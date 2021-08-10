@@ -43,13 +43,13 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
     - use `make` (requires `go` to be installed)
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
-  $ cd crunchyroll
+  $ cd crunchyroll-go
   $ make
   ```
     - use `go`
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
-  $ cd crunchyroll/cmd/crunchyroll
+  $ cd crunchyroll-go/cmd/crunchyroll-go
   $ go build -o crunchy
   ```
 

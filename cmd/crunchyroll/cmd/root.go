@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/ByteDream/crunchyroll"
+	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"

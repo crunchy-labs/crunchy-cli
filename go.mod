@@ -1,4 +1,4 @@
-module github.com/ByteDream/crunchyroll
+module github.com/ByteDream/crunchyroll-go
 
 go 1.16
 

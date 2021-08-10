@@ -2,7 +2,7 @@ package utils
 
 import (
 	"errors"
-	"github.com/ByteDream/crunchyroll"
+	"github.com/ByteDream/crunchyroll-go"
 	"sort"
 	"sync"
 )

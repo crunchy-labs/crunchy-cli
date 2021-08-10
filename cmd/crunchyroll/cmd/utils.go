@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ByteDream/crunchyroll"
-	"github.com/ByteDream/crunchyroll/utils"
+	"github.com/ByteDream/crunchyroll-go"
+	"github.com/ByteDream/crunchyroll-go/utils"
 	"io"
 	"io/ioutil"
 	"log"

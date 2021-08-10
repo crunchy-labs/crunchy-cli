@@ -1,20 +1,20 @@
-# crunchyroll
+# crunchyroll-go
 
 A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](https://www.crunchyroll.com) api.
 
 **You surely need a crunchyroll premium account to get full (api) access.**
 
 <p align="center">
-  <a href="https://github.com/ByteDream/crunchyroll">
+  <a href="https://github.com/ByteDream/crunchyroll-go">
     <img src="https://img.shields.io/github/languages/code-size/ByteDream/crunchyroll?style=flat-square" alt="Code size">
   </a>
-  <a href="https://github.com/ByteDream/crunchyroll/blob/master/LICENSE">
+  <a href="https://github.com/ByteDream/crunchyroll-go/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/ByteDream/crunchyroll?style=flat-square" alt="License">
   </a>
   <a href="https://golang.org">
     <img src="https://img.shields.io/github/go-mod/go-version/ByteDream/crunchyroll?style=flat-square" alt="Go version">
   </a>
-  <a href="https://github.com/ByteDream/crunchyroll/releases/latest">
+  <a href="https://github.com/ByteDream/crunchyroll-go/releases/latest">
     <img src="https://img.shields.io/github/v/release/ByteDream/crunchyroll?style=flat-square" alt="Release">
   </a>
 </p>
@@ -35,20 +35,20 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 - Download single videos and entire series from [crunchyroll](https://www.crunchyroll.com)
 
 #### Get the executable
-- 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll/releases/latest) or get it from below
-    - [Linux (x64)](https://github.com/ByteDream/crunchyroll/releases/download/v1.0/crunchy-v1.0_linux)
-    - [Windows (x64)](https://github.com/ByteDream/crunchyroll/releases/download/v1.0/crunchy-v1.0_windows.exe)
-    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll/releases/download/v1.0/crunchy-v1.0_darwin)
+- 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below
+    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.0/crunchy-v1.0_linux)
+    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.0/crunchy-v1.0_windows.exe)
+    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.0/crunchy-v1.0_darwin)
 - 🛠 Build it yourself
     - use `make` (requires `go` to be installed)
   ```
-  $ git clone https://github.com/ByteDream/crunchyroll
+  $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll
   $ make
   ```
     - use `go`
   ```
-  $ git clone https://github.com/ByteDream/crunchyroll
+  $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll/cmd/crunchyroll
   $ go build -o crunchy
   ```
@@ -144,7 +144,7 @@ These flags you can use across every sub-command
 Download the library via `go get`
 
 ```
-$ go get github.com/ByteDream/crunchyroll
+$ go get github.com/ByteDream/crunchyroll-go
 ```
 
 ### 📝 Examples

@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-var sessionIDPath = path.Join(os.TempDir(), ".crunchy")
+var sessionIDPath = filepath.Join(os.TempDir(), ".crunchy")
 
 type progress struct {
 	status  bool
@@ -89,11 +89,20 @@ func (l *logger) StartProgress(message string) {
 			l.progressWG.Lock()
 			select {
 			case p := <-l.progress:
-				fmt.Print("\r")
+				// clearing the last line
+				fmt.Printf("\r%s\r", strings.Repeat(" ", len(l.InfoLog.Prefix())+len(message)+2))
 				if p.status {
-					l.InfoLog.Printf("✅ %s", p.message)
+					successTag := "✔"
+					if runtime.GOOS == "windows" {
+						successTag = "~"
+					}
+					l.InfoLog.Printf("%s %s", successTag, p.message)
 				} else {
-					l.ErrLog.Printf("❌ %s", p.message)
+					errorTag := "✘"
+					if runtime.GOOS == "windows" {
+						errorTag = "!"
+					}
+					l.ErrLog.Printf("%s %s", errorTag, p.message)
 				}
 				l.progress = nil
 				l.progressWG.Unlock()

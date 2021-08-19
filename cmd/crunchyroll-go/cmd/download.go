@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -398,12 +399,12 @@ func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
 	return
 }
 
-func downloadFormat(format *crunchyroll.Format, dir, fname string, info information) (_ bool) {
-	filename := freeFileName(path.Join(dir, fname))
+func downloadFormat(format *crunchyroll.Format, dir, fname string, info information) bool {
+	filename := freeFileName(filepath.Join(dir, fname))
 	ext := path.Ext(filename)
 	out.Debugf("Download filename: %s\n", filename)
-	if filename != path.Join(dir, fname) {
-		out.Errf("The file %s already exist, renaming the download file to %s\n", path.Join(dir, fname), filename)
+	if filename != filepath.Join(dir, fname) {
+		out.Errf("The file %s already exist, renaming the download file to %s\n", filepath.Join(dir, fname), filename)
 	}
 	if ext != ".ts" {
 		if !hasFFmpeg() {
@@ -419,7 +420,7 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 			out.Errf("Failed to get %s subtitles\n", info.Subtitle)
 			return false
 		}
-		subtitleFilename = freeFileName(path.Join(dir, fmt.Sprintf("%s.%s", strings.TrimRight(path.Base(filename), ext), subtitle.Format)))
+		subtitleFilename = freeFileName(filepath.Join(dir, fmt.Sprintf("%s.%s", strings.TrimRight(path.Base(filename), ext), subtitle.Format)))
 		out.Debugf("Subtitles will be saved as `%s`\n", subtitleFilename)
 	}
 
@@ -436,7 +437,7 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 		defer file.Close()
 		if err != nil {
 			out.Errf("Could not create file `%s` to download episode `%s` (%s): %s, skipping\n", filename, info.Title, info.OriginalURL, err)
-			return
+			return false
 		}
 		cleanup[0] = filename
 
@@ -454,13 +455,16 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 		}()
 
 		err = format.Download(file, downloadProgress)
+		// newline to avoid weird output
+		fmt.Println()
+
 		// make the goroutine stop
 		sigs <- sigusr1
 	} else {
 		tempDir, err := os.MkdirTemp("", "crunchy_")
 		if err != nil {
 			out.Errln("Failed to create temp download dir. Skipping")
-			return
+			return false
 		}
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, sigusr1)
@@ -473,29 +477,29 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 			}
 		}()
 
-		var filenames []string
+		var segmentCount int
 		err = format.DownloadSegments(tempDir, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
-			filenames = append(filenames, file.Name())
+			segmentCount++
 			return downloadProgress(segment, current, total, file, err)
 		})
+		// newline to avoid weird output
+		fmt.Println()
 
-		sort.Slice(filenames, func(i, j int) bool {
-			iNum, err := strconv.Atoi(strings.Split(path.Base(filenames[i]), ".")[0])
-			if err != nil {
-				return false
-			}
-			jNum, err := strconv.Atoi(strings.Split(path.Base(filenames[j]), ".")[0])
-			if err != nil {
-				return false
-			}
-			return iNum < jNum
-		})
+		f, _ := os.CreateTemp("", "*.txt")
+		for i := 0; i < segmentCount; i++ {
+			fmt.Fprintf(f, "file '%s.ts'\n", filepath.Join(tempDir, strconv.Itoa(i)))
+		}
+		defer os.Remove(f.Name())
+		f.Close()
 
 		cmd := exec.Command("ffmpeg",
-			"-i", fmt.Sprintf("concat:%s", strings.Join(filenames, "|")),
-			"-codec", "copy",
+			"-f", "concat",
+			"-safe", "0",
+			"-i", f.Name(),
+			"-c", "copy",
 			filename)
 		err = cmd.Run()
+
 		sigs <- sigusr1
 	}
 	if err != nil {
@@ -513,7 +517,7 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 				} else {
 					subtitle, ok := utils.SubtitleByLocale(format, info.Subtitle)
 					if !ok {
-						out.Errln("Failed to get %s subtitles\n", info.Subtitle)
+						out.Errf("Failed to get %s subtitles\n", info.Subtitle)
 						return false
 					}
 					if err := subtitle.Download(file); err != nil {

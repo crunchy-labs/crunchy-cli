@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -108,7 +108,7 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 					break
 				default:
 					var file *os.File
-					file, err = f.downloadSegment(segment, path.Join(outputDir, fmt.Sprintf("%d.ts", i+j)), block, iv)
+					file, err = f.downloadSegment(segment, filepath.Join(outputDir, fmt.Sprintf("%d.ts", i+j)), block, iv)
 					if err != nil {
 						quit <- true
 						break
@@ -169,13 +169,13 @@ func (f *Format) downloadSegment(segment *m3u8.MediaSegment, filename string, bl
 
 	// some mpeg stream things. see the link beneath for more information
 	// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/dl/dowloader.go#L135
-	syncByte := uint8(71) //0x47
+	/*syncByte := uint8(71) //0x47
 	for k := 0; k < len(content); k++ {
 		if content[k] == syncByte {
 			content = content[k:]
 			break
 		}
-	}
+	}*/
 
 	file, err := os.Create(filename)
 	if err != nil {
@@ -212,7 +212,7 @@ func (f *Format) mergeSegments(tempPath string, output *os.File) error {
 	})
 
 	for _, file := range dir {
-		bodyAsBytes, err := ioutil.ReadFile(path.Join(tempPath, file.Name()))
+		bodyAsBytes, err := ioutil.ReadFile(filepath.Join(tempPath, file.Name()))
 		if err != nil {
 			return err
 		}

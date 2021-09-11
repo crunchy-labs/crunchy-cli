@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ByteDream/crunchyroll-go/utils"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -283,15 +283,12 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 // FindVideo fins a Video (Season or Movie) by a crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx
 func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
-	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
-	if urlMatch := pattern.FindAllStringSubmatch(seriesUrl, -1); len(urlMatch) != 0 {
-		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
-		title, ok := groups["series"]
+	if series, ok := utils.MatchVideo(seriesUrl); ok {
 		if !ok {
 			return nil, errors.New("series could not be found")
 		}
 
-		s, m, err := c.Search(title, 1)
+		s, m, err := c.Search(series, 1)
 		if err != nil {
 			return nil, err
 		}
@@ -310,16 +307,9 @@ func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
 // FindEpisode finds an episode by its crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
-	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/episode-\d+-(?P<title>\D+).*`)
-	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
-		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
-		var slugTitle string
-		var ok bool
-		if slugTitle, ok = groups["title"]; !ok {
-			return nil, errors.New("invalid url")
-		}
-		slugTitle = strings.TrimSuffix(slugTitle, "-")
-		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", groups["series"]))
+	if series, title, ok := utils.MatchEpisode(url); ok {
+		title = strings.TrimSuffix(title, "-")
+		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", series))
 		if err != nil {
 			return nil, err
 		}
@@ -335,7 +325,7 @@ func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
 				return nil, err
 			}
 			for _, episode := range episodes {
-				if episode.SlugTitle == slugTitle {
+				if episode.SlugTitle == title {
 					matchingEpisodes = append(matchingEpisodes, episode)
 				}
 			}

@@ -517,6 +517,7 @@ func (es *EpisodeStructure) GetEpisodeByURL(url string) (*crunchyroll.Episode, e
 	return nil, errors.New("no episode could be found")
 }
 
+// OrderEpisodeByID orders episodes by their ids
 func (es *EpisodeStructure) OrderEpisodeByID() ([][]*crunchyroll.Episode, error) {
 	episodes, err := es.Episodes()
 	if err != nil {
@@ -538,6 +539,11 @@ func (es *EpisodeStructure) OrderEpisodeByID() ([][]*crunchyroll.Episode, error)
 	return orderedEpisodes, nil
 }
 
+// OrderFormatsByEpisodeNumber orders episodes by their episode number.
+// Episode number 1 is on position 1 in the slice, number 2 on position 2, and so on.
+// This was made intentionally because there is a chance that episodes with the episode number 0 are existing
+// and position 0 in the slice is reserved for them.
+// Therefore, if the first episode number is, for example, 20, the first 19 array entries will be nil
 func (es *EpisodeStructure) OrderFormatsByEpisodeNumber() ([][]*crunchyroll.Format, error) {
 	formats, err := es.Formats()
 	if err != nil {
@@ -573,7 +579,7 @@ func (es *EpisodeStructure) OrderFormatsByEpisodeNumber() ([][]*crunchyroll.Form
 	}
 
 	var orderedFormats [][]*crunchyroll.Format
-	for i := 0; i < highest; i++ {
+	for i := 0; i < highest+1; i++ {
 		if formats, ok := formatsMap[i]; ok {
 			orderedFormats = append(orderedFormats, formats)
 		} else {

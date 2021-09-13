@@ -39,7 +39,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
     - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_linux)
     - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_windows.exe)
     - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_darwin)
-- If you use `arch` btw. or any other Linux distro which is based on arch, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/)
+- If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/)
   ```
   $ yay -S crunchyroll-go
   ```

@@ -7,6 +7,23 @@ import (
 	"sync"
 )
 
+// StructureError is the error type which is thrown whenever a structure fails
+// to receive information (formats, episodes, ...) from the api endpoint
+type StructureError struct {
+	error
+}
+
+func (se *StructureError) Error() string {
+	return se.error.Error()
+}
+
+func IsStructureError(err error) (ok bool) {
+	if err != nil {
+		_, ok = err.(*StructureError)
+	}
+	return
+}
+
 // FormatStructure is the basic structure which every other structure implements.
 // With it, and all other structures the api usage can be simplified magnificent
 type FormatStructure struct {
@@ -40,6 +57,7 @@ func newFormatStructure(parentStructure *StreamStructure) *FormatStructure {
 					defer wg.Done()
 					f, err := stream.Formats()
 					if err != nil {
+						errors.As(err, &StructureError{})
 						return
 					}
 					lock.Lock()
@@ -271,6 +289,7 @@ func newStreamStructure(structure VideoStructure) *StreamStructure {
 					defer wg.Done()
 					s, err := episode.Streams()
 					if err != nil {
+						errors.As(err, &StructureError{})
 						return
 					}
 					lock.Lock()
@@ -302,6 +321,7 @@ func newStreamStructure(structure VideoStructure) *StreamStructure {
 					defer wg.Done()
 					s, err := movieListing.Streams()
 					if err != nil {
+						errors.As(err, &StructureError{})
 						return
 					}
 					lock.Lock()
@@ -397,6 +417,7 @@ func newEpisodeStructure(structure *SeasonStructure) *EpisodeStructure {
 					defer wg.Done()
 					e, err := season.Episodes()
 					if err != nil {
+						errors.As(err, &StructureError{})
 						return
 					}
 					lock.Lock()
@@ -479,6 +500,26 @@ func (es *EpisodeStructure) GetEpisodeByFormat(format *crunchyroll.Format) (*cru
 		return nil, errors.New("could not find parent episode")
 	}
 	return episode, nil
+}
+
+// GetEpisodeByURL returns an episode by its url
+func (es *EpisodeStructure) GetEpisodeByURL(url string) (*crunchyroll.Episode, error) {
+	_, title, ok := crunchyroll.MatchEpisode(url)
+	if !ok {
+		return nil, errors.New("invalid url")
+	}
+
+	episodes, err := es.Episodes()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, episode := range episodes {
+		if episode.SlugTitle == title {
+			return episode, nil
+		}
+	}
+	return nil, errors.New("no episode could be found")
 }
 
 func (es *EpisodeStructure) OrderEpisodeByID() ([][]*crunchyroll.Episode, error) {

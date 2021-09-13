@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"github.com/ByteDream/crunchyroll-go"
-	"sort"
 	"sync"
 )
 
@@ -11,10 +10,6 @@ import (
 // to receive information (formats, episodes, ...) from the api endpoint
 type StructureError struct {
 	error
-}
-
-func (se *StructureError) Error() string {
-	return se.error.Error()
 }
 
 func IsStructureError(err error) (ok bool) {
@@ -570,15 +565,21 @@ func (es *EpisodeStructure) OrderFormatsByEpisodeNumber() ([][]*crunchyroll.Form
 		formatsMap[episode.EpisodeNumber] = append(formatsMap[episode.EpisodeNumber], format)
 	}
 
-	keys := make([]int, 0, len(formatsMap))
-	for k := range formatsMap {
-		keys = append(keys, k)
+	var highest int
+	for key := range formatsMap {
+		if key > highest {
+			highest = key
+		}
 	}
-	sort.Ints(keys)
 
 	var orderedFormats [][]*crunchyroll.Format
-	for _, k := range keys {
-		orderedFormats = append(orderedFormats, formatsMap[k])
+	for i := 0; i < highest; i++ {
+		if formats, ok := formatsMap[i]; ok {
+			orderedFormats = append(orderedFormats, formats)
+		} else {
+			// simply adds nil in case that no episode with number i exists
+			orderedFormats = append(orderedFormats, nil)
+		}
 	}
 	return orderedFormats, nil
 }

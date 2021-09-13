@@ -1,0 +1,136 @@
+.TH crunchyroll-go 1 "13 September 2021" "crunchyroll-go" "Crunchyroll Downloader"
+
+.SH NAME
+crunchyroll-go - A cli for downloading videos and entire series from crunchyroll.
+
+.SH SYNOPSIS
+crunchyroll-go [\fB-h\fR] [\fB--color\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
+.br
+crunchyroll-go help
+.br
+crunchyroll-go login [\fB--session-id\fR \fISESSION_ID\fR] [\fIemail\fR, \fIpassword\fR]
+.br
+crunchyroll-go download [\fB--alternative-progress\fR] [\fB-a\fR \fILOCALE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB--no-hardsub\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-s\fR \fILOCALE\fR] \fIURL…\fR
+
+.SH DESCRIPTION
+.TP
+With \fBcrunchyroll-go\fR you can easily download video and series from crunchyroll.
+.TP
+
+Note that you need an \fBcrunchyroll premium\fR account in order to use this tool!
+
+.SH GENERAL OPTIONS
+.TP
+This options can be passed to every action.
+.TP
+
+\fB-h, --help\fR
+Shows help.
+.TP
+
+\fB--color\fR
+Shows the output in different colors which will make it easier to differ the output.
+.TP
+
+\fB-p, --proxy PROXY\fR
+Sets a proxy through which all traffic will be routed.
+.TP
+
+\fB-q, --quiet\fR
+Disables all output.
+.TP
+
+\fB-v, --verbose\fR
+Shows verbose output.
+
+.SH LOGIN OPTIONS
+This options can only be used when calling the \fIlogin\fR action.
+.TP
+
+\fB--session-id SESSION_ID\fR
+Login via a session id (which can be extracted from a crunchyroll browser cookie) instead of using email and password.
+
+.SH DOWNLOAD OPTIONS
+This options can only be used when calling the \fIdownload\fR action.
+.TP
+
+\fB--alternative-progress\fR
+Shows an alternative, not so user-friendly progress instead of the progress bar which contains more information.
+.TP
+
+\fB-a, --audio LOCALE\fR
+Forces to download videos with the given audio locale. If no video with this audio locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-LA, es-ES, fr-FR, pt-BR, it-IT, de-DE, ru-RU, ar-ME.
+.TP
+
+\fB-d, --directory DIRECTORY\fR
+The directory to download all files to.
+.TP
+
+\fB--no-hardsub\fR
+Same as '-s', but the subtitles are not stored in the video itself, but in a separate file.
+.TP
+
+\fB-o, --output OUTPUT\fR
+Name of the output file. Formatting is also supported, so if the name contains one or more of the following things, they will get replaced.
+    {title} » Title of the video.
+    {season_title} » Title of the season.
+    {season_number} » Number of the season.
+    {episode_number} » Number of the episode.
+    {resolution} » Resolution of the video.
+    {fps} » Frame Rate of the video.
+    {audio} » Audio locale of the video.
+    {subtitle} » Subtitle locale of the video.
+.TP
+
+\fB-r, resolution RESOLUTION\fR
+The video resolution. Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or "common-use" words (e.g. best).
+    Available pixels: 1920x1080, 1280x720, 640x480, 480x360, 426x240.
+    Available abbreviations: 1080p, 720p, 480p, 360p, 240p.
+    Available common-use words: best (best available resolution), worst (worst available resolution).
+.TP
+
+\fB-s, --subtitle LOCALE\fR
+Forces to download the videos with subtitles in the given locale / language. If no video with this subtitle locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-LA, es-ES, fr-FR, pt-BR, it-IT, de-DE, ru-RU, ar-ME.
+
+.SH EXAMPLES
+Login via crunchyroll account email and password.
+.br
+$ crunchyroll-go login user@example.com 12345678
+
+Download a episode normally. Your system locale will be used for the video's audio.
+.br
+$ crunchyroll-go download https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+
+Download a episode with 720p and name it to 'darling.mp4'. Note that you need \fBffmpeg\fR to save files which do not have '.ts' as file extension.
+.br
+$ crunchyroll-go download -o "darling.mp4" -r 720p https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+
+Download a episode with japanese audio and american subtitles.
+.br
+$ crunchyroll-go download -a ja-JP -s en-US https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+
+.SH BUGS
+If you notice any bug or want a enhancement, feel free to create a new issue or pull request in the GitHub repository.
+
+.SH AUTHOR
+ByteDream
+.br
+Source: https://github.com/ByteDream/crunchyroll-go
+
+.SH COPYRIGHT
+Copyright (C) 2021 ByteDream
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this program; if not, write to the Free Software Foundation,
+Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+

@@ -140,7 +140,7 @@ func download(urls []string) {
 	}
 
 	var success int
-	for i, episode := range allEpisodes {
+	for _, episode := range allEpisodes {
 		var subtitle crunchyroll.LOCALE
 		if subtitleFlag != "" {
 			subtitle = localeToLOCALE(subtitleFlag)
@@ -166,11 +166,11 @@ func download(urls []string) {
 			out.Debugf("Information (json): %s\n", string(fmtOptionsBytes))
 		}
 
-		baseFilename := outputFlag
+		filename := outputFlag
 
 		fields := reflect.TypeOf(info)
 		values := reflect.ValueOf(info)
-		for j := 0; j < fields.NumField(); j++ {
+		for i := 0; i < fields.NumField(); i++ {
 			field := fields.Field(i)
 			value := values.Field(i)
 
@@ -179,10 +179,10 @@ func download(urls []string) {
 			case reflect.String:
 				valueAsString = value.String()
 			case reflect.Float64:
-				valueAsString = strconv.Itoa(int(values.Float()))
+				valueAsString = strconv.Itoa(int(value.Float()))
 			}
 
-			baseFilename = strings.ReplaceAll(baseFilename, "{"+strings.ToLower(field.Name)+"}", valueAsString)
+			filename = strings.ReplaceAll(filename, "{"+field.Tag.Get("json")+"}", valueAsString)
 		}
 
 		invalidChars := invalidLinuxChars
@@ -192,11 +192,11 @@ func download(urls []string) {
 
 		// replaces all the invalid characters
 		for _, char := range invalidChars {
-			strings.ReplaceAll(baseFilename, char, "")
+			filename = strings.ReplaceAll(filename, char, "")
 		}
 
 		out.Empty()
-		if downloadFormat(episode.Format, baseFilename, info) {
+		if downloadFormat(episode.Format, filename, info) {
 			success++
 		}
 	}
@@ -441,6 +441,8 @@ func downloadFormat(format *crunchyroll.Format, outFile string, info information
 	}
 
 	out.Infof("Downloading '%s' (%s) as '%s'\n", info.Title, info.OriginalURL, outFile)
+	out.Infof("Series: %s\n", info.SeriesName)
+	out.Infof("Season & Episode: S%02dE%02d", info.SeasonNumber, info.EpisodeNumber)
 	out.Infof("Audio: %s\n", info.Audio)
 	out.Infof("Subtitle: %s\n", info.Subtitle)
 	out.Infof("Hardsub: %v\n", format.Hardsub != "")

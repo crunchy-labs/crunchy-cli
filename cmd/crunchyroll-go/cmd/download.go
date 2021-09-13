@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
@@ -13,15 +12,13 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
-	"text/template"
 )
-
-// sigusr1 is actually syscall.SIGUSR1, but because has no signal (or very less) it has to be defined manually
-var sigusr1 = syscall.Signal(0xa)
 
 var (
 	audioFlag     string
@@ -36,8 +33,6 @@ var (
 	alternativeProgressFlag bool
 )
 
-var cleanup [2]string
-
 var getCmd = &cobra.Command{
 	Use:   "download",
 	Short: "Download a video",
@@ -45,40 +40,76 @@ var getCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		loadCrunchy()
+
+		sig := make(chan os.Signal)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-sig
+			if cleanupPath != "" {
+				os.RemoveAll(cleanupPath)
+			}
+			os.Exit(1)
+		}()
+
 		download(args)
 	},
 }
 
+var (
+	invalidWindowsChars = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
+	invalidLinuxChars   = []string{"/"}
+)
+
+var cleanupPath string
+
 func init() {
 	rootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVar(&audioFlag, "audio", "", "The locale of the audio. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
-	getCmd.Flags().StringVar(&subtitleFlag, "subtitle", "", "The locale of the subtitle. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
-	getCmd.Flags().BoolVar(&noHardsubFlag, "no-hardsub", false, "Same as `--sub`, but the subtitles are not stored in the video itself, but in a separate file")
+	getCmd.Flags().StringVarP(&audioFlag, "audio", "a", "", "The locale of the audio. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
+	getCmd.Flags().StringVarP(&subtitleFlag, "subtitle", "s", "", "The locale of the subtitle. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
+	getCmd.Flags().BoolVar(&noHardsubFlag, "no-hardsub", false, "Same as '-s', but the subtitles are not stored in the video itself, but in a separate file")
 
 	cwd, _ := os.Getwd()
 	getCmd.Flags().StringVarP(&directoryFlag, "directory", "d", cwd, "The directory to download the file to")
-	getCmd.Flags().StringVarP(&outputFlag, "output", "o", "{{.Title}}.ts", "Name of the output file\n"+
-		"If you use the following things in the name, the will get replaced"+
-		"\t{{.Title}} » Title of the video\n"+
-		"\t{{.Resolution}} » Resolution of the video\n"+
-		"\t{{.FPS}} » Frame Rate of the video\n"+
-		"\t{{.Audio}} » Audio locale of the video\n"+
-		"\t{{.Subtitle}} » Subtitle locale of the video\n")
+	getCmd.Flags().StringVarP(&outputFlag, "output", "o", "{title}.ts", "Name of the output file\n"+
+		"If you use the following things in the name, the will get replaced\n"+
+		"\t{title} » Title of the video\n"+
+		"\t{season_title} » Title of the season\n"+
+		"\t{season_number} » Number of the season\n"+
+		"\t{episode_number} » Number of the episode\n"+
+		"\t{resolution} » Resolution of the video\n"+
+		"\t{fps} » Frame Rate of the video\n"+
+		"\t{audio} » Audio locale of the video\n"+
+		"\t{subtitle} » Subtitle locale of the video\n")
 
-	getCmd.Flags().StringVarP(&resolutionFlag, "resolution", "r", "best", "res")
+	getCmd.Flags().StringVarP(&resolutionFlag, "resolution", "r", "best", "The video resolution. Can either be specified via the pixels, the abbreviation for pixels, or 'common-use' words\n"+
+		"\tAvailable pixels: 1920x1080, 1280x720, 640x480, 480x360, 426x240\n"+
+		"\tAvailable abbreviations: 1080p, 720p, 480p, 360p, 240p\n"+
+		"\tAvailable common-use words: best (best available resolution), worst (worst available resolution)\n")
 
 	getCmd.Flags().BoolVar(&alternativeProgressFlag, "alternative-progress", false, "Shows an alternative, not so user-friendly progress instead of the progress bar")
 }
 
+type episodeInformation struct {
+	Format      *crunchyroll.Format
+	Title       string
+	URL         string
+	SeriesTitle string
+	SeasonNum   int
+	EpisodeNum  int
+}
+
 type information struct {
-	Title       string             `json:"title"`
-	OriginalURL string             `json:"original_url"`
-	DownloadURL string             `json:"download_url"`
-	Resolution  string             `json:"resolution"`
-	FPS         float64            `json:"fps"`
-	Audio       crunchyroll.LOCALE `json:"audio"`
-	Subtitle    crunchyroll.LOCALE `json:"subtitle"`
-	Hardsub     bool               `json:"hardsub"`
+	Title         string             `json:"title"`
+	SeriesName    string             `json:"series_name"`
+	SeasonNumber  int                `json:"season_number"`
+	EpisodeNumber int                `json:"episode_number"`
+	OriginalURL   string             `json:"original_url"`
+	DownloadURL   string             `json:"download_url"`
+	Resolution    string             `json:"resolution"`
+	FPS           float64            `json:"fps"`
+	Audio         crunchyroll.LOCALE `json:"audio"`
+	Subtitle      crunchyroll.LOCALE `json:"subtitle"`
+	Hardsub       bool               `json:"hardsub"`
 }
 
 func download(urls []string) {
@@ -86,98 +117,45 @@ func download(urls []string) {
 		out.Fatalf("The file ending for the output file (%s) is not `.ts`. "+
 			"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", outputFlag)
 	}
-
-	var allFormats []*crunchyroll.Format
-	var allTitles []string
-	var allURLs []string
-
-	for i, url := range urls {
-		var failed bool
-
-		out.StartProgressf("Parsing url %d", i+1)
-		if video, err1 := crunchy.FindVideo(url); err1 == nil {
-			out.Debugf("Pre-parsed url %d as video\n", i+1)
-			if formats, titles := parseVideo(video, url); formats != nil {
-				allFormats = append(allFormats, formats...)
-				allTitles = append(allTitles, titles...)
-				for range formats {
-					allURLs = append(allURLs, url)
-				}
-			} else {
-				failed = true
-			}
-		} else if episodes, err2 := crunchy.FindEpisode(url); err2 == nil {
-			out.Debugf("Parsed url %d as episode\n", i+1)
-			out.Debugf("Found %d episode types\n", len(episodes))
-			if format, title := parseEpisodes(episodes, url); format != nil {
-				allFormats = append(allFormats, format)
-				allTitles = append(allTitles, title)
-				allURLs = append(allURLs, url)
-			} else {
-				failed = true
-			}
-		} else {
-			out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
-			out.Debugf("Parse error 1: %s\n", err1)
-			out.Debugf("Parse error 2: %s\n", err2)
-			continue
-		}
-
-		if !failed {
-			out.EndProgressf(true, "Parsed url %d successful\n", i+1)
-		} else {
-			out.EndProgressf(false, "Failed to parse url %d (the url is valid but some kind of error which is surely shown caused the failure)", i+1)
-		}
-	}
-	out.Debugf("%d of %d urls could be parsed\n", len(allURLs), len(urls))
+	allEpisodes := parseURLs(urls)
+	out.Debugf("%d of %d urls could be parsed\n", len(allEpisodes), len(urls))
 
 	out.Empty()
-	if len(allFormats) == 0 {
+	if len(allEpisodes) == 0 {
 		out.Fatalf("Nothing to download, aborting\n")
 	}
 	out.Infof("Downloads:")
-	for i, format := range allFormats {
-		video := format.Video
-		out.Infof("\t%d. %s » %spx, %.2f FPS, %s audio\n", i+1, allTitles[i], video.Resolution, video.FrameRate, utils.LocaleLanguage(format.AudioLocale))
-	}
-	var tmpl *template.Template
-	var err error
-	tmpl, err = template.New("").Parse(outputFlag)
-	if err == nil {
-		var buff bytes.Buffer
-		if err := tmpl.Execute(&buff, allFormats[0].Video); err == nil {
-			if buff.String() == outputFlag {
-				tmpl = nil
-			}
-		}
+	for i, episode := range allEpisodes {
+		video := episode.Format.Video
+		out.Infof("\t%d. %s » %spx, %.2f FPS, %s audio (%s S%02dE%02d)\n",
+			i+1, episode.Title, video.Resolution, video.FrameRate, utils.LocaleLanguage(episode.Format.AudioLocale), episode.SeriesTitle, episode.SeasonNum, episode.EpisodeNum)
 	}
 
-	if fileInfo, stat := os.Stat(directoryFlag); err == nil {
-		if !fileInfo.IsDir() {
-			out.Fatalf("%s (given from the `-d`/`--directory` flag) is not a directory\n", directoryFlag)
-		}
-	} else if os.IsNotExist(stat) {
+	if fileInfo, stat := os.Stat(directoryFlag); os.IsNotExist(stat) {
 		if err := os.MkdirAll(directoryFlag, 0777); err != nil {
 			out.Fatalf("Failed to create directory which was given from the `-d`/`--directory` flag: %s\n", err)
 		}
-	} else {
-		out.Fatalf("Failed to get information for via `-d`/`--directory` flag the given file / directory: %s", err)
+	} else if !fileInfo.IsDir() {
+		out.Fatalf("%s (given from the `-d`/`--directory` flag) is not a directory\n", directoryFlag)
 	}
 
 	var success int
-	for i, format := range allFormats {
+	for i, episode := range allEpisodes {
 		var subtitle crunchyroll.LOCALE
 		if subtitleFlag != "" {
 			subtitle = localeToLOCALE(subtitleFlag)
 		}
 		info := information{
-			Title:       allTitles[i],
-			OriginalURL: allURLs[i],
-			DownloadURL: format.Video.URI,
-			Resolution:  format.Video.Resolution,
-			FPS:         format.Video.FrameRate,
-			Audio:       format.AudioLocale,
-			Subtitle:    subtitle,
+			Title:         episode.Title,
+			SeriesName:    episode.SeriesTitle,
+			SeasonNumber:  episode.SeasonNum,
+			EpisodeNumber: episode.EpisodeNum,
+			OriginalURL:   episode.URL,
+			DownloadURL:   episode.Format.Video.URI,
+			Resolution:    episode.Format.Video.Resolution,
+			FPS:           episode.Format.Video.FrameRate,
+			Audio:         episode.Format.AudioLocale,
+			Subtitle:      subtitle,
 		}
 
 		if verboseFlag {
@@ -185,94 +163,147 @@ func download(urls []string) {
 			if err != nil {
 				fmtOptionsBytes = make([]byte, 0)
 			}
-			out.Debugf("Information (json): %s", string(fmtOptionsBytes))
+			out.Debugf("Information (json): %s\n", string(fmtOptionsBytes))
 		}
 
-		var baseFilename string
-		if tmpl != nil {
-			var buff bytes.Buffer
-			if err := tmpl.Execute(&buff, info); err == nil {
-				baseFilename = buff.String()
-			} else {
-				out.Fatalf("Could not convert filename (%s), aborting\n", err)
+		baseFilename := outputFlag
+
+		fields := reflect.TypeOf(info)
+		values := reflect.ValueOf(info)
+		for j := 0; j < fields.NumField(); j++ {
+			field := fields.Field(i)
+			value := values.Field(i)
+
+			var valueAsString string
+			switch value.Kind() {
+			case reflect.String:
+				valueAsString = value.String()
+			case reflect.Float64:
+				valueAsString = strconv.Itoa(int(values.Float()))
 			}
-		} else {
-			baseFilename = outputFlag
+
+			baseFilename = strings.ReplaceAll(baseFilename, "{"+strings.ToLower(field.Name)+"}", valueAsString)
+		}
+
+		invalidChars := invalidLinuxChars
+		if runtime.GOOS == "windows" {
+			invalidChars = invalidWindowsChars
+		}
+
+		// replaces all the invalid characters
+		for _, char := range invalidChars {
+			strings.ReplaceAll(baseFilename, char, "")
 		}
 
 		out.Empty()
-		if downloadFormat(format, directoryFlag, baseFilename, info) {
+		if downloadFormat(episode.Format, baseFilename, info) {
 			success++
 		}
 	}
 
-	out.Empty()
-	out.Infof("Downloaded %d out of %d videos successful\n", success, len(allFormats))
+	out.Infof("Downloaded %d out of %d videos\n", success, len(allEpisodes))
 }
 
-func parseVideo(video crunchyroll.Video, url string) (parsedFormats []*crunchyroll.Format, titles []string) {
+func parseURLs(urls []string) (allEpisodes []episodeInformation) {
+	videoDupes := map[string]utils.VideoStructure{}
+
+	for i, url := range urls {
+		out.StartProgressf("Parsing url %d", i+1)
+
+		var seriesName string
+		var ok bool
+		if seriesName, _, ok = crunchyroll.MatchEpisode(url); !ok {
+			seriesName, _ = crunchyroll.MatchVideo(url)
+		}
+
+		if seriesName != "" {
+			dupe, ok := videoDupes[seriesName]
+			if !ok {
+				video, err := crunchy.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", seriesName))
+				if err != nil {
+					continue
+				}
+				switch video.(type) {
+				case *crunchyroll.Series:
+					seasons, err := video.(*crunchyroll.Series).Seasons()
+					if err != nil {
+						out.EndProgressf(false, "Failed to get seasons for url %s: %s\n", url, err)
+						continue
+					}
+					dupe = utils.NewSeasonStructure(seasons).EpisodeStructure
+					if err := dupe.(*utils.EpisodeStructure).InitAll(); err != nil {
+						out.EndProgressf(false, "Failed to initialize series for url %s\n", url)
+						continue
+					}
+				case *crunchyroll.Movie:
+					movieListings, err := video.(*crunchyroll.Movie).MovieListing()
+					if err != nil {
+						out.EndProgressf(false, "Failed to get movie listing for url %s\n", url)
+						continue
+					}
+					dupe = utils.NewMovieListingStructure(movieListings)
+					if err := dupe.(*utils.MovieListingStructure).InitAll(); err != nil {
+						out.EndProgressf(false, "Failed to initialize movie for url %s\n", url)
+						continue
+					}
+				}
+				videoDupes[seriesName] = dupe
+			}
+
+			if _, ok := crunchyroll.MatchVideo(url); ok {
+				out.Debugf("Parsed url %d as video\n", i+1)
+				allEpisodes = append(allEpisodes, parseVideo(dupe, url)...)
+			} else if _, _, ok = crunchyroll.MatchEpisode(url); ok {
+				out.Debugf("Parsed url %d as episode\n", i+1)
+				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); (episodeInformation{}) != episode {
+					allEpisodes = append(allEpisodes, episode)
+				} else {
+					out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
+				}
+			} else {
+				out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
+				continue
+			}
+			out.EndProgressf(true, "Parsed url %d successful\n", i+1)
+		} else {
+			out.EndProgressf(false, "URL %d seems to be invalid\n", i+1)
+		}
+	}
+	return
+}
+
+func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInformations []episodeInformation) {
 	var rootTitle string
 	var orderedFormats [][]*crunchyroll.Format
-	var videoStructure utils.VideoStructure
 
-	switch video.(type) {
-	case *crunchyroll.Series:
-		out.Debugf("Parsed url as series\n")
-		series := video.(*crunchyroll.Series)
-		seasons, err := series.Seasons()
-		if err != nil {
-			out.Errf("Could not get any season of %s (%s): %s. Aborting\n", series.Title, url, err.Error())
-			return
-		}
-		out.Debugf("Found %d seasons\n", len(seasons))
-		seasonsStructure := utils.NewSeasonStructure(seasons)
-		if err := seasonsStructure.InitAll(); err != nil {
-			out.Errf("Failed to initialize %s (%s): %s. Aborting\n", series.Title, url, err.Error())
-			return
-		}
-		out.Debugf("Initialized %s\n", series.Title)
-
-		rootTitle = series.Title
-		orderedFormats, _ = seasonsStructure.OrderFormatsByEpisodeNumber()
-		videoStructure = seasonsStructure.EpisodeStructure
-	case *crunchyroll.Movie:
-		out.Debugf("Parsed url as movie\n")
-		movie := video.(*crunchyroll.Movie)
-		movieListings, err := movie.MovieListing()
-		if err != nil {
-			out.Errf("Failed to get movie of %s (%s)\n", movie.Title, url)
-			return
-		}
-		out.Debugf("Parsed %d movie listenings\n", len(movieListings))
-		movieListingStructure := utils.NewMovieListingStructure(movieListings)
-		if err := movieListingStructure.InitAll(); err != nil {
-			out.Errf("Failed to initialize %s (%s): %s. Aborting\n", movie.Title, url, err.Error())
-			return
-		}
-
-		rootTitle = movie.Title
-		unorderedFormats, _ := movieListingStructure.Formats()
+	switch videoStructure.(type) {
+	case *utils.EpisodeStructure:
+		orderedFormats, _ = videoStructure.(*utils.EpisodeStructure).OrderFormatsByEpisodeNumber()
+	case *utils.MovieListingStructure:
+		unorderedFormats, _ := videoStructure.(*utils.MovieListingStructure).Formats()
 		orderedFormats = append(orderedFormats, unorderedFormats)
-		videoStructure = movieListingStructure
 	}
 
-	// out.Debugf("Found %d formats\n", len(unorderedFormats))
 	out.Debugf("Found %d different episodes\n", len(orderedFormats))
 
 	for j, formats := range orderedFormats {
 		if format := findFormat(formats); format != nil {
-			var title string
+			info := episodeInformation{Format: format, URL: url}
 			switch videoStructure.(type) {
 			case *utils.EpisodeStructure:
 				episode, _ := videoStructure.(*utils.EpisodeStructure).GetEpisodeByFormat(format)
-				title = episode.Title
+				info.Title = episode.Title
+				info.SeriesTitle = episode.SeriesTitle
+				info.SeasonNum = episode.SeasonNumber
+				info.EpisodeNum = episode.EpisodeNumber
 			case *utils.MovieListingStructure:
 				movieListing, _ := videoStructure.(*utils.MovieListingStructure).GetMovieListingByFormat(format)
-				title = movieListing.Title
+				info.Title = movieListing.Title
+				info.SeriesTitle = movieListing.Title
+				info.SeasonNum, info.EpisodeNum = 1, 1
 			}
 
-			parsedFormats = append(parsedFormats, format)
-			titles = append(titles, title)
+			episodeInformations = append(episodeInformations, info)
 			out.Debugf("Successful parsed format %d for %s\n", j+1, rootTitle)
 		}
 	}
@@ -280,20 +311,24 @@ func parseVideo(video crunchyroll.Video, url string) (parsedFormats []*crunchyro
 	return
 }
 
-func parseEpisodes(episodes []*crunchyroll.Episode, url string) (*crunchyroll.Format, string) {
-	episodeStructure := utils.NewEpisodeStructure(episodes)
-	if err := episodeStructure.InitAll(); err != nil {
-		out.EndProgressf(false, "Failed to initialize %s (%s): %s, skipping\n", episodes[0].Title, url, err)
-		return nil, ""
-	}
-
-	formats, _ := episodeStructure.Formats()
+func parseEpisodes(episodeStructure *utils.EpisodeStructure, url string) episodeInformation {
+	episode, _ := episodeStructure.GetEpisodeByURL(url)
+	ordered, _ := episodeStructure.OrderFormatsByEpisodeNumber()
+	formats := ordered[episode.EpisodeNumber]
 	out.Debugf("Found %d formats\n", len(formats))
 	if format := findFormat(formats); format != nil {
-		episode, _ := episodeStructure.GetEpisodeByFormat(format)
-		return format, episode.Title
+		episode, _ = episodeStructure.GetEpisodeByFormat(format)
+		out.Debugf("Found matching episode %s\n", episode.Title)
+		return episodeInformation{
+			Format:      format,
+			Title:       episode.Title,
+			URL:         url,
+			SeriesTitle: episode.SeriesTitle,
+			SeasonNum:   episode.SeasonNumber,
+			EpisodeNum:  episode.EpisodeNumber,
+		}
 	}
-	return nil, ""
+	return episodeInformation{}
 }
 
 func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
@@ -303,91 +338,43 @@ func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
 	if audioFlag != "" {
 		audioLocale = localeToLOCALE(audioFlag)
 	} else {
-		audioLocale = localeToLOCALE(systemLocale())
+		audioLocale = systemLocale()
 	}
 	if subtitleFlag != "" {
 		subtitleLocale = localeToLOCALE(subtitleFlag)
 	}
 
-	if audioFlag == "" {
-		var dubOk bool
-		availableDub, _, _, _ := formatStructure.AvailableLocales(true)
-		for _, dub := range availableDub {
-			if dub == audioLocale {
-				dubOk = true
-				break
-			}
-		}
-		if !dubOk {
-			if audioFlag != systemLocale() {
-				out.EndProgressf(false, "No stream with audio locale `%s` is available, skipping\n", audioLocale)
-				return nil
-			}
-			out.Errf("No stream with default audio locale `%s` is available, using hardsubbed %s with subtitle locale %s\n", audioLocale, crunchyroll.JP, systemLocale())
-			audioLocale = crunchyroll.JP
-			if subtitleFlag == "" {
-				subtitleLocale = localeToLOCALE(systemLocale())
-			}
-		}
-	}
-
-	var dubOk, subOk bool
-	availableDub, availableSub, _, _ := formatStructure.AvailableLocales(true)
-	for _, dub := range availableDub {
-		if dub == audioLocale {
-			dubOk = true
-			break
-		}
-	}
-	if !dubOk {
+	formats, _ = formatStructure.FilterFormatsByLocales(audioLocale, subtitleLocale, !noHardsubFlag)
+	if formats == nil {
 		if audioFlag == "" {
+			out.Errf("Failed to find episode with '%s' audio and '%s' subtitles, tying with %s audio\n", audioLocale, subtitleLocale, strings.ToLower(utils.LocaleLanguage(crunchyroll.JP)))
 			audioLocale = crunchyroll.JP
-			if subtitleFlag == "" {
-				subtitleLocale = localeToLOCALE(systemLocale())
-				out.Errf("No stream with default audio locale `%s` is available, using hardsubbed %s with subtitle locale %s\n", audioLocale, crunchyroll.JP, subtitleLocale)
-			}
+			formats, _ = formatStructure.FilterFormatsByLocales(audioLocale, subtitleLocale, !noHardsubFlag)
 		}
-		for _, dub := range availableDub {
-			if dub == audioLocale {
-				dubOk = true
-				break
-			}
+		if formats == nil && subtitleFlag == "" {
+			out.Errf("Failed to find episode with '%s' audio and '%s' subtitles, tying with %s subtitle\n", audioLocale, subtitleLocale, strings.ToLower(utils.LocaleLanguage(systemLocale())))
+			subtitleLocale = systemLocale()
+			formats, _ = formatStructure.FilterFormatsByLocales(audioLocale, subtitleLocale, !noHardsubFlag)
+		}
+		if formats == nil {
+			out.Errf("Could not find matching video with '%s' audio and '%s' subtitles. Try to change the '--audio' and / or '--subtitle' flag\n", audioLocale, subtitleLocale)
+			return nil
 		}
 	}
-	if subtitleLocale != "" {
-		for _, sub := range availableSub {
-			if sub == subtitleLocale {
-				subOk = true
-				break
-			}
-		}
-	} else {
-		subOk = true
-	}
-
-	if !dubOk {
-		out.Errf("Could not find any video with `%s` audio locale\n", audioLocale)
-	}
-	if !subOk {
-		out.Errf("Could not find any video with `%s` subtitle locale\n", subtitleLocale)
-	}
-	if !dubOk || !subOk {
-		return nil
-	}
-
-	formats, err := formatStructure.FilterFormatsByLocales(audioLocale, subtitleLocale, !noHardsubFlag)
-	if err != nil {
-		out.Errln("Failed to get matching format. Try to change the `--audio` or `--subtitle` flag")
-		return
-	}
-
 	if resolutionFlag == "best" || resolutionFlag == "" {
 		sort.Sort(sort.Reverse(utils.FormatsByResolution(formats)))
 		format = formats[0]
 	} else if resolutionFlag == "worst" {
 		sort.Sort(utils.FormatsByResolution(formats))
 		format = formats[0]
-	} else {
+	} else if strings.HasSuffix(resolutionFlag, "p") {
+		for _, f := range formats {
+			if strings.Split(f.Video.Resolution, "x")[1] == strings.TrimSuffix(resolutionFlag, "p") {
+				format = f
+				break
+			}
+		}
+	} else if strings.Contains(resolutionFlag, "x") {
 		for _, f := range formats {
 			if f.Video.Resolution == resolutionFlag {
 				format = f
@@ -395,21 +382,26 @@ func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
 			}
 		}
 	}
+	if format == nil {
+		out.Errf("Failed to get video with resolution '%s'\n", resolutionFlag)
+	}
+
 	subtitleFlag = string(subtitleLocale)
 	return
 }
 
-func downloadFormat(format *crunchyroll.Format, dir, fname string, info information) bool {
-	filename := freeFileName(filepath.Join(dir, fname))
-	ext := path.Ext(filename)
-	out.Debugf("Download filename: %s\n", filename)
-	if filename != filepath.Join(dir, fname) {
-		out.Errf("The file %s already exist, renaming the download file to %s\n", filepath.Join(dir, fname), filename)
+func downloadFormat(format *crunchyroll.Format, outFile string, info information) bool {
+	oldOutFile := outFile
+	outFile, changed := freeFileName(outFile)
+	ext := path.Ext(outFile)
+	out.Debugf("Download filename: %s\n", outFile)
+	if changed {
+		out.Errf("The file %s already exist, renaming the download file to %s\n", oldOutFile, outFile)
 	}
 	if ext != ".ts" {
 		if !hasFFmpeg() {
 			out.Fatalf("The file ending for the output file (%s) is not `.ts`. "+
-				"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", filename)
+				"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", outFile)
 		}
 		out.Debugf("File will be converted via ffmpeg")
 	}
@@ -420,11 +412,11 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 			out.Errf("Failed to get %s subtitles\n", info.Subtitle)
 			return false
 		}
-		subtitleFilename = freeFileName(filepath.Join(dir, fmt.Sprintf("%s.%s", strings.TrimRight(path.Base(filename), ext), subtitle.Format)))
-		out.Debugf("Subtitles will be saved as `%s`\n", subtitleFilename)
+		subtitleFilename, _ = freeFileName(fmt.Sprintf("%s.%s", strings.TrimSuffix(outFile, ext), subtitle.Format))
+		out.Debugf("Subtitles will be saved as '%s'\n", subtitleFilename)
 	}
 
-	out.Infof("Downloading `%s` (%s) as `%s`\n", info.Title, info.OriginalURL, filename)
+	out.Infof("Downloading '%s' (%s) as '%s'\n", info.Title, info.OriginalURL, outFile)
 	out.Infof("Audio: %s\n", info.Audio)
 	out.Infof("Subtitle: %s\n", info.Subtitle)
 	out.Infof("Hardsub: %v\n", format.Hardsub != "")
@@ -433,49 +425,22 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 
 	var err error
 	if ext == ".ts" {
-		file, err := os.Create(filename)
+		file, err := os.Create(outFile)
 		defer file.Close()
 		if err != nil {
-			out.Errf("Could not create file `%s` to download episode `%s` (%s): %s, skipping\n", filename, info.Title, info.OriginalURL, err)
+			out.Errf("Could not create file '%s' to download episode '%s' (%s): %s, skipping\n", outFile, info.Title, info.OriginalURL, err)
 			return false
 		}
-		cleanup[0] = filename
-
-		// removes all files in case of an unexpected exit
-		sigs := make(chan os.Signal)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, sigusr1)
-		go func() {
-			sig := <-sigs
-			os.RemoveAll(cleanup[1])
-			switch sig {
-			case os.Interrupt, syscall.SIGTERM:
-				os.Remove(cleanup[0])
-				os.Exit(1)
-			}
-		}()
 
 		err = format.Download(file, downloadProgress)
 		// newline to avoid weird output
 		fmt.Println()
-
-		// make the goroutine stop
-		sigs <- sigusr1
 	} else {
 		tempDir, err := os.MkdirTemp("", "crunchy_")
 		if err != nil {
 			out.Errln("Failed to create temp download dir. Skipping")
 			return false
 		}
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, sigusr1)
-		go func() {
-			sig := <-sigs
-			os.RemoveAll(tempDir)
-			switch sig {
-			case os.Interrupt, syscall.SIGTERM:
-				os.Exit(1)
-			}
-		}()
 
 		var segmentCount int
 		err = format.DownloadSegments(tempDir, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
@@ -497,18 +462,19 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 			"-safe", "0",
 			"-i", f.Name(),
 			"-c", "copy",
-			filename)
+			outFile)
 		err = cmd.Run()
-
-		sigs <- sigusr1
 	}
+	os.RemoveAll(cleanupPath)
+	cleanupPath = ""
+
 	if err != nil {
 		out.Errln("Failed to download video, skipping")
 	} else {
 		if info.Subtitle == "" {
-			out.Infof("Downloaded `%s` as `%s` with %s audio locale\n", info.Title, filename, strings.ToLower(utils.LocaleLanguage(info.Audio)))
+			out.Infof("Downloaded '%s' as '%s' with %s audio locale\n", info.Title, outFile, strings.ToLower(utils.LocaleLanguage(info.Audio)))
 		} else {
-			out.Infof("Downloaded `%s` as `%s` with %s audio locale and %s subtitle locale\n", info.Title, filename, strings.ToLower(utils.LocaleLanguage(info.Audio)), strings.ToLower(utils.LocaleLanguage(info.Subtitle)))
+			out.Infof("Downloaded '%s' as '%s' with %s audio locale and %s subtitle locale\n", info.Title, outFile, strings.ToLower(utils.LocaleLanguage(info.Audio)), strings.ToLower(utils.LocaleLanguage(info.Subtitle)))
 			if subtitleFilename != "" {
 				file, err := os.Create(subtitleFilename)
 				if err != nil {
@@ -524,7 +490,7 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 						out.Errf("Failed to download subtitles: %s\n", err)
 						return false
 					}
-					out.Infof("Downloaded `%s` subtitles to `%s`\n", info.Subtitle, subtitleFilename)
+					out.Infof("Downloaded '%s' subtitles to '%s'\n", info.Subtitle, subtitleFilename)
 				}
 			}
 		}
@@ -534,8 +500,8 @@ func downloadFormat(format *crunchyroll.Format, dir, fname string, info informat
 }
 
 func downloadProgress(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
-	if cleanup[1] == "" && file != nil {
-		cleanup[1] = path.Dir(file.Name())
+	if cleanupPath == "" {
+		cleanupPath = path.Dir(file.Name())
 	}
 
 	if !quietFlag {
@@ -559,16 +525,4 @@ func downloadProgress(segment *m3u8.MediaSegment, current, total int, file *os.F
 		}
 	}
 	return nil
-}
-
-func freeFileName(filename string) string {
-	ext := path.Ext(filename)
-	base := strings.TrimRight(filename, ext)
-	for j := 0; ; j++ {
-		if _, stat := os.Stat(filename); stat != nil && !os.IsExist(stat) {
-			break
-		}
-		filename = fmt.Sprintf("%s (%d)%s", base, j, ext)
-	}
-	return filename
 }

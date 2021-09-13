@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -210,18 +211,18 @@ func (lw *loggerWriter) Write(p []byte) (n int, err error) {
 
 // systemLocale receives the system locale
 // https://stackoverflow.com/questions/51829386/golang-get-system-language/51831590#51831590
-func systemLocale() string {
+func systemLocale() crunchyroll.LOCALE {
 	if runtime.GOOS != "windows" {
 		if lang, ok := os.LookupEnv("LANG"); ok {
-			return strings.ReplaceAll(strings.Split(lang, ".")[0], "_", "-")
+			return localeToLOCALE(strings.ReplaceAll(strings.Split(lang, ".")[0], "_", "-"))
 		}
 	} else {
 		cmd := exec.Command("powershell", "Get-Culture | select -exp Name")
 		if output, err := cmd.Output(); err != nil {
-			return strings.Trim(string(output), "\r\n")
+			return localeToLOCALE(strings.Trim(string(output), "\r\n"))
 		}
 	}
-	return "en-US"
+	return localeToLOCALE("en-US")
 }
 
 func localeToLOCALE(locale string) crunchyroll.LOCALE {
@@ -258,6 +259,19 @@ func createOrDefaultClient(proxy string) (*http.Client, error) {
 		}
 		return client, nil
 	}
+}
+
+func freeFileName(filename string) (string, bool) {
+	ext := path.Ext(filename)
+	base := strings.TrimRight(filename, ext)
+	j := 0
+	for ; ; j++ {
+		if _, stat := os.Stat(filename); stat != nil && !os.IsExist(stat) {
+			break
+		}
+		filename = fmt.Sprintf("%s (%d)%s", base, j, ext)
+	}
+	return filename, j != 0
 }
 
 func loadSessionID() (string, error) {

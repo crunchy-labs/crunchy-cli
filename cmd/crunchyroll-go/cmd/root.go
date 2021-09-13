@@ -18,7 +18,6 @@ var (
 	quietFlag   bool
 	verboseFlag bool
 	proxyFlag   string
-	localeFlag  string
 	colorFlag   bool
 )
 
@@ -34,8 +33,6 @@ var rootCmd = &cobra.Command{
 
 		out.DebugLog.Printf("Executing `%s` command with %d arg(s)\n", cmd.Name(), len(args))
 
-		locale = localeToLOCALE(localeFlag)
-
 		client, err = createOrDefaultClient(proxyFlag)
 		return
 	},
@@ -45,7 +42,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Disable all output")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Adds debug messages to the normal output")
 	rootCmd.PersistentFlags().StringVarP(&proxyFlag, "proxy", "p", "", "Proxy to use")
-	rootCmd.PersistentFlags().StringVarP(&localeFlag, "locale", "l", systemLocale(), "The locale to use")
 	rootCmd.PersistentFlags().BoolVar(&colorFlag, "color", false, "Colored output. Only available on not windows systems")
 }
 

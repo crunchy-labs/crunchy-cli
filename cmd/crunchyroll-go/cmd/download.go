@@ -117,8 +117,8 @@ func download(urls []string) {
 		out.Fatalf("The file ending for the output file (%s) is not `.ts`. "+
 			"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", outputFlag)
 	}
-	allEpisodes := parseURLs(urls)
-	out.Debugf("%d of %d urls could be parsed\n", len(allEpisodes), len(urls))
+	allEpisodes, total, successes := parseURLs(urls)
+	out.Infof("%d of %d episodes could be parsed\n", successes, total)
 
 	out.Empty()
 	if len(allEpisodes) == 0 {
@@ -204,11 +204,13 @@ func download(urls []string) {
 	out.Infof("Downloaded %d out of %d videos\n", success, len(allEpisodes))
 }
 
-func parseURLs(urls []string) (allEpisodes []episodeInformation) {
+func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successes int) {
 	videoDupes := map[string]utils.VideoStructure{}
 
 	for i, url := range urls {
 		out.StartProgressf("Parsing url %d", i+1)
+
+		var localTotal, localSuccesses int
 
 		var seriesName string
 		var ok bool
@@ -252,28 +254,33 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation) {
 
 			if _, ok := crunchyroll.MatchVideo(url); ok {
 				out.Debugf("Parsed url %d as video\n", i+1)
-				allEpisodes = append(allEpisodes, parseVideo(dupe, url)...)
+				var parsed []episodeInformation
+				parsed, localTotal, localSuccesses = parseVideo(dupe, url)
+				allEpisodes = append(allEpisodes, parsed...)
 			} else if _, _, ok = crunchyroll.MatchEpisode(url); ok {
 				out.Debugf("Parsed url %d as episode\n", i+1)
 				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); (episodeInformation{}) != episode {
 					allEpisodes = append(allEpisodes, episode)
+					localSuccesses++
 				} else {
 					out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
 				}
+				localTotal++
 			} else {
 				out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
 				continue
 			}
-			out.EndProgressf(true, "Parsed url %d successful\n", i+1)
+			out.EndProgressf(true, "Parsed url %d with %d successes and %d fails\n", i+1, localSuccesses, localTotal-localSuccesses)
 		} else {
 			out.EndProgressf(false, "URL %d seems to be invalid\n", i+1)
 		}
+		total += localTotal
+		successes += localSuccesses
 	}
 	return
 }
 
-func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInformations []episodeInformation) {
-	var rootTitle string
+func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInformations []episodeInformation, total, successes int) {
 	var orderedFormats [][]*crunchyroll.Format
 
 	switch videoStructure.(type) {
@@ -286,8 +293,23 @@ func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInforma
 
 	out.Debugf("Found %d different episodes\n", len(orderedFormats))
 
-	for j, formats := range orderedFormats {
-		if format := findFormat(formats); format != nil {
+	for _, formats := range orderedFormats {
+		if formats == nil {
+			continue
+		}
+		total++
+
+		var title string
+		switch videoStructure.(type) {
+		case *utils.EpisodeStructure:
+			episode, _ := videoStructure.(*utils.EpisodeStructure).GetEpisodeByFormat(formats[0])
+			title = episode.Title
+		case *utils.MovieListingStructure:
+			movieListing, _ := videoStructure.(*utils.MovieListingStructure).GetMovieListingByFormat(formats[0])
+			title = movieListing.Title
+		}
+
+		if format := findFormat(formats, title); format != nil {
 			info := episodeInformation{Format: format, URL: url}
 			switch videoStructure.(type) {
 			case *utils.EpisodeStructure:
@@ -304,8 +326,9 @@ func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInforma
 			}
 
 			episodeInformations = append(episodeInformations, info)
-			out.Debugf("Successful parsed format %d for %s\n", j+1, rootTitle)
+			out.Debugf("Successful parsed %s\n", title)
 		}
+		successes++
 	}
 
 	return
@@ -314,9 +337,10 @@ func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInforma
 func parseEpisodes(episodeStructure *utils.EpisodeStructure, url string) episodeInformation {
 	episode, _ := episodeStructure.GetEpisodeByURL(url)
 	ordered, _ := episodeStructure.OrderFormatsByEpisodeNumber()
+
 	formats := ordered[episode.EpisodeNumber]
 	out.Debugf("Found %d formats\n", len(formats))
-	if format := findFormat(formats); format != nil {
+	if format := findFormat(formats, episode.Title); format != nil {
 		episode, _ = episodeStructure.GetEpisodeByFormat(format)
 		out.Debugf("Found matching episode %s\n", episode.Title)
 		return episodeInformation{
@@ -331,7 +355,7 @@ func parseEpisodes(episodeStructure *utils.EpisodeStructure, url string) episode
 	return episodeInformation{}
 }
 
-func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
+func findFormat(formats []*crunchyroll.Format, name string) (format *crunchyroll.Format) {
 	formatStructure := utils.NewFormatStructure(formats)
 	var audioLocale, subtitleLocale crunchyroll.LOCALE
 
@@ -357,7 +381,7 @@ func findFormat(formats []*crunchyroll.Format) (format *crunchyroll.Format) {
 			formats, _ = formatStructure.FilterFormatsByLocales(audioLocale, subtitleLocale, !noHardsubFlag)
 		}
 		if formats == nil {
-			out.Errf("Could not find matching video with '%s' audio and '%s' subtitles. Try to change the '--audio' and / or '--subtitle' flag\n", audioLocale, subtitleLocale)
+			out.Errf("Could not find matching video with '%s' audio and '%s' subtitles for %s. Try to change the '--audio' and / or '--subtitle' flag\n", audioLocale, subtitleLocale, name)
 			return nil
 		}
 	}

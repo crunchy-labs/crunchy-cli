@@ -2,20 +2,23 @@ VERSION=1.1.0
 BINARY_NAME=crunchy
 VERSION_BINARY_NAME=$(BINARY_NAME)-v$(VERSION)
 
+DESTDIR=
+PREFIX=/usr
+
 build:
 		cd cmd/crunchyroll-go && go build -o $(BINARY_NAME)
 		mv cmd/crunchyroll-go/$(BINARY_NAME) .
 
 install:
 		cd cmd/crunchyroll-go && go build -o crunchyroll-go
-		mv cmd/crunchyroll-go/crunchyroll-go /usr/bin
-		ln -sf /usr/bin/crunchyroll-go /usr/bin/crunchy
-		cp crunchyroll-go.1 /usr/share/man/man1
+		install -Dm755 cmd/crunchyroll-go/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchyroll-go
+		install -Dm755 cmd/crunchyroll-go/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
+		install -Dm644 crunchyroll-go.1 $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 
 uninstall:
-		unlink /usr/bin/crunchy
-		rm /usr/bin/crunchyroll-go
-		rm /usr/share/man/man1/crunchyroll-go.1
+		rm -f $(DESTDIR)$(PREFIX)/bin/crunchyroll-go
+		rm -f $(DESTDIR)$(PREFIX)/bin/crunchy
+		rm -f $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 
 test:
 		go test -v .

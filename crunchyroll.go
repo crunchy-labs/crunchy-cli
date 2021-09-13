@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/utils"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -283,7 +283,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 // FindVideo fins a Video (Season or Movie) by a crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx
 func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
-	if series, ok := utils.MatchVideo(seriesUrl); ok {
+	if series, ok := MatchVideo(seriesUrl); ok {
 		if !ok {
 			return nil, errors.New("series could not be found")
 		}
@@ -307,7 +307,7 @@ func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
 // FindEpisode finds an episode by its crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
-	if series, title, ok := utils.MatchEpisode(url); ok {
+	if series, title, ok := MatchEpisode(url); ok {
 		title = strings.TrimSuffix(title, "-")
 		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", series))
 		if err != nil {
@@ -334,4 +334,33 @@ func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
 	}
 
 	return nil, errors.New("invalid url")
+}
+
+// MatchVideo tries to extract the crunchyroll series / movie name out of the given url
+func MatchVideo(url string) (seriesName string, ok bool) {
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
+	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
+		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
+		seriesName = groups["series"]
+
+		if seriesName != "" {
+			ok = true
+		}
+	}
+	return
+}
+
+// MatchEpisode tries to extract the crunchyroll series name and title out of the given url
+func MatchEpisode(url string) (seriesName, title string, ok bool) {
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/episode-\d+-(?P<title>\D+).*`)
+	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
+		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
+		seriesName = groups["series"]
+		title = strings.TrimSuffix(groups["title"], "-")
+
+		if seriesName != "" && title != "" {
+			ok = true
+		}
+	}
+	return
 }

@@ -130,11 +130,11 @@ func (l *logger) EndProgress(successful bool, message string) {
 			l.ErrLog.Print(message)
 		}
 		return
-	}
-
-	l.progress <- progress{
-		status:  successful,
-		message: message,
+	} else if l.progress != nil {
+		l.progress <- progress{
+			status:  successful,
+			message: message,
+		}
 	}
 }
 

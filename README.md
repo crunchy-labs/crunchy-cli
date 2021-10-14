@@ -261,7 +261,7 @@ func main() {
     }
 
     // download the format to the file
-    if err := format.Download(file, nil); err != nil {
+    if err := format.DownloadGoroutines(file, 4, nil); err != nil {
         panic(err)
     }
     fmt.Printf("Downloaded %s with %s resolution and %.2f fps as %s\n", episode.Title, format.Video.Resolution, format.Video.FPS, file.Name())

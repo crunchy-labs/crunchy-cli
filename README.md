@@ -26,7 +26,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   •
   <a href="#-credits">Credits 🙏</a>
   •
-  <a href="##️-notice">Notice 🗒️</a>
+  <a href="#️-notice">Notice 🗒️</a>
   •
   <a href="#-license">License ⚖</a>
 </p>

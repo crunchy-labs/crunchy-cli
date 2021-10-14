@@ -296,7 +296,7 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successe
 
 		var seriesName string
 		var ok bool
-		if seriesName, _, ok = crunchyroll.MatchEpisode(url); !ok {
+		if seriesName, _, _, _, ok = crunchyroll.ParseEpisodeURL(url); !ok {
 			seriesName, _ = crunchyroll.MatchVideo(url)
 		}
 
@@ -339,7 +339,7 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successe
 				var parsed []episodeInformation
 				parsed, localTotal, localSuccesses = parseVideo(dupe, url)
 				allEpisodes = append(allEpisodes, parsed...)
-			} else if _, _, ok = crunchyroll.MatchEpisode(url); ok {
+			} else if _, _, _, _, ok = crunchyroll.ParseEpisodeURL(url); ok {
 				out.Debugf("Parsed url %d as episode\n", i+1)
 				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); episode.Format != nil {
 					allEpisodes = append(allEpisodes, episode)

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
+	"strconv"
 )
 
 // LOCALE represents a locale / language
@@ -307,8 +307,7 @@ func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
 // FindEpisode finds an episode by its crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
-	if series, title, ok := MatchEpisode(url); ok {
-		title = strings.TrimSuffix(title, "-")
+	if series, title, _, _, ok := ParseEpisodeURL(url); ok {
 		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", series))
 		if err != nil {
 			return nil, err
@@ -351,14 +350,26 @@ func MatchVideo(url string) (seriesName string, ok bool) {
 }
 
 // MatchEpisode tries to extract the crunchyroll series name and title out of the given url
+//
+// Deprecated: Use ParseEpisodeURL instead
 func MatchEpisode(url string) (seriesName, title string, ok bool) {
-	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/episode-\d+-(?P<title>\D+).*`)
+	seriesName, title, _, _, ok = ParseEpisodeURL(url)
+	return
+}
+
+// ParseEpisodeURL tries to extract the crunchyroll series name, title, episode number and web id out of the given url
+// Note that the episode number can be misleading. For example if an episode has the episode number 23.5 (slime isekai)
+// the episode number will be 235
+func ParseEpisodeURL(url string) (seriesName, title string, episodeNumber int, webId int, ok bool) {
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/episode-(?P<number>\d+)-(?P<title>\w+)-(?P<webId>\d+).*`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
 		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
 		seriesName = groups["series"]
-		title = strings.TrimSuffix(groups["title"], "-")
+		episodeNumber, _ = strconv.Atoi(groups["number"])
+		title = groups["title"]
+		webId, _ = strconv.Atoi(groups["webId"])
 
-		if seriesName != "" && title != "" {
+		if seriesName != "" && title != "" && webId != 0 {
 			ok = true
 		}
 	}

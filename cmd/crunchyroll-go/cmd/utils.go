@@ -263,7 +263,7 @@ func createOrDefaultClient(proxy string) (*http.Client, error) {
 
 func freeFileName(filename string) (string, bool) {
 	ext := path.Ext(filename)
-	base := strings.TrimRight(filename, ext)
+	base := strings.TrimSuffix(filename, ext)
 	j := 0
 	for ; ; j++ {
 		if _, stat := os.Stat(filename); stat != nil && !os.IsExist(stat) {

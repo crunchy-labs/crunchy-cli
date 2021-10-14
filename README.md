@@ -26,6 +26,8 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   •
   <a href="#-credits">Credits 🙏</a>
   •
+  <a href="#-notice">Notice 🗒️</a>
+  •
   <a href="#-license">License ⚖</a>
 </p>
 
@@ -36,9 +38,9 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 
 #### Get the executable
 - 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below
-    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_linux)
-    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_windows.exe)
-    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.1.0/crunchy-v1.1.0_darwin)
+    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_linux)
+    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_windows.exe)
+    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/)
   ```
   $ yay -S crunchyroll-go
@@ -111,6 +113,7 @@ $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/da
 - `--audio` » forces audio of the video(s)
 - `--subtitle` » forces subtitle of the video(s)
 - `--no-hardsub` » forces that the subtitles are stored as a separate file and are not directly embedded into the video
+- `--only-sub` » downloads only the subtitles without the corresponding video
 
 - `-d`, `--directory` » directory to download the video(s) to
 - `-o`, `--output` » name of the output file
@@ -118,6 +121,8 @@ $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/da
 - `-r`, `--resolution` » the resolution of the video(s). `best` for best resolution, `worst` for worst
 
 - `--alternative-progress` » shows an alternative, not so user-friendly progress instead of the progress bar
+
+- `-g`, `--goroutines` » sets how many parallel segment downloads should be used
 
 #### Help
 - General help
@@ -328,6 +333,10 @@ $ go test .
 ### All libraries
 - [m3u8](https://github.com/grafov/m3u8) (not the m3u8 library from above) » mpeg stream info library
 - [cobra](https://github.com/spf13/cobra) » cli library
+
+# 🗒️ Notice
+
+I would really appreciate if someone rewrites the complete cli. I'm not satisfied with it's current structure but at the moment I have no time and no desire to do it myself.
 
 # ⚖ License
 

@@ -70,6 +70,10 @@ The directory to download all files to.
 Same as '-s', but the subtitles are not stored in the video itself, but in a separate file.
 .TP
 
+\fB--only-sub\fR
+Downloads only the subtitles without the corresponding video.
+.TP
+
 \fB-o, --output OUTPUT\fR
 Name of the output file. Formatting is also supported, so if the name contains one or more of the following things, they will get replaced.
     {title} » Title of the video.
@@ -91,6 +95,10 @@ The video resolution. Can either be specified via the pixels (e.g. 1920x1080), t
 
 \fB-s, --subtitle LOCALE\fR
 Forces to download the videos with subtitles in the given locale / language. If no video with this subtitle locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-LA, es-ES, fr-FR, pt-BR, it-IT, de-DE, ru-RU, ar-ME.
+.TP
+
+\fB-g, --goroutines GOROUTINES\fR
+Sets the number of parallel downloads for the segments the final video is made of.
 
 .SH EXAMPLES
 Login via crunchyroll account email and password.

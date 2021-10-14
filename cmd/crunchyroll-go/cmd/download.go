@@ -24,6 +24,7 @@ var (
 	audioFlag     string
 	subtitleFlag  string
 	noHardsubFlag bool
+	onlySubFlag   bool
 
 	directoryFlag string
 	outputFlag    string
@@ -31,6 +32,8 @@ var (
 	resolutionFlag string
 
 	alternativeProgressFlag bool
+
+	goroutinesFlag int
 )
 
 var getCmd = &cobra.Command{
@@ -67,6 +70,7 @@ func init() {
 	getCmd.Flags().StringVarP(&audioFlag, "audio", "a", "", "The locale of the audio. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
 	getCmd.Flags().StringVarP(&subtitleFlag, "subtitle", "s", "", "The locale of the subtitle. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
 	getCmd.Flags().BoolVar(&noHardsubFlag, "no-hardsub", false, "Same as '-s', but the subtitles are not stored in the video itself, but in a separate file")
+	getCmd.Flags().BoolVar(&onlySubFlag, "only-sub", false, "Downloads only the subtitles without the corresponding video")
 
 	cwd, _ := os.Getwd()
 	getCmd.Flags().StringVarP(&directoryFlag, "directory", "d", cwd, "The directory to download the file to")
@@ -87,15 +91,19 @@ func init() {
 		"\tAvailable common-use words: best (best available resolution), worst (worst available resolution)\n")
 
 	getCmd.Flags().BoolVar(&alternativeProgressFlag, "alternative-progress", false, "Shows an alternative, not so user-friendly progress instead of the progress bar")
+
+	// TODO: Rename this to something understandable (for "normal" users)
+	getCmd.Flags().IntVarP(&goroutinesFlag, "goroutines", "g", 4, "Sets how many parallel segment downloads should be used")
 }
 
 type episodeInformation struct {
-	Format      *crunchyroll.Format
-	Title       string
-	URL         string
-	SeriesTitle string
-	SeasonNum   int
-	EpisodeNum  int
+	Format       *crunchyroll.Format
+	Title        string
+	URL          string
+	SeriesTitle  string
+	SeasonNum    int
+	EpisodeNum   int
+	AllSubtitles []*crunchyroll.Subtitle
 }
 
 type information struct {
@@ -113,9 +121,23 @@ type information struct {
 }
 
 func download(urls []string) {
-	if path.Ext(outputFlag) != ".ts" && !hasFFmpeg() {
-		out.Fatalf("The file ending for the output file (%s) is not `.ts`. "+
-			"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", outputFlag)
+	switch path.Ext(outputFlag) {
+	case ".ts":
+		// checks if only subtitles should be downloaded and if so, if the output flag has the default value
+		if onlySubFlag && outputFlag == "{title}.ts" {
+			outputFlag = "{title}.ass"
+		}
+		break
+	case ".ass":
+		if !onlySubFlag {
+			break
+		}
+		fallthrough
+	default:
+		if !hasFFmpeg() {
+			out.Fatalf("The file ending for the output file (%s) is not `.ts`. "+
+				"Install ffmpeg (https://ffmpeg.org/download.html) use other media file endings (e.g. `.mp4`)\n", outputFlag)
+		}
 	}
 	allEpisodes, total, successes := parseURLs(urls)
 	out.Infof("%d of %d episodes could be parsed\n", successes, total)
@@ -124,12 +146,22 @@ func download(urls []string) {
 	if len(allEpisodes) == 0 {
 		out.Fatalf("Nothing to download, aborting\n")
 	}
-	out.Infof("Downloads:")
+	if onlySubFlag {
+		out.Infof("Downloads (only subtitles):")
+	} else {
+		out.Infof("Downloads:")
+	}
 	for i, episode := range allEpisodes {
 		video := episode.Format.Video
-		out.Infof("\t%d. %s » %spx, %.2f FPS, %s audio (%s S%02dE%02d)\n",
-			i+1, episode.Title, video.Resolution, video.FrameRate, utils.LocaleLanguage(episode.Format.AudioLocale), episode.SeriesTitle, episode.SeasonNum, episode.EpisodeNum)
+		if onlySubFlag && subtitleFlag == "" {
+			out.Infof("\t%d. %s » %spx, %.2f FPS (%s S%02dE%02d)\n",
+				i+1, episode.Title, video.Resolution, video.FrameRate, episode.SeriesTitle, episode.SeasonNum, episode.EpisodeNum)
+		} else {
+			out.Infof("\t%d. %s » %spx, %.2f FPS, %s audio (%s S%02dE%02d)\n",
+				i+1, episode.Title, video.Resolution, video.FrameRate, utils.LocaleLanguage(episode.Format.AudioLocale), episode.SeriesTitle, episode.SeasonNum, episode.EpisodeNum)
+		}
 	}
+	out.Empty()
 
 	if fileInfo, stat := os.Stat(directoryFlag); os.IsNotExist(stat) {
 		if err := os.MkdirAll(directoryFlag, 0777); err != nil {
@@ -195,13 +227,63 @@ func download(urls []string) {
 			filename = strings.ReplaceAll(filename, char, "")
 		}
 
-		out.Empty()
-		if downloadFormat(episode.Format, filename, info) {
-			success++
+		if onlySubFlag {
+			var found bool
+			if subtitleFlag == "" {
+				for _, formatSubtitle := range episode.AllSubtitles {
+					ext := path.Ext(filename)
+					base := strings.TrimSuffix(filename, ext)
+
+					originalSubtitleFilename := fmt.Sprintf("%s_%s%s", base, formatSubtitle.Locale, ext)
+					subtitleFilename, changed := freeFileName(originalSubtitleFilename)
+					if changed {
+						out.Infof("The file %s already exist, renaming the download file to %s", originalSubtitleFilename, subtitleFilename)
+					}
+					file, err := os.Create(subtitleFilename)
+					if err != nil {
+						out.Errf("Failed to open subtitle file for locale %s: %v", formatSubtitle.Locale, err)
+						continue
+					}
+					if err = formatSubtitle.Download(file); err != nil {
+						out.Errf("Error while downloading %s subtitles: %s", formatSubtitle.Locale, err)
+						continue
+					}
+					found = true
+				}
+			} else {
+				for _, formatSubtitle := range episode.Format.Subtitles {
+					if formatSubtitle.Locale == subtitle {
+						file, err := os.Create(filename)
+						if err != nil {
+							out.Errf("Failed to open file %s: %v", filename, err)
+							break
+						}
+						if err = formatSubtitle.Download(file); err != nil {
+							out.Errf("Error while downloading subtitles: %v", err)
+							break
+						}
+						found = true
+						break
+					}
+				}
+			}
+			if found {
+				out.Infof("Downloaded subtitles for %s", episode.Title)
+				success++
+			}
+		} else {
+			if downloadFormat(episode.Format, episode.AllSubtitles, filename, info) {
+				success++
+			}
+			out.Empty()
 		}
 	}
 
-	out.Infof("Downloaded %d out of %d videos\n", success, len(allEpisodes))
+	if onlySubFlag {
+		out.Infof("Downloaded all %d out of %d video subtitles\n", success, len(allEpisodes))
+	} else {
+		out.Infof("Downloaded %d out of %d videos\n", success, len(allEpisodes))
+	}
 }
 
 func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successes int) {
@@ -259,7 +341,7 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successe
 				allEpisodes = append(allEpisodes, parsed...)
 			} else if _, _, ok = crunchyroll.MatchEpisode(url); ok {
 				out.Debugf("Parsed url %d as episode\n", i+1)
-				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); (episodeInformation{}) != episode {
+				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); episode.Format != nil {
 					allEpisodes = append(allEpisodes, episode)
 					localSuccesses++
 				} else {
@@ -325,6 +407,13 @@ func parseVideo(videoStructure utils.VideoStructure, url string) (episodeInforma
 				info.SeasonNum, info.EpisodeNum = 1, 1
 			}
 
+			for _, audioFormat := range formats {
+				if audioFormat.AudioLocale == crunchyroll.JP {
+					info.AllSubtitles = audioFormat.Subtitles
+					break
+				}
+			}
+
 			episodeInformations = append(episodeInformations, info)
 			out.Debugf("Successful parsed %s\n", title)
 		}
@@ -338,18 +427,27 @@ func parseEpisodes(episodeStructure *utils.EpisodeStructure, url string) episode
 	episode, _ := episodeStructure.GetEpisodeByURL(url)
 	ordered, _ := episodeStructure.OrderFormatsByEpisodeNumber()
 
+	var subtitles []*crunchyroll.Subtitle
 	formats := ordered[episode.EpisodeNumber]
+	for _, format := range formats {
+		if format.AudioLocale == crunchyroll.JP {
+			subtitles = format.Subtitles
+			break
+		}
+	}
+
 	out.Debugf("Found %d formats\n", len(formats))
 	if format := findFormat(formats, episode.Title); format != nil {
 		episode, _ = episodeStructure.GetEpisodeByFormat(format)
 		out.Debugf("Found matching episode %s\n", episode.Title)
 		return episodeInformation{
-			Format:      format,
-			Title:       episode.Title,
-			URL:         url,
-			SeriesTitle: episode.SeriesTitle,
-			SeasonNum:   episode.SeasonNumber,
-			EpisodeNum:  episode.EpisodeNumber,
+			Format:       format,
+			AllSubtitles: subtitles,
+			Title:        episode.Title,
+			URL:          url,
+			SeriesTitle:  episode.SeriesTitle,
+			SeasonNum:    episode.SeasonNumber,
+			EpisodeNum:   episode.EpisodeNumber,
 		}
 	}
 	return episodeInformation{}
@@ -357,6 +455,13 @@ func parseEpisodes(episodeStructure *utils.EpisodeStructure, url string) episode
 
 func findFormat(formats []*crunchyroll.Format, name string) (format *crunchyroll.Format) {
 	formatStructure := utils.NewFormatStructure(formats)
+
+	// if the only sub flag is given the japanese format gets returned because it has all subtitles available
+	if onlySubFlag {
+		jpFormat, _ := formatStructure.FilterFormatsByAudio(crunchyroll.JP)
+		return jpFormat[0]
+	}
+
 	var audioLocale, subtitleLocale crunchyroll.LOCALE
 
 	if audioFlag != "" {
@@ -414,7 +519,7 @@ func findFormat(formats []*crunchyroll.Format, name string) (format *crunchyroll
 	return
 }
 
-func downloadFormat(format *crunchyroll.Format, outFile string, info information) bool {
+func downloadFormat(format *crunchyroll.Format, subtitles []*crunchyroll.Subtitle, outFile string, info information) bool {
 	oldOutFile := outFile
 	outFile, changed := freeFileName(outFile)
 	ext := path.Ext(outFile)
@@ -451,27 +556,29 @@ func downloadFormat(format *crunchyroll.Format, outFile string, info information
 
 	var err error
 	if ext == ".ts" {
-		file, err := os.Create(outFile)
+		var file *os.File
+		file, err = os.Create(outFile)
 		defer file.Close()
 		if err != nil {
 			out.Errf("Could not create file '%s' to download episode '%s' (%s): %s, skipping\n", outFile, info.Title, info.OriginalURL, err)
 			return false
 		}
 
-		err = format.Download(file, downloadProgress)
+		err = format.DownloadGoroutines(file, goroutinesFlag, downloadProgress)
 		// newline to avoid weird output
 		fmt.Println()
 	} else {
-		tempDir, err := os.MkdirTemp("", "crunchy_")
+		var tempDir string
+		tempDir, err = os.MkdirTemp("", "crunchy_")
 		if err != nil {
 			out.Errln("Failed to create temp download dir. Skipping")
 			return false
 		}
 
 		var segmentCount int
-		err = format.DownloadSegments(tempDir, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
+		err = format.DownloadSegments(tempDir, goroutinesFlag, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
 			segmentCount++
-			return downloadProgress(segment, current, total, file, err)
+			return downloadProgress(segment, current, total, file)
 		})
 		// newline to avoid weird output
 		fmt.Println()
@@ -483,19 +590,49 @@ func downloadFormat(format *crunchyroll.Format, outFile string, info information
 		defer os.Remove(f.Name())
 		f.Close()
 
-		cmd := exec.Command("ffmpeg",
+		args := []string{
 			"-f", "concat",
 			"-safe", "0",
 			"-i", f.Name(),
-			"-c", "copy",
-			outFile)
+		}
+		if ext == ".mkv" && subtitleFlag == "" {
+			// this saves all subtitles into a mkv file. see https://github.com/ByteDream/crunchyroll-go/issues/5 for some details
+
+			ffmpegInput := make([]string, 0)
+			ffmpegMap := []string{"-map", "0"}
+			ffmpegMetadata := make([]string, 0)
+			for i, subtitle := range subtitles {
+				subtitleFilepath := filepath.Join(cleanupPath, fmt.Sprintf("%s.%s", subtitle.Locale, subtitle.Format))
+
+				var file *os.File
+				file, err = os.Create(subtitleFilepath)
+				if err != nil {
+					out.Errf("Could not create file to download %s subtitles to: %v", subtitle.Locale, err)
+					continue
+				}
+				if err = subtitle.Download(file); err != nil {
+					out.Errf("Failed to download subtitles: %s", err)
+					continue
+				}
+				ffmpegInput = append(ffmpegInput, "-i", subtitleFilepath)
+				ffmpegMap = append(ffmpegMap, "-map", strconv.Itoa(i+1))
+				ffmpegMetadata = append(ffmpegMetadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("language=%s", strings.Split(string(subtitle.Locale), "-")[0]))
+			}
+
+			args = append(args, ffmpegInput...)
+			args = append(args, ffmpegMap...)
+			args = append(args, ffmpegMetadata...)
+		}
+		args = append(args, "-c", "copy", outFile)
+
+		cmd := exec.Command("ffmpeg", args...)
 		err = cmd.Run()
 	}
 	os.RemoveAll(cleanupPath)
 	cleanupPath = ""
 
 	if err != nil {
-		out.Errln("Failed to download video, skipping")
+		out.Errf("Failed to download video, skipping: %v", err)
 	} else {
 		if info.Subtitle == "" {
 			out.Infof("Downloaded '%s' as '%s' with %s audio locale\n", info.Title, outFile, strings.ToLower(utils.LocaleLanguage(info.Audio)))
@@ -525,7 +662,7 @@ func downloadFormat(format *crunchyroll.Format, outFile string, info information
 	return true
 }
 
-func downloadProgress(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
+func downloadProgress(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
 	if cleanupPath == "" {
 		cleanupPath = path.Dir(file.Name())
 	}

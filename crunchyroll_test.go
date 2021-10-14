@@ -108,7 +108,7 @@ func TestFormat_Download(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	formats[0].Download(file, func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error {
+	formats[0].DownloadGoroutines(file, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
 		t.Logf("Downloaded %.2f%% (%d/%d)", float32(current)/float32(total)*100, current, total)
 		return nil
 	})

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/grafov/m3u8"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -35,16 +37,26 @@ type Format struct {
 	Subtitles   []*Subtitle
 }
 
-// Download downloads the format to the given output file (as .ts file).
-// See Format.DownloadSegments for more information
+// Download calls DownloadGoroutines with 4 goroutines.
+// See DownloadGoroutines for more details
+//
+// Deprecated: Use DownloadGoroutines instead
 func (f *Format) Download(output *os.File, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error) error {
+	return f.DownloadGoroutines(output, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
+		return onSegmentDownload(segment, current, total, file, nil)
+	})
+}
+
+// DownloadGoroutines downloads the format to the given output file (as .ts file).
+// See Format.DownloadSegments for more information
+func (f *Format) DownloadGoroutines(output *os.File, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
 	downloadDir, err := os.MkdirTemp("", "crunchy_")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(downloadDir)
 
-	if err := f.DownloadSegments(downloadDir, 4, onSegmentDownload); err != nil {
+	if err := f.DownloadSegments(downloadDir, goroutines, onSegmentDownload); err != nil {
 		return err
 	}
 
@@ -60,7 +72,7 @@ func (f *Format) Download(output *os.File, onSegmentDownload func(segment *m3u8.
 // 		The actual crunchyroll video is split up in multiple segments (or video files) which have to be downloaded and merged after to generate a single video file.
 //		And this function just downloads each of this segment into the given directory.
 // 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
-func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error) error {
+func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
 	resp, err := f.crunchy.Client.Get(f.Video.URI)
 	if err != nil {
 		return err
@@ -81,9 +93,9 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 	}
 
 	var wg sync.WaitGroup
-	chunkSize := len(segments) / goroutines
+	chunkSize := int(math.Ceil(float64(len(segments)) / float64(goroutines)))
 
-	// when a afterDownload call returns an error, this channel will be set to true and stop all goroutines
+	// when a onSegmentDownload call returns an error, this channel will be set to true and stop all goroutines
 	quit := make(chan bool)
 
 	// receives the decrypt block and iv from the first segment.
@@ -93,7 +105,7 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 		return err
 	}
 
-	var current int32
+	var total int32
 	for i := 0; i < len(segments); i += chunkSize {
 		wg.Add(1)
 		end := i + chunkSize
@@ -101,6 +113,9 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 			end = len(segments)
 		}
 		i := i
+
+		fmt.Println(i, end)
+
 		go func() {
 			for j, segment := range segments[i:end] {
 				select {
@@ -108,16 +123,24 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 					break
 				default:
 					var file *os.File
-					file, err = f.downloadSegment(segment, filepath.Join(outputDir, fmt.Sprintf("%d.ts", i+j)), block, iv)
-					if err != nil {
+					k := 1
+					for ; k < 4; k++ {
+						file, err = f.downloadSegment(segment, filepath.Join(outputDir, fmt.Sprintf("%d.ts", i+j)), block, iv)
+						if err == nil {
+							break
+						}
+						// sleep if an error occurs. very useful because sometimes the connection times out
+						time.Sleep(5 * time.Duration(k) * time.Second)
+					}
+					if k == 4 {
 						quit <- true
-						break
+						return
 					}
 					if onSegmentDownload != nil {
-						if err = onSegmentDownload(segment, int(atomic.AddInt32(&current, 1)), len(segments), file, err); err != nil {
+						if err = onSegmentDownload(segment, int(atomic.AddInt32(&total, 1)), len(segments), file); err != nil {
 							quit <- true
 							file.Close()
-							break
+							return
 						}
 					}
 					file.Close()
@@ -166,16 +189,6 @@ func (f *Format) downloadSegment(segment *m3u8.MediaSegment, filename string, bl
 	if err != nil {
 		return nil, err
 	}
-
-	// some mpeg stream things. see the link beneath for more information
-	// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/dl/dowloader.go#L135
-	/*syncByte := uint8(71) //0x47
-	for k := 0; k < len(content); k++ {
-		if content[k] == syncByte {
-			content = content[k:]
-			break
-		}
-	}*/
 
 	file, err := os.Create(filename)
 	if err != nil {

@@ -114,8 +114,6 @@ func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDow
 		}
 		i := i
 
-		fmt.Println(i, end)
-
 		go func() {
 			for j, segment := range segments[i:end] {
 				select {

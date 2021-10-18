@@ -50,7 +50,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go
-  $ make
+  $ make && sudo make install
   ```
     - use `go`
   ```

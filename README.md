@@ -38,9 +38,9 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 
 #### Get the executable
 - 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below
-    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_linux)
-    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_windows.exe)
-    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.0/crunchy-v1.2.0_darwin)
+    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_linux)
+    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_windows.exe)
+    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/)
   ```
   $ yay -S crunchyroll-go

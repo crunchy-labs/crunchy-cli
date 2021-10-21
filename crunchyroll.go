@@ -284,10 +284,6 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx
 func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
 	if series, ok := MatchVideo(seriesUrl); ok {
-		if !ok {
-			return nil, errors.New("series could not be found")
-		}
-
 		s, m, err := c.Search(series, 1)
 		if err != nil {
 			return nil, err
@@ -357,7 +353,7 @@ func MatchEpisode(url string) (seriesName, title string, ok bool) {
 	return
 }
 
-// ParseEpisodeURL tries to extract the crunchyroll series name, title, episode number and web id out of the given url
+// ParseEpisodeURL tries to extract the crunchyroll series name, title, episode number and web id out of the given crunchyroll url
 // Note that the episode number can be misleading. For example if an episode has the episode number 23.5 (slime isekai)
 // the episode number will be 235
 func ParseEpisodeURL(url string) (seriesName, title string, episodeNumber int, webId int, ok bool) {
@@ -372,6 +368,28 @@ func ParseEpisodeURL(url string) (seriesName, title string, episodeNumber int, w
 		if seriesName != "" && title != "" && webId != 0 {
 			ok = true
 		}
+	}
+	return
+}
+
+// ParseBetaSeriesURL tries to extract the season id of the given crunchyroll beta url, pointing to a season
+func ParseBetaSeriesURL(url string) (seasonId string, ok bool) {
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?beta\.crunchyroll\.com/series/(?P<seasonId>\w+).*`)
+	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
+		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
+		seasonId = groups["seasonId"]
+		ok = true
+	}
+	return
+}
+
+// ParseBetaEpisodeURL tries to extract the episode id of the given crunchyroll beta url, pointing to an episode
+func ParseBetaEpisodeURL(url string) (episodeId string, ok bool) {
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?beta\.crunchyroll\.com/watch/(?P<episodeId>\w+).*`)
+	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
+		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
+		episodeId = groups["episodeId"]
+		ok = true
 	}
 	return
 }

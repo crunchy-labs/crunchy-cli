@@ -142,7 +142,7 @@ $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/da
 These flags you can use across every sub-command
 
 - `-q`, `--quiet` » disables all output
-- `-v`, `--verbote` » shows additional debug output
+- `-v`, `--verbose` » shows additional debug output
 - `--color` » adds color to the output (works only on not windows systems)
 
 - `-p`, `--proxy` » use a proxy to hide your ip / redirect your traffic

@@ -1,4 +1,4 @@
-VERSION=1.2.1
+VERSION=1.2.2
 BINARY_NAME=crunchy
 VERSION_BINARY_NAME=$(BINARY_NAME)-v$(VERSION)
 
@@ -11,7 +11,7 @@ build:
 
 install:
 		install -Dm755 $(BINARY_NAME) $(DESTDIR)$(PREFIX)/bin/crunchyroll-go
-		cp $(DESTDIR)$(PREFIX)/bin/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
+		cp -f $(DESTDIR)$(PREFIX)/bin/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
 		install -Dm644 crunchyroll-go.1 $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 		install -Dm644 LICENSE $(DESTDIR)$(PREFIX)/share/licenses/crunchyroll-go/LICENSE
 

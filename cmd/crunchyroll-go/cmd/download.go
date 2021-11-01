@@ -77,6 +77,7 @@ func init() {
 	getCmd.Flags().StringVarP(&outputFlag, "output", "o", "{title}.ts", "Name of the output file\n"+
 		"If you use the following things in the name, the will get replaced\n"+
 		"\t{title} » Title of the video\n"+
+		"\t{series_name} » Name of the series\n"+
 		"\t{season_title} » Title of the season\n"+
 		"\t{season_number} » Number of the season\n"+
 		"\t{episode_number} » Number of the episode\n"+
@@ -210,8 +211,19 @@ func download(urls []string) {
 			switch value.Kind() {
 			case reflect.String:
 				valueAsString = value.String()
+			case reflect.Int:
+				valueAsString = strconv.Itoa(int(value.Int()))
+				if len(valueAsString) == 1 {
+					valueAsString = "0" + valueAsString
+				}
 			case reflect.Float64:
-				valueAsString = strconv.Itoa(int(value.Float()))
+				valueAsString = strconv.FormatFloat(value.Float(), 'f', 2, 64)
+			case reflect.Bool:
+				if value.Bool() {
+					valueAsString = field.Tag.Get("json")
+				} else {
+					valueAsString = fmt.Sprintf("no %s", field.Tag.Get("json"))
+				}
 			}
 
 			filename = strings.ReplaceAll(filename, "{"+field.Tag.Get("json")+"}", valueAsString)

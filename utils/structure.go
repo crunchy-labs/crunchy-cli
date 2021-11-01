@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
 	"sync"
 )
@@ -504,8 +503,6 @@ func (es *EpisodeStructure) GetEpisodeByURL(url string) (*crunchyroll.Episode, e
 	if !ok {
 		return nil, errors.New("invalid url")
 	}
-
-	fmt.Println(title)
 
 	episodes, err := es.Episodes()
 	if err != nil {

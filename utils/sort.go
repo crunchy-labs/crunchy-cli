@@ -19,7 +19,7 @@ func (mlbd MovieListingsByDuration) Less(i, j int) bool {
 	return mlbd[i].DurationMS < mlbd[j].DurationMS
 }
 
-// EpisodesByDuration episodes by their duration
+// EpisodesByDuration sorts episodes by their duration
 type EpisodesByDuration []*crunchyroll.Episode
 
 func (ebd EpisodesByDuration) Len() int {
@@ -32,7 +32,7 @@ func (ebd EpisodesByDuration) Less(i, j int) bool {
 	return ebd[i].DurationMS < ebd[j].DurationMS
 }
 
-// FormatsByResolution sort formats after their resolution
+// FormatsByResolution sorts formats after their resolution
 type FormatsByResolution []*crunchyroll.Format
 
 func (fbr FormatsByResolution) Len() int {

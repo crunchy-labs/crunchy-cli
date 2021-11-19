@@ -180,7 +180,7 @@ func (f *Format) getCrypt(segment *m3u8.MediaSegment) (block cipher.Block, iv []
 	return block, iv, nil
 }
 
-// downloadSegment downloads a segments, decrypts it and names it after the given index
+// downloadSegment downloads a segment, decrypts it and names it after the given index
 func (f *Format) downloadSegment(segment *m3u8.MediaSegment, filename string, block cipher.Block, iv []byte) (*os.File, error) {
 	// every segment is aes-128 encrypted and has to be decrypted when downloaded
 	content, err := decryptSegment(f.crunchy.Client, segment, block, iv)
@@ -200,7 +200,7 @@ func (f *Format) downloadSegment(segment *m3u8.MediaSegment, filename string, bl
 	return file, nil
 }
 
-// mergeSegments reads every file in tempPath and write their content to output
+// mergeSegments reads every file in tempPath and writes their content to output
 func (f *Format) mergeSegments(tempPath string, output *os.File) error {
 	dir, err := os.ReadDir(tempPath)
 	if err != nil {

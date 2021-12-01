@@ -102,7 +102,8 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 // AudioLocale returns the audio locale of the episode.
 // Every episode in a season (should) have the same audio locale,
 // so if you want to get the audio locale of a season, just call this method on the first episode of the season.
-// Otherwise, this function will cause massive heap on a season which many episodes
+// Otherwise, if you call this function on every episode it will cause a massive delay and redundant network
+// overload since it calls an api endpoint every time
 func (e *Episode) AudioLocale() (LOCALE, error) {
 	resp, err := e.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		e.crunchy.Config.CountryCode,

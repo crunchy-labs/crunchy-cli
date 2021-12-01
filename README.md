@@ -38,21 +38,21 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 
 #### Get the executable
 - 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below
-    - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_linux)
-    - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_windows.exe)
-    - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.1/crunchy-v1.2.1_darwin)
-- If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/)
+  - [Linux (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.3/crunchy-v1.2.3_linux)
+  - [Windows (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.3/crunchy-v1.2.3_windows.exe)
+  - [MacOS (x64)](https://github.com/ByteDream/crunchyroll-go/releases/download/v1.2.3/crunchy-v1.2.3_darwin)
+- If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```
   $ yay -S crunchyroll-go
   ```
 - 🛠 Build it yourself
-    - use `make` (requires `go` to be installed)
+    - use `make` (requires `go` to be installed):
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go
   $ make && sudo make install
   ```
-    - use `go`
+    - use `go`:
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go/cmd/crunchyroll-go
@@ -64,7 +64,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 #### Login
 Before you can do something, you have to login first.
 
-This can be performed via crunchyroll account email and password
+This can be performed via crunchyroll account email and password.
 ```
 $ crunchy login user@example.com password
 ```

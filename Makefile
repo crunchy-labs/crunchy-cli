@@ -1,4 +1,4 @@
-VERSION=1.2.2
+VERSION=1.2.3
 BINARY_NAME=crunchy
 VERSION_BINARY_NAME=$(BINARY_NAME)-v$(VERSION)
 
@@ -28,5 +28,7 @@ release:
 		cd cmd/crunchyroll-go && GOOS=linux GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_linux
 		cd cmd/crunchyroll-go && GOOS=windows GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_windows.exe
 		cd cmd/crunchyroll-go && GOOS=darwin GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_darwin
+
+		strip cmd/crunchyroll-go/$(VERSION_BINARY_NAME)_{linux,windows.exe}
 
 		mv cmd/crunchyroll-go/$(VERSION_BINARY_NAME)_* .

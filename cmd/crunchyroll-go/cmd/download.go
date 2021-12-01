@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -301,33 +302,32 @@ func download(urls []string) {
 func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successes int) {
 	videoDupes := map[string]utils.VideoStructure{}
 
+	betaUrl := regexp.MustCompile(`(?m)^https?://(www\.)?beta\.crunchyroll\.com*`)
+
 	for i, url := range urls {
 		out.StartProgressf("Parsing url %d", i+1)
 
 		var localTotal, localSuccesses int
 
-		var seriesName string
-		var ok bool
-		if seriesName, _, _, _, ok = crunchyroll.ParseEpisodeURL(url); !ok {
-			seriesName, _ = crunchyroll.MatchVideo(url)
-		}
+		var err error
+		var video utils.VideoStructure
+		var episode *crunchyroll.Episode
+		if betaUrl.MatchString(url) {
+			if episodeid, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
+				episode, err = crunchyroll.EpisodeFromID(crunchy, episodeid)
+			} else if seriesid, ok := crunchyroll.ParseBetaSeriesURL(url); ok {
+				var vid crunchyroll.Video
+				vid, err = crunchyroll.SeriesFromID(crunchy, seriesid)
 
-		if seriesName != "" {
-			dupe, ok := videoDupes[seriesName]
-			if !ok {
-				video, err := crunchy.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", seriesName))
-				if err != nil {
-					continue
-				}
-				switch video.(type) {
+				switch vid.(type) {
 				case *crunchyroll.Series:
 					seasons, err := video.(*crunchyroll.Series).Seasons()
 					if err != nil {
 						out.EndProgressf(false, "Failed to get seasons for url %s: %s\n", url, err)
 						continue
 					}
-					dupe = utils.NewSeasonStructure(seasons).EpisodeStructure
-					if err := dupe.(*utils.EpisodeStructure).InitAll(); err != nil {
+					video = utils.NewSeasonStructure(seasons).EpisodeStructure
+					if err := video.(*utils.EpisodeStructure).InitAll(); err != nil {
 						out.EndProgressf(false, "Failed to initialize series for url %s\n", url)
 						continue
 					}
@@ -337,23 +337,80 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successe
 						out.EndProgressf(false, "Failed to get movie listing for url %s\n", url)
 						continue
 					}
-					dupe = utils.NewMovieListingStructure(movieListings)
-					if err := dupe.(*utils.MovieListingStructure).InitAll(); err != nil {
+					video = utils.NewMovieListingStructure(movieListings)
+					if err := video.(*utils.MovieListingStructure).InitAll(); err != nil {
 						out.EndProgressf(false, "Failed to initialize movie for url %s\n", url)
 						continue
 					}
 				}
-				videoDupes[seriesName] = dupe
+			}
+		} else {
+			var seriesName string
+			var ok bool
+			if seriesName, _, _, _, ok = crunchyroll.ParseEpisodeURL(url); !ok {
+				seriesName, ok = crunchyroll.MatchVideo(url)
 			}
 
+			if ok {
+				dupe, ok := videoDupes[seriesName]
+				if !ok {
+					var vid crunchyroll.Video
+					vid, err = crunchy.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", seriesName))
+
+					switch vid.(type) {
+					case *crunchyroll.Series:
+						seasons, err := vid.(*crunchyroll.Series).Seasons()
+						if err != nil {
+							out.EndProgressf(false, "Failed to get seasons for url %s: %s\n", url, err)
+							continue
+						}
+						dupe = utils.NewSeasonStructure(seasons).EpisodeStructure
+						if err := dupe.(*utils.EpisodeStructure).InitAll(); err != nil {
+							out.EndProgressf(false, "Failed to initialize series for url %s\n", url)
+							continue
+						}
+					case *crunchyroll.Movie:
+						movieListings, err := vid.(*crunchyroll.Movie).MovieListing()
+						if err != nil {
+							out.EndProgressf(false, "Failed to get movie listing for url %s\n", url)
+							continue
+						}
+						dupe = utils.NewMovieListingStructure(movieListings)
+						if err := dupe.(*utils.MovieListingStructure).InitAll(); err != nil {
+							out.EndProgressf(false, "Failed to initialize movie for url %s\n", url)
+							continue
+						}
+					}
+				}
+				video = dupe
+			} else {
+				err = fmt.Errorf("")
+			}
+		}
+
+		if err != nil {
+			out.EndProgressf(false, "URL %d seems to be invalid\n", i+1)
+		} else if episode != nil {
+			epstruct := utils.NewEpisodeStructure([]*crunchyroll.Episode{episode})
+
+			if err = epstruct.InitAll(); err != nil {
+				out.EndProgressf(false, "Could not init url %d, skipping\n", i+1)
+			} else if ep := parseEpisodes(epstruct, url); ep.Format != nil {
+				allEpisodes = append(allEpisodes, ep)
+				localSuccesses++
+			} else {
+				out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
+			}
+			localTotal++
+		} else if video != nil {
 			if _, ok := crunchyroll.MatchVideo(url); ok {
 				out.Debugf("Parsed url %d as video\n", i+1)
 				var parsed []episodeInformation
-				parsed, localTotal, localSuccesses = parseVideo(dupe, url)
+				parsed, localTotal, localSuccesses = parseVideo(video, url)
 				allEpisodes = append(allEpisodes, parsed...)
 			} else if _, _, _, _, ok = crunchyroll.ParseEpisodeURL(url); ok {
 				out.Debugf("Parsed url %d as episode\n", i+1)
-				if episode := parseEpisodes(dupe.(*utils.EpisodeStructure), url); episode.Format != nil {
+				if episode := parseEpisodes(video.(*utils.EpisodeStructure), url); episode.Format != nil {
 					allEpisodes = append(allEpisodes, episode)
 					localSuccesses++
 				} else {
@@ -364,10 +421,12 @@ func parseURLs(urls []string) (allEpisodes []episodeInformation, total, successe
 				out.EndProgressf(false, "Could not parse url %d, skipping\n", i+1)
 				continue
 			}
-			out.EndProgressf(true, "Parsed url %d with %d successes and %d fails\n", i+1, localSuccesses, localTotal-localSuccesses)
 		} else {
 			out.EndProgressf(false, "URL %d seems to be invalid\n", i+1)
 		}
+
+		out.EndProgressf(true, "Parsed url %d with %d successes and %d fails\n", i+1, localSuccesses, localTotal-localSuccesses)
+
 		total += localTotal
 		successes += localSuccesses
 	}

@@ -501,6 +501,19 @@ func (es *EpisodeStructure) GetEpisodeByFormat(format *crunchyroll.Format) (*cru
 func (es *EpisodeStructure) GetEpisodeByURL(url string) (*crunchyroll.Episode, error) {
 	_, title, episodeNumber, _, ok := crunchyroll.ParseEpisodeURL(url)
 	if !ok {
+		if episodeid, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
+			episodes, err := es.Episodes()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, episode := range episodes {
+				if episode.ID == episodeid {
+					return episode, nil
+				}
+			}
+		}
+
 		return nil, errors.New("invalid url")
 	}
 

@@ -280,7 +280,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 	return s, m, nil
 }
 
-// FindVideo fins a Video (Season or Movie) by a crunchyroll link
+// FindVideo finds a Video (Season or Movie) by a crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx
 func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
 	if series, ok := MatchVideo(seriesUrl); ok {

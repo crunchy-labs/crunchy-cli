@@ -6,16 +6,19 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 
 <p align="center">
   <a href="https://github.com/ByteDream/crunchyroll-go">
-    <img src="https://img.shields.io/github/languages/code-size/ByteDream/crunchyroll?style=flat-square" alt="Code size">
-  </a>
-  <a href="https://github.com/ByteDream/crunchyroll-go/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/ByteDream/crunchyroll?style=flat-square" alt="License">
-  </a>
-  <a href="https://golang.org">
-    <img src="https://img.shields.io/github/go-mod/go-version/ByteDream/crunchyroll?style=flat-square" alt="Go version">
+    <img src="https://img.shields.io/github/languages/code-size/ByteDream/crunchyroll-go?style=flat-square" alt="Code size">
   </a>
   <a href="https://github.com/ByteDream/crunchyroll-go/releases/latest">
-    <img src="https://img.shields.io/github/v/release/ByteDream/crunchyroll?style=flat-square" alt="Release">
+    <img src="https://img.shields.io/github/downloads/ByteDream/crunchyroll-go/total?style=flat-square" alt="Download Badge">
+  </a>
+  <a href="https://github.com/ByteDream/crunchyroll-go/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/ByteDream/crunchyroll-go?style=flat-square" alt="License">
+  </a>
+  <a href="https://golang.org">
+    <img src="https://img.shields.io/github/go-mod/go-version/ByteDream/crunchyroll-go?style=flat-square" alt="Go version">
+  </a>
+  <a href="https://github.com/ByteDream/crunchyroll-go/releases/latest">
+    <img src="https://img.shields.io/github/v/release/ByteDream/crunchyroll-go?style=flat-square" alt="Release">
   </a>
 </p>
 

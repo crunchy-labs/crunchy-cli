@@ -20,6 +20,9 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   <a href="https://github.com/ByteDream/crunchyroll-go/releases/latest">
     <img src="https://img.shields.io/github/v/release/ByteDream/crunchyroll-go?style=flat-square" alt="Release">
   </a>
+  <a href="https://discord.gg/gUWwekeNNg">
+    <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
+  </a>
 </p>
 
 <p align="center">

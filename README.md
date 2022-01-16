@@ -342,6 +342,8 @@ $ go test .
 
 # 🗒️ Notice
 
+Sometimes the download stops without a reason on linux and does not go further. In this case the `tmpfs` / `/tmp` directory may be full. Execute `df /tmp` to see how much of the space is used.
+
 I would really appreciate if someone rewrites the complete cli. I'm not satisfied with it's current structure but at the moment I have no time and no desire to do it myself.
 
 # ⚖ License

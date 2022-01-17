@@ -280,55 +280,49 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 	return s, m, nil
 }
 
-// FindVideo finds a Video (Season or Movie) by a crunchyroll link
-// e.g. https://www.crunchyroll.com/darling-in-the-franxx
-func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
-	if series, ok := ParseVideoURL(seriesUrl); ok {
-		s, m, err := c.Search(series, 1)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(s) > 0 {
-			return s[0], nil
-		} else if len(m) > 0 {
-			return m[0], nil
-		}
-		return nil, errors.New("no series or movie could be found")
+// FindVideoByName finds a Video (Season or Movie) by its name.
+// Use this in combination with ParseVideoURL and hand over the corresponding results
+// to this function.
+func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
+	s, m, err := c.Search(seriesName, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid url")
+	if len(s) > 0 {
+		return s[0], nil
+	} else if len(m) > 0 {
+		return m[0], nil
+	}
+	return nil, errors.New("no series or movie could be found")
 }
 
-// FindEpisode finds an episode by its crunchyroll link
-// e.g. https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
-func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
-	if series, title, _, _, ok := ParseEpisodeURL(url); ok {
-		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", series))
-		if err != nil {
-			return nil, err
-		}
-		seasons, err := video.(*Series).Seasons()
-		if err != nil {
-			return nil, err
-		}
-
-		var matchingEpisodes []*Episode
-		for _, season := range seasons {
-			episodes, err := season.Episodes()
-			if err != nil {
-				return nil, err
-			}
-			for _, episode := range episodes {
-				if episode.SlugTitle == title {
-					matchingEpisodes = append(matchingEpisodes, episode)
-				}
-			}
-		}
-		return matchingEpisodes, nil
+// FindEpisodeByName finds an episode by its crunchyroll series name and episode title.
+// Use this in combination with ParseEpisodeURL and hand over the corresponding results
+// to this function.
+func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Episode, error) {
+	video, err := c.FindVideoByName(seriesName)
+	if err != nil {
+		return nil, err
+	}
+	seasons, err := video.(*Series).Seasons()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid url")
+	var matchingEpisodes []*Episode
+	for _, season := range seasons {
+		episodes, err := season.Episodes()
+		if err != nil {
+			return nil, err
+		}
+		for _, episode := range episodes {
+			if episode.SlugTitle == episodeTitle {
+				matchingEpisodes = append(matchingEpisodes, episode)
+			}
+		}
+	}
+	return matchingEpisodes, nil
 }
 
 // MatchEpisode tries to extract the crunchyroll series name and title out of the given url

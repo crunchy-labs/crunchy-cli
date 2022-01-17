@@ -9,24 +9,34 @@ import (
 type Season struct {
 	crunchy *Crunchyroll
 
-	ID             string   `json:"id"`
-	Title          string   `json:"title"`
-	SlugTitle      string   `json:"slug_title"`
-	SeriesID       string   `json:"series_id"`
-	SeasonNumber   int      `json:"season_number"`
-	IsComplete     bool     `json:"is_complete"`
-	Description    string   `json:"description"`
-	Keywords       []string `json:"keywords"`
-	SeasonTags     []string `json:"season_tags"`
-	IsMature       bool     `json:"is_mature"`
-	MatureBlocked  bool     `json:"mature_blocked"`
-	IsSubbed       bool     `json:"is_subbed"`
-	IsDubbed       bool     `json:"is_dubbed"`
-	IsSimulcast    bool     `json:"is_simulcast"`
-	SeoTitle       string   `json:"seo_title"`
-	SeoDescription string   `json:"seo_description"`
+	ID        string `json:"id"`
+	ChannelID string `json:"channel_id"`
 
-	Language LOCALE
+	Title     string `json:"title"`
+	SlugTitle string `json:"slug_title"`
+
+	SeriesID     string `json:"series_id"`
+	SeasonNumber int    `json:"season_number"`
+
+	IsComplete bool `json:"is_complete"`
+
+	Description   string   `json:"description"`
+	Keywords      []string `json:"keywords"`
+	SeasonTags    []string `json:"season_tags"`
+	IsMature      bool     `json:"is_mature"`
+	MatureBlocked bool     `json:"mature_blocked"`
+	IsSubbed      bool     `json:"is_subbed"`
+	IsDubbed      bool     `json:"is_dubbed"`
+	IsSimulcast   bool     `json:"is_simulcast"`
+
+	SeoTitle       string `json:"seo_title"`
+	SeoDescription string `json:"seo_description"`
+
+	AvailabilityNotes string `json:"availability_notes"`
+
+	// the locales are always empty, idk why this may change in the future
+	AudioLocales    []LOCALE
+	SubtitleLocales []LOCALE
 }
 
 // SeasonFromID returns a season by its api id

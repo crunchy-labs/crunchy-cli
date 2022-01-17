@@ -12,10 +12,17 @@ type Episode struct {
 
 	siteCache map[string]interface{}
 
-	ID           string `json:"id"`
-	SeriesID     string `json:"series_id"`
-	SeriesTitle  string `json:"series_title"`
-	SeasonNumber int    `json:"season_number"`
+	ID        string `json:"id"`
+	ChannelID string `json:"channel_id"`
+
+	SeriesID        string `json:"series_id"`
+	SeriesTitle     string `json:"series_title"`
+	SeriesSlugTitle string `json:"series_slug_title"`
+
+	SeasonID        string `json:"season_id"`
+	SeasonTitle     string `json:"season_title"`
+	SeasonSlugTitle string `json:"season_slug_title"`
+	SeasonNumber    int    `json:"season_number"`
 
 	Episode             string  `json:"episode"`
 	EpisodeNumber       int     `json:"episode_number"`

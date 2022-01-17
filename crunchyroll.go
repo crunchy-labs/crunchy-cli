@@ -283,7 +283,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 // FindVideo finds a Video (Season or Movie) by a crunchyroll link
 // e.g. https://www.crunchyroll.com/darling-in-the-franxx
 func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
-	if series, ok := MatchVideo(seriesUrl); ok {
+	if series, ok := ParseVideoURL(seriesUrl); ok {
 		s, m, err := c.Search(series, 1)
 		if err != nil {
 			return nil, err
@@ -331,8 +331,16 @@ func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
 	return nil, errors.New("invalid url")
 }
 
-// MatchVideo tries to extract the crunchyroll series / movie name out of the given url
-func MatchVideo(url string) (seriesName string, ok bool) {
+// MatchEpisode tries to extract the crunchyroll series name and title out of the given url
+//
+// Deprecated: Use ParseEpisodeURL instead
+func MatchEpisode(url string) (seriesName, title string, ok bool) {
+	seriesName, title, _, _, ok = ParseEpisodeURL(url)
+	return
+}
+
+// ParseVideoURL tries to extract the crunchyroll series / movie name out of the given url
+func ParseVideoURL(url string) (seriesName string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
 		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
@@ -342,14 +350,6 @@ func MatchVideo(url string) (seriesName string, ok bool) {
 			ok = true
 		}
 	}
-	return
-}
-
-// MatchEpisode tries to extract the crunchyroll series name and title out of the given url
-//
-// Deprecated: Use ParseEpisodeURL instead
-func MatchEpisode(url string) (seriesName, title string, ok bool) {
-	seriesName, title, _, _, ok = ParseEpisodeURL(url)
 	return
 }
 

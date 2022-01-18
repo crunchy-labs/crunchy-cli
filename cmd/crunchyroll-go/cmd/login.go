@@ -30,7 +30,7 @@ func init() {
 }
 
 func loginCredentials(email, password string) error {
-	out.Debugln("Logging in via credentials")
+	out.Debug("Logging in via credentials")
 	session, err := crunchyroll.LoginWithCredentials(email, password, locale, client)
 	if err != nil {
 		return err
@@ -40,11 +40,11 @@ func loginCredentials(email, password string) error {
 
 func loginSessionID(sessionID string, alreadyChecked bool) error {
 	if !alreadyChecked {
-		out.Debugln("Logging in via session id")
+		out.Debug("Logging in via session id")
 		if _, err := crunchyroll.LoginWithSessionID(sessionID, locale, client); err != nil {
 			return err
 		}
 	}
-	out.Infoln("Due to security reasons, you have to login again on the next reboot")
+	out.Info("Due to security reasons, you have to login again on the next reboot")
 	return ioutil.WriteFile(sessionIDPath, []byte(sessionID), 0777)
 }

@@ -37,16 +37,6 @@ type Format struct {
 	Subtitles   []*Subtitle
 }
 
-// Download calls DownloadGoroutines with 4 goroutines.
-// See DownloadGoroutines for more details
-//
-// Deprecated: Use DownloadGoroutines instead
-func (f *Format) Download(output *os.File, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File, err error) error) error {
-	return f.DownloadGoroutines(output, 4, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
-		return onSegmentDownload(segment, current, total, file, nil)
-	})
-}
-
 // DownloadGoroutines downloads the format to the given output file (as .ts file).
 // See Format.DownloadSegments for more information
 func (f *Format) DownloadGoroutines(output *os.File, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {

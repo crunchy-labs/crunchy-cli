@@ -325,14 +325,6 @@ func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Epi
 	return matchingEpisodes, nil
 }
 
-// MatchEpisode tries to extract the crunchyroll series name and title out of the given url
-//
-// Deprecated: Use ParseEpisodeURL instead
-func MatchEpisode(url string) (seriesName, title string, ok bool) {
-	seriesName, title, _, _, ok = ParseEpisodeURL(url)
-	return
-}
-
 // ParseVideoURL tries to extract the crunchyroll series / movie name out of the given url
 func ParseVideoURL(url string) (seriesName string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)

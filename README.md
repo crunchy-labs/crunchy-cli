@@ -1,3 +1,5 @@
+**This branch is under highly development, so it may contain errors which are making compiling not possible**
+
 # crunchyroll-go
 
 A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](https://www.crunchyroll.com) api.

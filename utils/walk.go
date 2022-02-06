@@ -30,7 +30,7 @@ type EpisodeWalker struct {
 // Urls to seasons and episodes are support, normal as well as beta urls
 func (ew EpisodeWalker) WalkURLs(urls []string) error {
 	var episodeIds, seasonIds, seriesNames []string
-	var episodeNames map[string][]string
+	episodeNames := make(map[string][]string)
 
 	for _, url := range urls {
 		if episodeId, ok := crunchyroll.ParseBetaEpisodeURL(url); ok && !(ew.CheckDuplicates && sliceContains(episodeIds, episodeId)) {

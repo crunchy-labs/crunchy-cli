@@ -2,29 +2,24 @@ package crunchyroll
 
 import (
 	"bufio"
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
 	"github.com/grafov/m3u8"
 	"io/ioutil"
-	"math"
-	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
+
+type FormatType string
 
 const (
 	EPISODE FormatType = "episodes"
 	MOVIE              = "movies"
 )
 
-type FormatType string
 type Format struct {
 	crunchy *Crunchyroll
 
@@ -37,166 +32,50 @@ type Format struct {
 	Subtitles   []*Subtitle
 }
 
-// DownloadGoroutines downloads the format to the given output file (as .ts file).
-// See Format.DownloadSegments for more information
-func (f *Format) DownloadGoroutines(output *os.File, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
-	downloadDir, err := os.MkdirTemp("", "crunchy_")
-	if err != nil {
-		return err
+func (f *Format) Download(downloader Downloader) error {
+	if _, err := os.Stat(downloader.Filename); err == nil && !downloader.IgnoreExisting {
+		return fmt.Errorf("file %s already exists", downloader.Filename)
 	}
-	defer os.RemoveAll(downloadDir)
-
-	if err := f.DownloadSegments(downloadDir, goroutines, onSegmentDownload); err != nil {
-		return err
-	}
-
-	return f.mergeSegments(downloadDir, output)
-}
-
-// DownloadSegments downloads every mpeg transport stream segment to a given directory (more information below).
-// After every segment download onSegmentDownload will be called with:
-//		the downloaded segment, the current position, the total size of segments to download, the file where the segment content was written to an error (if occurred).
-// The filename is always <number of downloaded segment>.ts
-//
-// Short explanation:
-// 		The actual crunchyroll video is split up in multiple segments (or video files) which have to be downloaded and merged after to generate a single video file.
-//		And this function just downloads each of this segment into the given directory.
-// 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
-func (f *Format) DownloadSegments(outputDir string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
-	resp, err := f.crunchy.Client.Get(f.Video.URI)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	// reads the m3u8 file
-	playlist, _, err := m3u8.DecodeFrom(resp.Body, true)
-	if err != nil {
-		return err
-	}
-	// extracts the segments from the playlist
-	var segments []*m3u8.MediaSegment
-	for _, segment := range playlist.(*m3u8.MediaPlaylist).Segments {
-		// some segments are nil, so they have to be filtered out
-		if segment != nil {
-			segments = append(segments, segment)
+	if _, err := os.Stat(downloader.TempDir); err == nil && !downloader.IgnoreExisting {
+		content, err := os.ReadDir(downloader.TempDir)
+		if err != nil {
+			return err
 		}
-	}
-
-	var wg sync.WaitGroup
-	chunkSize := int(math.Ceil(float64(len(segments)) / float64(goroutines)))
-
-	// when a onSegmentDownload call returns an error, this channel will be set to true and stop all goroutines
-	quit := make(chan bool)
-
-	// receives the decrypt block and iv from the first segment.
-	// in my tests, only the first segment has specified this data, so the decryption data from this first segments will be used in every other segment too
-	block, iv, err := f.getCrypt(segments[0])
-	if err != nil {
-		return err
-	}
-
-	var total int32
-	for i := 0; i < len(segments); i += chunkSize {
-		wg.Add(1)
-		end := i + chunkSize
-		if end > len(segments) {
-			end = len(segments)
+		if len(content) > 0 {
+			return fmt.Errorf("directory %s is not empty", downloader.Filename)
 		}
-		i := i
-
-		go func() {
-			for j, segment := range segments[i:end] {
-				select {
-				case <-quit:
-					break
-				default:
-					var file *os.File
-					k := 1
-					for ; k < 4; k++ {
-						file, err = f.downloadSegment(segment, filepath.Join(outputDir, fmt.Sprintf("%d.ts", i+j)), block, iv)
-						if err == nil {
-							break
-						}
-						// sleep if an error occurs. very useful because sometimes the connection times out
-						time.Sleep(5 * time.Duration(k) * time.Second)
-					}
-					if k == 4 {
-						quit <- true
-						return
-					}
-					if onSegmentDownload != nil {
-						if err = onSegmentDownload(segment, int(atomic.AddInt32(&total, 1)), len(segments), file); err != nil {
-							quit <- true
-							file.Close()
-							return
-						}
-					}
-					file.Close()
-				}
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	select {
-	case <-quit:
+	} else if err != nil && os.IsNotExist(err) {
+		if err := os.Mkdir(downloader.TempDir, 0755); err != nil {
+			return err
+		}
+	} else {
 		return err
-	default:
-		return nil
+	}
+
+	if err := download(f, downloader.TempDir, downloader.Goroutines, downloader.OnSegmentDownload); err != nil {
+		return err
+	}
+
+	if downloader.FFmpeg {
+		return mergeSegmentsFFmpeg(downloader.TempDir, downloader.Filename)
+	} else {
+		return mergeSegments(downloader.TempDir, downloader.Filename)
 	}
 }
 
-// getCrypt extracts the key and iv of a m3u8 segment and converts it into a cipher.Block block and a iv byte sequence
-func (f *Format) getCrypt(segment *m3u8.MediaSegment) (block cipher.Block, iv []byte, err error) {
-	var resp *http.Response
-
-	resp, err = f.crunchy.Client.Get(segment.Key.URI)
+// mergeSegments reads every file in tempDir and writes their content to the outputFile.
+// The given output file gets created or overwritten if already existing
+func mergeSegments(tempDir string, outputFile string) error {
+	dir, err := os.ReadDir(tempDir)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	defer resp.Body.Close()
-	key, err := ioutil.ReadAll(resp.Body)
-
-	block, err = aes.NewCipher(key)
+	file, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
-		return nil, nil, err
-	}
-	iv = []byte(segment.Key.IV)
-	if len(iv) == 0 {
-		iv = key
-	}
-
-	return block, iv, nil
-}
-
-// downloadSegment downloads a segment, decrypts it and names it after the given index
-func (f *Format) downloadSegment(segment *m3u8.MediaSegment, filename string, block cipher.Block, iv []byte) (*os.File, error) {
-	// every segment is aes-128 encrypted and has to be decrypted when downloaded
-	content, err := decryptSegment(f.crunchy.Client, segment, block, iv)
-	if err != nil {
-		return nil, err
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return nil, err
+		return err
 	}
 	defer file.Close()
-	if _, err = file.Write(content); err != nil {
-		return nil, err
-	}
-
-	return file, nil
-}
-
-// mergeSegments reads every file in tempPath and writes their content to output
-func (f *Format) mergeSegments(tempPath string, output *os.File) error {
-	dir, err := os.ReadDir(tempPath)
-	if err != nil {
-		return err
-	}
-	writer := bufio.NewWriter(output)
+	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 
 	// sort the directory files after their numeric names
@@ -213,7 +92,7 @@ func (f *Format) mergeSegments(tempPath string, output *os.File) error {
 	})
 
 	for _, file := range dir {
-		bodyAsBytes, err := ioutil.ReadFile(filepath.Join(tempPath, file.Name()))
+		bodyAsBytes, err := ioutil.ReadFile(filepath.Join(tempDir, file.Name()))
 		if err != nil {
 			return err
 		}
@@ -222,4 +101,29 @@ func (f *Format) mergeSegments(tempPath string, output *os.File) error {
 		}
 	}
 	return nil
+}
+
+// mergeSegmentsFFmpeg reads every file in tempDir and merges their content to the outputFile
+// with ffmpeg (https://ffmpeg.org/).
+// The given output file gets created or overwritten if already existing
+func mergeSegmentsFFmpeg(tempDir string, outputFile string) error {
+	dir, err := os.ReadDir(tempDir)
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp("", "*.txt")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	for i := 0; i < len(dir); i++ {
+		fmt.Fprintf(f, "file '%s.ts'\n", filepath.Join(tempDir, strconv.Itoa(i)))
+	}
+	cmd := exec.Command("ffmpeg",
+		"-f", "concat",
+		"-safe", "0",
+		"-i", f.Name(),
+		"-c", "copy",
+		outputFile)
+	return cmd.Run()
 }

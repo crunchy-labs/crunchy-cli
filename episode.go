@@ -10,6 +10,8 @@ import (
 type Episode struct {
 	crunchy *Crunchyroll
 
+	children []*Stream
+
 	siteCache map[string]interface{}
 
 	ID        string `json:"id"`
@@ -134,7 +136,11 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 
 // Streams returns all streams which are available for the episode
 func (e *Episode) Streams() ([]*Stream, error) {
-	return fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+	if e.children != nil {
+		return e.children, nil
+	}
+
+	streams, err := fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		e.crunchy.Config.CountryCode,
 		e.crunchy.Config.MaturityRating,
 		e.crunchy.Config.Channel,
@@ -143,4 +149,12 @@ func (e *Episode) Streams() ([]*Stream, error) {
 		e.crunchy.Config.Signature,
 		e.crunchy.Config.Policy,
 		e.crunchy.Config.KeyPairID))
+	if err != nil {
+		return nil, err
+	}
+
+	if e.crunchy.cache {
+		e.children = streams
+	}
+	return streams, nil
 }

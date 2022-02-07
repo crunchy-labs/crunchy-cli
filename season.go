@@ -9,6 +9,8 @@ import (
 type Season struct {
 	crunchy *Crunchyroll
 
+	children []*Episode
+
 	ID        string `json:"id"`
 	ChannelID string `json:"channel_id"`
 
@@ -69,6 +71,10 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 
 // Episodes returns all episodes which are available for the season
 func (s *Season) Episodes() (episodes []*Episode, err error) {
+	if s.children != nil {
+		return s.children, nil
+	}
+
 	resp, err := s.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes?season_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		s.crunchy.Config.CountryCode,
 		s.crunchy.Config.MaturityRating,
@@ -101,5 +107,8 @@ func (s *Season) Episodes() (episodes []*Episode, err error) {
 		episodes = append(episodes, episode)
 	}
 
+	if s.crunchy.cache {
+		s.children = episodes
+	}
 	return
 }

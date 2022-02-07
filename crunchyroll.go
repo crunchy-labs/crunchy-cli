@@ -51,6 +51,9 @@ type Crunchyroll struct {
 		ExternalID     string
 		MaturityRating string
 	}
+
+	// If cache is true, internal caching is enabled
+	cache bool
 }
 
 // LoginWithCredentials logs in via crunchyroll email and password
@@ -86,6 +89,7 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		Client:    client,
 		Locale:    locale,
 		SessionID: sessionID,
+		cache:     true,
 	}
 	var endpoint string
 	var err error
@@ -229,6 +233,20 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 		resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyAsBytes))
 	}
 	return resp, err
+}
+
+// IsCaching returns if data gets cached or not.
+// See SetCaching for more information
+func (c *Crunchyroll) IsCaching() bool {
+	return c.cache
+}
+
+// SetCaching enables or disables internal caching of requests made.
+// Caching is enabled by default.
+// If it is disabled the already cached data still gets called.
+// The best way to prevent this is to create a complete new Crunchyroll struct
+func (c *Crunchyroll) SetCaching(caching bool) {
+	c.cache = caching
 }
 
 // Search searches a query and returns all found series and movies within the given limit

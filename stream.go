@@ -11,6 +11,8 @@ import (
 type Stream struct {
 	crunchy *Crunchyroll
 
+	children []*Format
+
 	HardsubLocale LOCALE
 	AudioLocale   LOCALE
 	Subtitles     []*Subtitle
@@ -35,6 +37,10 @@ func StreamsFromID(crunchy *Crunchyroll, id string) ([]*Stream, error) {
 
 // Formats returns all formats which are available for the stream
 func (s *Stream) Formats() ([]*Format, error) {
+	if s.children != nil {
+		return s.children, nil
+	}
+
 	resp, err := s.crunchy.Client.Get(s.streamURL)
 	if err != nil {
 		return nil, err
@@ -56,6 +62,10 @@ func (s *Stream) Formats() ([]*Format, error) {
 			Hardsub:     s.HardsubLocale,
 			Subtitles:   s.Subtitles,
 		})
+	}
+
+	if s.crunchy.cache {
+		s.children = formats
 	}
 	return formats, nil
 }

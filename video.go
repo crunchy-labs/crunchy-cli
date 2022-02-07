@@ -38,6 +38,8 @@ type Movie struct {
 
 	crunchy *Crunchyroll
 
+	children []*MovieListing
+
 	// not generated when calling MovieFromID
 	MovieListingMetadata struct {
 		AvailabilityNotes   string   `json:"availability_notes"`
@@ -95,6 +97,10 @@ func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
 // Beside the normal movie, sometimes movie previews are returned too, but you can try to get the actual movie
 // by sorting the returning MovieListing slice with the utils.MovieListingByDuration interface
 func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
+	if m.children != nil {
+		return m.children, nil
+	}
+
 	resp, err := m.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		m.crunchy.Config.CountryCode,
 		m.crunchy.Config.MaturityRating,
@@ -120,6 +126,10 @@ func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
 		}
 		movieListings = append(movieListings, movieListing)
 	}
+
+	if m.crunchy.cache {
+		m.children = movieListings
+	}
 	return movieListings, nil
 }
 
@@ -128,6 +138,8 @@ type Series struct {
 	Video
 
 	crunchy *Crunchyroll
+
+	children []*Season
 
 	PromoDescription string `json:"promo_description"`
 	PromoTitle       string `json:"promo_title"`
@@ -179,6 +191,10 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 
 // Seasons returns all seasons of a series
 func (s *Series) Seasons() (seasons []*Season, err error) {
+	if s.children != nil {
+		return s.children, nil
+	}
+
 	resp, err := s.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/seasons?series_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		s.crunchy.Config.CountryCode,
 		s.crunchy.Config.MaturityRating,
@@ -203,6 +219,10 @@ func (s *Series) Seasons() (seasons []*Season, err error) {
 			return nil, err
 		}
 		seasons = append(seasons, season)
+	}
+
+	if s.crunchy.cache {
+		s.children = seasons
 	}
 	return
 }

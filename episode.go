@@ -12,8 +12,6 @@ type Episode struct {
 
 	children []*Stream
 
-	siteCache map[string]interface{}
-
 	ID        string `json:"id"`
 	ChannelID string `json:"channel_id"`
 
@@ -110,28 +108,13 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 
 // AudioLocale returns the audio locale of the episode.
 // Every episode in a season (should) have the same audio locale,
-// so if you want to get the audio locale of a season, just call this method on the first episode of the season.
-// Otherwise, if you call this function on every episode it will cause a massive delay and redundant network
-// overload since it calls an api endpoint every time
+// so if you want to get the audio locale of a season, just call this method on the first episode of the season
 func (e *Episode) AudioLocale() (LOCALE, error) {
-	resp, err := e.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		e.crunchy.Config.CountryCode,
-		e.crunchy.Config.MaturityRating,
-		e.crunchy.Config.Channel,
-		e.StreamID,
-		e.crunchy.Locale,
-		e.crunchy.Config.Signature,
-		e.crunchy.Config.Policy,
-		e.crunchy.Config.KeyPairID))
+	streams, err := e.Streams()
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	var jsonBody map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
-	e.siteCache = jsonBody
-
-	return LOCALE(jsonBody["audio_locale"].(string)), nil
+	return streams[0].AudioLocale, nil
 }
 
 // Streams returns all streams which are available for the episode

@@ -117,6 +117,44 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 	return streams[0].AudioLocale, nil
 }
 
+func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*Format, error) {
+	streams, err := e.Streams()
+	if err != nil {
+		return nil, err
+	}
+	var foundStream *Stream
+	for _, stream := range streams {
+		if hardsub && stream.HardsubLocale == subtitle || stream.HardsubLocale == "" && subtitle == "" {
+			foundStream = stream
+			break
+		} else if !hardsub {
+			for _, subtitle := range stream.Subtitles {
+				if subtitle.Locale == subtitle.Locale {
+					foundStream = stream
+					break
+				}
+			}
+			if foundStream != nil {
+				break
+			}
+		}
+	}
+
+	if foundStream == nil {
+		return nil, fmt.Errorf("no matching stream found")
+	}
+	formats, err := foundStream.Formats()
+	if err != nil {
+		return nil, err
+	}
+	for _, format := range formats {
+		if format.Video.Resolution == resolution {
+			return format, nil
+		}
+	}
+	return nil, fmt.Errorf("no matching resolution found")
+}
+
 // Streams returns all streams which are available for the episode
 func (e *Episode) Streams() ([]*Stream, error) {
 	if e.children != nil {

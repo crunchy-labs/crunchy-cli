@@ -69,6 +69,14 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 	return season, nil
 }
 
+func (s *Season) AudioLocale() (LOCALE, error) {
+	episodes, err := s.Episodes()
+	if err != nil {
+		return "", err
+	}
+	return episodes[0].AudioLocale()
+}
+
 // Episodes returns all episodes which are available for the season
 func (s *Season) Episodes() (episodes []*Episode, err error) {
 	if s.children != nil {

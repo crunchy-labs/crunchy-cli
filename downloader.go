@@ -30,6 +30,12 @@ type Downloader struct {
 	// cancel Context
 	DeleteTempAfter bool
 
+	// Context to control the download process with.
+	// There is a tiny delay when canceling the context and the actual stop of the
+	// process. So it is not recommend stopping the program immediately after calling
+	// the cancel function. It's better when canceling it and then exit the program
+	// when Format.Download throws an error. See the signal handling section in
+	// cmd/crunchyroll-go/cmd/download.go for an example
 	Context context.Context
 
 	// Goroutines is the number of goroutines to download segments with
@@ -42,14 +48,16 @@ type Downloader struct {
 	FFmpeg bool
 }
 
-func NewDownloader(filename string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) Downloader {
+// NewDownloader creates a downloader with default settings which should
+// fit the most needs
+func NewDownloader(context context.Context, filename string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) Downloader {
 	tmp, _ := os.MkdirTemp("", "crunchy_")
 
 	return Downloader{
 		Filename:          filename,
 		TempDir:           tmp,
 		DeleteTempAfter:   true,
-		Context:           context.Background(),
+		Context:           context,
 		Goroutines:        goroutines,
 		OnSegmentDownload: onSegmentDownload,
 	}
@@ -65,7 +73,13 @@ func NewDownloader(filename string, goroutines int, onSegmentDownload func(segme
 //		And this function just downloads each of this segment into the given directory.
 // 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
 func download(context context.Context, format *Format, tempDir string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
-	resp, err := format.crunchy.Client.Get(format.Video.URI)
+	req, err := http.NewRequest(http.MethodGet, format.Video.URI, nil)
+	if err != nil {
+		return err
+	}
+	req.WithContext(context)
+
+	resp, err := format.crunchy.Client.Do(req)
 	if err != nil {
 		return err
 	}

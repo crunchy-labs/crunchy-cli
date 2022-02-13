@@ -54,17 +54,3 @@ func LocaleLanguage(locale crunchyroll.LOCALE) string {
 		return ""
 	}
 }
-
-// SubtitleByLocale returns the subtitle of a crunchyroll.Format by its locale.
-// Check the second ok return value if the format has this subtitle
-func SubtitleByLocale(format *crunchyroll.Format, locale crunchyroll.LOCALE) (subtitle *crunchyroll.Subtitle, ok bool) {
-	if format.Subtitles == nil {
-		return
-	}
-	for _, sub := range format.Subtitles {
-		if sub.Locale == locale {
-			return sub, true
-		}
-	}
-	return
-}

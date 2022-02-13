@@ -2,6 +2,7 @@ package crunchyroll
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"github.com/grafov/m3u8"
 	"io/ioutil"
@@ -52,20 +53,23 @@ func (f *Format) Download(downloader Downloader) error {
 		return err
 	}
 
-	if err := download(f, downloader.TempDir, downloader.Goroutines, downloader.OnSegmentDownload); err != nil {
+	if downloader.DeleteTempAfter {
+		defer os.RemoveAll(downloader.TempDir)
+	}
+	if err := download(downloader.Context, f, downloader.TempDir, downloader.Goroutines, downloader.OnSegmentDownload); err != nil {
 		return err
 	}
 
 	if downloader.FFmpeg {
-		return mergeSegmentsFFmpeg(downloader.TempDir, downloader.Filename)
+		return mergeSegmentsFFmpeg(downloader.Context, downloader.TempDir, downloader.Filename)
 	} else {
-		return mergeSegments(downloader.TempDir, downloader.Filename)
+		return mergeSegments(downloader.Context, downloader.TempDir, downloader.Filename)
 	}
 }
 
 // mergeSegments reads every file in tempDir and writes their content to the outputFile.
 // The given output file gets created or overwritten if already existing
-func mergeSegments(tempDir string, outputFile string) error {
+func mergeSegments(context context.Context, tempDir string, outputFile string) error {
 	dir, err := os.ReadDir(tempDir)
 	if err != nil {
 		return err
@@ -92,6 +96,12 @@ func mergeSegments(tempDir string, outputFile string) error {
 	})
 
 	for _, file := range dir {
+		select {
+		case <-context.Done():
+			return context.Err()
+		default:
+		}
+
 		bodyAsBytes, err := ioutil.ReadFile(filepath.Join(tempDir, file.Name()))
 		if err != nil {
 			return err
@@ -106,7 +116,7 @@ func mergeSegments(tempDir string, outputFile string) error {
 // mergeSegmentsFFmpeg reads every file in tempDir and merges their content to the outputFile
 // with ffmpeg (https://ffmpeg.org/).
 // The given output file gets created or overwritten if already existing
-func mergeSegmentsFFmpeg(tempDir string, outputFile string) error {
+func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile string) error {
 	dir, err := os.ReadDir(tempDir)
 	if err != nil {
 		return err
@@ -125,5 +135,19 @@ func mergeSegmentsFFmpeg(tempDir string, outputFile string) error {
 		"-i", f.Name(),
 		"-c", "copy",
 		outputFile)
-	return cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	cmdChan := make(chan error)
+	go func() {
+		cmdChan <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-cmdChan:
+		return err
+	case <-context.Done():
+		return context.Err()
+	}
 }

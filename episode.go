@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -147,11 +149,33 @@ func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*
 	if err != nil {
 		return nil, err
 	}
+	var res *Format
 	for _, format := range formats {
+		if resolution == "worst" || resolution == "best" {
+			curSplitRes := strings.SplitN(format.Video.Resolution, "x", 1)
+			curResX, _ := strconv.Atoi(curSplitRes[0])
+			curResY, _ := strconv.Atoi(curSplitRes[1])
+
+			resSplitRes := strings.SplitN(res.Video.Resolution, "x", 1)
+			resResX, _ := strconv.Atoi(resSplitRes[0])
+			resResY, _ := strconv.Atoi(resSplitRes[1])
+
+			if resolution == "worst" && curResX+curResY < resResX+resResY {
+				res = format
+			} else if resolution == "best" && curResX+curResY > resResX+resResY {
+				res = format
+			}
+		}
+
 		if format.Video.Resolution == resolution {
 			return format, nil
 		}
 	}
+
+	if res != nil {
+		return res, nil
+	}
+
 	return nil, fmt.Errorf("no matching resolution found")
 }
 

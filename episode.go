@@ -152,11 +152,16 @@ func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*
 	var res *Format
 	for _, format := range formats {
 		if resolution == "worst" || resolution == "best" {
-			curSplitRes := strings.SplitN(format.Video.Resolution, "x", 1)
+			if res == nil {
+				res = format
+				continue
+			}
+
+			curSplitRes := strings.SplitN(format.Video.Resolution, "x", 2)
 			curResX, _ := strconv.Atoi(curSplitRes[0])
 			curResY, _ := strconv.Atoi(curSplitRes[1])
 
-			resSplitRes := strings.SplitN(res.Video.Resolution, "x", 1)
+			resSplitRes := strings.SplitN(res.Video.Resolution, "x", 2)
 			resResX, _ := strconv.Atoi(resSplitRes[0])
 			resResY, _ := strconv.Atoi(resSplitRes[1])
 

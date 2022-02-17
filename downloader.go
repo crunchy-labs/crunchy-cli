@@ -43,9 +43,15 @@ type Downloader struct {
 
 	// A method to call when a segment was downloaded
 	OnSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error
+	// If LockOnSegmentDownload is true, only one OnSegmentDownload function can be called at
+	// once. Normally (because of the use of goroutines while downloading) multiple could get
+	// called simultaneously
+	LockOnSegmentDownload bool
 
-	// If FFmpeg is true, ffmpeg will used to merge and convert files
-	FFmpeg bool
+	// If FFmpegOpts is not nil, ffmpeg will be used to merge and convert files.
+	// The given opts will be used as ffmpeg parameters while merging.
+	// Some opts are already used, see mergeSegmentsFFmpeg in format.go for more details
+	FFmpegOpts []string
 }
 
 // NewDownloader creates a downloader with default settings which should
@@ -72,7 +78,7 @@ func NewDownloader(context context.Context, filename string, goroutines int, onS
 // 		The actual crunchyroll video is split up in multiple segments (or video files) which have to be downloaded and merged after to generate a single video file.
 //		And this function just downloads each of this segment into the given directory.
 // 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
-func download(context context.Context, format *Format, tempDir string, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
+func download(context context.Context, format *Format, tempDir string, goroutines int, lockOnSegmentDownload bool, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
 	req, err := http.NewRequest(http.MethodGet, format.Video.URI, nil)
 	if err != nil {
 		return err
@@ -99,6 +105,7 @@ func download(context context.Context, format *Format, tempDir string, goroutine
 	}
 
 	var wg sync.WaitGroup
+	var lock sync.Mutex
 	chunkSize := int(math.Ceil(float64(len(segments)) / float64(goroutines)))
 
 	// when a onSegmentDownload call returns an error, this channel will be set to true and stop all goroutines
@@ -145,10 +152,20 @@ func download(context context.Context, format *Format, tempDir string, goroutine
 						return
 					}
 					if onSegmentDownload != nil {
+						if lockOnSegmentDownload {
+							lock.Lock()
+						}
+
 						if err = onSegmentDownload(segment, int(atomic.AddInt32(&total, 1)), len(segments), file); err != nil {
 							quit <- true
+							if lockOnSegmentDownload {
+								lock.Unlock()
+							}
 							file.Close()
 							return
+						}
+						if lockOnSegmentDownload {
+							lock.Unlock()
 						}
 					}
 					file.Close()

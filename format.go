@@ -56,12 +56,12 @@ func (f *Format) Download(downloader Downloader) error {
 	if downloader.DeleteTempAfter {
 		defer os.RemoveAll(downloader.TempDir)
 	}
-	if err := download(downloader.Context, f, downloader.TempDir, downloader.Goroutines, downloader.OnSegmentDownload); err != nil {
+	if err := download(downloader.Context, f, downloader.TempDir, downloader.Goroutines, downloader.LockOnSegmentDownload, downloader.OnSegmentDownload); err != nil {
 		return err
 	}
 
-	if downloader.FFmpeg {
-		return mergeSegmentsFFmpeg(downloader.Context, downloader.TempDir, downloader.Filename)
+	if downloader.FFmpegOpts != nil {
+		return mergeSegmentsFFmpeg(downloader.Context, downloader.TempDir, downloader.Filename, downloader.FFmpegOpts)
 	} else {
 		return mergeSegments(downloader.Context, downloader.TempDir, downloader.Filename)
 	}
@@ -116,7 +116,7 @@ func mergeSegments(context context.Context, tempDir string, outputFile string) e
 // mergeSegmentsFFmpeg reads every file in tempDir and merges their content to the outputFile
 // with ffmpeg (https://ffmpeg.org/).
 // The given output file gets created or overwritten if already existing
-func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile string) error {
+func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile string, opts []string) error {
 	dir, err := os.ReadDir(tempDir)
 	if err != nil {
 		return err
@@ -129,12 +129,21 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 	for i := 0; i < len(dir); i++ {
 		fmt.Fprintf(f, "file '%s.ts'\n", filepath.Join(tempDir, strconv.Itoa(i)))
 	}
-	cmd := exec.Command("ffmpeg",
+
+	// predefined options ... custom options ... predefined output filename
+	command := []string{
 		"-f", "concat",
 		"-safe", "0",
 		"-i", f.Name(),
 		"-c", "copy",
-		outputFile)
+	}
+	if opts != nil {
+		command = append(command, opts...)
+	}
+	command = append(command, outputFile)
+
+	cmd := exec.Command("ffmpeg",
+		command...)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -148,6 +157,7 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 	case err := <-cmdChan:
 		return err
 	case <-context.Done():
+		cmd.Process.Kill()
 		return context.Err()
 	}
 }

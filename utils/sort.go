@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-// SortEpisodesBySeason sorts the given episodes by their seasons
+// SortEpisodesBySeason sorts the given episodes by their seasons.
+// Note that the same episodes just with different audio locales will cause problems
 func SortEpisodesBySeason(episodes []*crunchyroll.Episode) [][]*crunchyroll.Episode {
 	sortMap := map[string]map[int][]*crunchyroll.Episode{}
 

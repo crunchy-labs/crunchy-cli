@@ -2,7 +2,6 @@ package crunchyroll
 
 import (
 	"io"
-	"os"
 )
 
 type Subtitle struct {
@@ -13,13 +12,13 @@ type Subtitle struct {
 	Format string `json:"format"`
 }
 
-func (s Subtitle) Download(file *os.File) error {
+func (s Subtitle) Save(writer io.Writer) error {
 	resp, err := s.crunchy.Client.Get(s.URL)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	_, err = io.Copy(file, resp.Body)
+	_, err = io.Copy(writer, resp.Body)
 	return err
 }

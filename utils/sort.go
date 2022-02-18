@@ -24,7 +24,7 @@ func SortEpisodesBySeason(episodes []*crunchyroll.Episode) [][]*crunchyroll.Epis
 
 	var eps [][]*crunchyroll.Episode
 	for _, series := range sortMap {
-		keys := make([]int, len(series))
+		var keys []int
 		for seriesNumber := range series {
 			keys = append(keys, seriesNumber)
 		}

@@ -2,6 +2,7 @@ package crunchyroll
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/grafov/m3u8"
@@ -37,7 +38,14 @@ func (f *Format) Download(downloader Downloader) error {
 	if _, err := os.Stat(downloader.Filename); err == nil && !downloader.IgnoreExisting {
 		return fmt.Errorf("file %s already exists", downloader.Filename)
 	}
-	if _, err := os.Stat(downloader.TempDir); err == nil && !downloader.IgnoreExisting {
+	if _, err := os.Stat(downloader.TempDir); err != nil {
+		if os.IsNotExist(err) {
+			err = os.Mkdir(downloader.TempDir, 0755)
+		}
+		if err != nil {
+			return err
+		}
+	} else if !downloader.IgnoreExisting {
 		content, err := os.ReadDir(downloader.TempDir)
 		if err != nil {
 			return err
@@ -45,12 +53,6 @@ func (f *Format) Download(downloader Downloader) error {
 		if len(content) > 0 {
 			return fmt.Errorf("directory %s is not empty", downloader.Filename)
 		}
-	} else if err != nil && os.IsNotExist(err) {
-		if err := os.Mkdir(downloader.TempDir, 0755); err != nil {
-			return err
-		}
-	} else {
-		return err
 	}
 
 	if downloader.DeleteTempAfter {
@@ -142,8 +144,11 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 	}
 	command = append(command, outputFile)
 
+	var errBuf bytes.Buffer
 	cmd := exec.Command("ffmpeg",
 		command...)
+	cmd.Stderr = &errBuf
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -154,8 +159,8 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 	}()
 
 	select {
-	case err := <-cmdChan:
-		return err
+	case <-cmdChan:
+		return fmt.Errorf(errBuf.String())
 	case <-context.Done():
 		cmd.Process.Kill()
 		return context.Err()

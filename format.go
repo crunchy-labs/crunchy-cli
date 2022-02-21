@@ -123,17 +123,19 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 	if err != nil {
 		return err
 	}
-	f, err := os.CreateTemp("", "*.txt")
+	f, err := os.Create(filepath.Join(tempDir, "list.txt"))
 	if err != nil {
 		return err
 	}
-	defer os.Remove(f.Name())
-	for i := 0; i < len(dir); i++ {
+	// -1 is the list.txt file
+	for i := 0; i < len(dir)-1; i++ {
 		fmt.Fprintf(f, "file '%s.ts'\n", filepath.Join(tempDir, strconv.Itoa(i)))
 	}
+	f.Close()
 
 	// predefined options ... custom options ... predefined output filename
 	command := []string{
+		"-y",
 		"-f", "concat",
 		"-safe", "0",
 		"-i", f.Name(),
@@ -153,14 +155,21 @@ func mergeSegmentsFFmpeg(context context.Context, tempDir string, outputFile str
 		return err
 	}
 
-	cmdChan := make(chan error)
+	cmdChan := make(chan error, 1)
 	go func() {
 		cmdChan <- cmd.Wait()
 	}()
 
 	select {
-	case <-cmdChan:
-		return fmt.Errorf(errBuf.String())
+	case err = <-cmdChan:
+		if err != nil {
+			if errBuf.Len() > 0 {
+				return fmt.Errorf(errBuf.String())
+			} else {
+				return err
+			}
+		}
+		return nil
 	case <-context.Done():
 		cmd.Process.Kill()
 		return context.Err()

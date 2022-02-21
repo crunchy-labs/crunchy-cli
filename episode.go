@@ -130,8 +130,8 @@ func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*
 			foundStream = stream
 			break
 		} else if !hardsub {
-			for _, subtitle := range stream.Subtitles {
-				if subtitle.Locale == subtitle.Locale {
+			for _, streamSubtitle := range stream.Subtitles {
+				if streamSubtitle.Locale == subtitle {
 					foundStream = stream
 					break
 				}

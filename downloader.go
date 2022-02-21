@@ -79,58 +79,37 @@ func NewDownloader(context context.Context, filename string, goroutines int, onS
 //		And this function just downloads each of this segment into the given directory.
 // 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
 func download(context context.Context, format *Format, tempDir string, goroutines int, lockOnSegmentDownload bool, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) error {
-	req, err := http.NewRequest(http.MethodGet, format.Video.URI, nil)
-	if err != nil {
+	if err := format.InitVideo(); err != nil {
 		return err
-	}
-	req.WithContext(context)
-
-	resp, err := format.crunchy.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	// reads the m3u8 file
-	playlist, _, err := m3u8.DecodeFrom(resp.Body, true)
-	if err != nil {
-		return err
-	}
-	// extracts the segments from the playlist
-	var segments []*m3u8.MediaSegment
-	for _, segment := range playlist.(*m3u8.MediaPlaylist).Segments {
-		// some segments are nil, so they have to be filtered out
-		if segment != nil {
-			segments = append(segments, segment)
-		}
 	}
 
 	var wg sync.WaitGroup
 	var lock sync.Mutex
-	chunkSize := int(math.Ceil(float64(len(segments)) / float64(goroutines)))
+	chunkSize := int(math.Ceil(float64(format.Video.Chunklist.Count()) / float64(goroutines)))
 
 	// when a onSegmentDownload call returns an error, this channel will be set to true and stop all goroutines
 	quit := make(chan bool)
 
 	// receives the decrypt block and iv from the first segment.
 	// in my tests, only the first segment has specified this data, so the decryption data from this first segments will be used in every other segment too
-	block, iv, err := getCrypt(format, segments[0])
+	block, iv, err := getCrypt(format, format.Video.Chunklist.Segments[0])
 	if err != nil {
 		return err
 	}
 
 	var total int32
-	for i := 0; i < len(segments); i += chunkSize {
+	for i := 0; i < int(format.Video.Chunklist.Count()); i += chunkSize {
 		wg.Add(1)
 		end := i + chunkSize
-		if end > len(segments) {
-			end = len(segments)
+		if end > int(format.Video.Chunklist.Count()) {
+			end = int(format.Video.Chunklist.Count())
 		}
 		i := i
 
 		go func() {
 			defer wg.Done()
 
-			for j, segment := range segments[i:end] {
+			for j, segment := range format.Video.Chunklist.Segments[i:end] {
 				select {
 				case <-context.Done():
 					return
@@ -156,7 +135,7 @@ func download(context context.Context, format *Format, tempDir string, goroutine
 							lock.Lock()
 						}
 
-						if err = onSegmentDownload(segment, int(atomic.AddInt32(&total, 1)), len(segments), file); err != nil {
+						if err = onSegmentDownload(segment, int(atomic.AddInt32(&total, 1)), int(format.Video.Chunklist.Count()), file); err != nil {
 							quit <- true
 							if lockOnSegmentDownload {
 								lock.Unlock()

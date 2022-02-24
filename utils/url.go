@@ -7,7 +7,7 @@ import (
 
 // ExtractEpisodesFromUrl extracts all episodes from an url.
 // If audio is not empty, the episodes gets filtered after the given locale
-func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio crunchyroll.LOCALE) ([]*crunchyroll.Episode, error) {
+func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio ...crunchyroll.LOCALE) ([]*crunchyroll.Episode, error) {
 	series, episodes, err := ParseUrl(crunchy, url)
 	if err != nil {
 		return nil, err
@@ -21,10 +21,20 @@ func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio 
 			return nil, err
 		}
 		for _, season := range seasons {
-			if audio != "" {
-				if audioLocale, err := season.AudioLocale(); err != nil {
+			if audio != nil {
+				locale, err := season.AudioLocale()
+				if err != nil {
 					return nil, err
-				} else if audioLocale != audio {
+				}
+
+				var found bool
+				for _, l := range audio {
+					if locale == l {
+						found = true
+						break
+					}
+				}
+				if !found {
 					continue
 				}
 			}
@@ -35,15 +45,34 @@ func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio 
 			eps = append(eps, e...)
 		}
 	} else if episodes != nil {
-		for _, episode := range episodes {
-			if audio == "" {
-				eps = append(eps, episode)
-			} else if audioLocale, err := episode.AudioLocale(); err != nil {
-				return nil, err
-			} else if audioLocale == audio {
-				eps = append(eps, episode)
-			}
+		if audio == nil {
+			return episodes, nil
 		}
+
+		for _, episode := range episodes {
+			locale, err := episode.AudioLocale()
+			if err != nil {
+				return nil, err
+			}
+			if audio != nil {
+				var found bool
+				for _, l := range audio {
+					if locale == l {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+			}
+
+			eps = append(eps, episode)
+		}
+	}
+
+	if len(eps) == 0 {
+		return nil, fmt.Errorf("could not find any matching episode")
 	}
 
 	return eps, nil

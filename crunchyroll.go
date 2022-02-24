@@ -18,14 +18,15 @@ type LOCALE string
 const (
 	JP LOCALE = "ja-JP"
 	US        = "en-US"
-	LA        = "es-LA"
+	LA        = "es-419"
 	ES        = "es-ES"
 	FR        = "fr-FR"
+	PT        = "pt-PT"
 	BR        = "pt-BR"
 	IT        = "it-IT"
 	DE        = "de-DE"
 	RU        = "ru-RU"
-	ME        = "ar-ME"
+	AR        = "ar-SA"
 )
 
 type Crunchyroll struct {

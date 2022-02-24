@@ -10,11 +10,12 @@ var AllLocales = []crunchyroll.LOCALE{
 	crunchyroll.LA,
 	crunchyroll.ES,
 	crunchyroll.FR,
+	crunchyroll.PT,
 	crunchyroll.BR,
 	crunchyroll.IT,
 	crunchyroll.DE,
 	crunchyroll.RU,
-	crunchyroll.ME,
+	crunchyroll.AR,
 }
 
 // ValidateLocale validates if the given locale actually exist
@@ -40,6 +41,8 @@ func LocaleLanguage(locale crunchyroll.LOCALE) string {
 		return "Spanish (Spain)"
 	case crunchyroll.FR:
 		return "French"
+	case crunchyroll.PT:
+		return "Portuguese (Europe)"
 	case crunchyroll.BR:
 		return "Portuguese (Brazil)"
 	case crunchyroll.IT:
@@ -48,7 +51,7 @@ func LocaleLanguage(locale crunchyroll.LOCALE) string {
 		return "German"
 	case crunchyroll.RU:
 		return "Russian"
-	case crunchyroll.ME:
+	case crunchyroll.AR:
 		return "Arabic"
 	default:
 		return ""

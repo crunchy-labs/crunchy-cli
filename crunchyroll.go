@@ -57,8 +57,8 @@ type Crunchyroll struct {
 	cache bool
 }
 
-// LoginWithCredentials logs in via crunchyroll email and password
-func LoginWithCredentials(email string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+// LoginWithCredentials logs in via crunchyroll username or email and password
+func LoginWithCredentials(user string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	sessionIDEndpoint := fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?version=1.0&access_token=%s&device_type=%s&device_id=%s",
 		"LNDJgOit5yaRIWN", "com.crunchyroll.windows.desktop", "Az2srGnChW65fuxYz2Xxl1GcZQgtGgI")
 	sessResp, err := client.Get(sessionIDEndpoint)
@@ -76,7 +76,7 @@ func LoginWithCredentials(email string, password string, locale LOCALE, client *
 	loginEndpoint := "https://api.crunchyroll.com/login.0.json"
 	authValues := url.Values{}
 	authValues.Set("session_id", sessionID)
-	authValues.Set("account", email)
+	authValues.Set("account", user)
 	authValues.Set("password", password)
 	client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
 

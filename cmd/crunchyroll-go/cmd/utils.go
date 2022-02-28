@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/ByteDream/crunchyroll-go/utils"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -18,8 +18,6 @@ import (
 	"sync"
 	"time"
 )
-
-var sessionIDPath = filepath.Join(os.TempDir(), ".crunchy")
 
 var (
 	invalidWindowsChars = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
@@ -95,32 +93,49 @@ func freeFileName(filename string) (string, bool) {
 	return filename, j != 0
 }
 
-func loadSessionID() (string, error) {
-	if _, stat := os.Stat(sessionIDPath); os.IsNotExist(stat) {
-		out.Err("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
-		os.Exit(1)
-	}
-	body, err := ioutil.ReadFile(sessionIDPath)
-	if err != nil {
-		return "", err
-	}
-	return strings.ReplaceAll(string(body), "\n", ""), nil
-}
-
 func loadCrunchy() {
 	out.SetProgress("Logging in")
-	sessionID, err := loadSessionID()
-	if err == nil {
-		if crunchy, err = crunchyroll.LoginWithSessionID(sessionID, systemLocale(), client); err != nil {
+
+	files := []string{filepath.Join(os.TempDir(), ".crunchy")}
+
+	if runtime.GOOS != "windows" {
+		usr, _ := user.Current()
+		files = append(files, filepath.Join(usr.HomeDir, ".config/crunchyroll-go"))
+	}
+
+	var body []byte
+	var err error
+	for _, file := range files {
+		if _, err = os.Stat(file); os.IsNotExist(err) {
+			continue
+		}
+		body, err = os.ReadFile(file)
+		break
+	}
+	if body == nil {
+		out.Err("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
+		os.Exit(1)
+	} else if err != nil {
+		out.Err("Failed to read login information: %v", err)
+		os.Exit(1)
+	}
+
+	split := strings.SplitN(string(body), "\n", 2)
+	if len(split) == 1 || split[2] == "" {
+		if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(), client); err != nil {
 			out.StopProgress(err.Error())
 			os.Exit(1)
 		}
+		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 	} else {
-		out.StopProgress(err.Error())
-		os.Exit(1)
+		if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(), client); err != nil {
+			out.StopProgress(err.Error())
+			os.Exit(1)
+		}
+		out.Debug("Logged in with username '%s' and password '%s'. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0], split[1])
 	}
+
 	out.StopProgress("Logged in")
-	out.Debug("Logged in with session id %s", sessionID)
 }
 
 func hasFFmpeg() bool {

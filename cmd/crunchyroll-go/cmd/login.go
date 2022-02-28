@@ -1,13 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
 )
 
 var (
-	sessionIDFlag bool
+	loginSessionIDFlag bool
+
+	loginPersistentFlag bool
 )
 
 var loginCmd = &cobra.Command{
@@ -15,36 +22,55 @@ var loginCmd = &cobra.Command{
 	Short: "Login to crunchyroll",
 	Args:  cobra.RangeArgs(1, 2),
 
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if sessionIDFlag {
-			return loginSessionID(args[0], false)
+	Run: func(cmd *cobra.Command, args []string) {
+		if loginSessionIDFlag {
+			loginSessionID(args[0])
 		} else {
-			return loginCredentials(args[0], args[1])
+			loginCredentials(args[0], args[1])
 		}
 	},
 }
 
 func init() {
+	loginCmd.Flags().BoolVar(&loginSessionIDFlag, "session-id", false, "Use a session id to login instead of username and password")
+
+	loginCmd.Flags().BoolVar(&loginPersistentFlag, "persistent", false, "If the given credential should be stored persistent")
+
 	rootCmd.AddCommand(loginCmd)
-	loginCmd.Flags().BoolVar(&sessionIDFlag, "session-id", false, "session id")
 }
 
-func loginCredentials(email, password string) error {
+func loginCredentials(user, password string) error {
 	out.Debug("Logging in via credentials")
-	session, err := crunchyroll.LoginWithCredentials(email, password, locale, client)
-	if err != nil {
-		return err
+	if _, err := crunchyroll.LoginWithCredentials(user, password, systemLocale(), client); err != nil {
+		out.Err(err.Error())
+		os.Exit(1)
 	}
-	return loginSessionID(session.SessionID, true)
+
+	return ioutil.WriteFile(loginStorePath(), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600)
 }
 
-func loginSessionID(sessionID string, alreadyChecked bool) error {
-	if !alreadyChecked {
-		out.Debug("Logging in via session id")
-		if _, err := crunchyroll.LoginWithSessionID(sessionID, locale, client); err != nil {
-			return err
-		}
+func loginSessionID(sessionID string) error {
+	out.Debug("Logging in via session id")
+	if _, err := crunchyroll.LoginWithSessionID(sessionID, systemLocale(), client); err != nil {
+		out.Err(err.Error())
+		os.Exit(1)
 	}
-	out.Info("Due to security reasons, you have to login again on the next reboot")
-	return ioutil.WriteFile(sessionIDPath, []byte(sessionID), 0777)
+
+	return ioutil.WriteFile(loginStorePath(), []byte(sessionID), 0600)
+}
+
+func loginStorePath() string {
+	path := filepath.Join(os.TempDir(), ".crunchy")
+	if loginPersistentFlag {
+		if runtime.GOOS != "windows" {
+			usr, _ := user.Current()
+			path = filepath.Join(usr.HomeDir, ".config/crunchyroll-go")
+		}
+
+		out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", path)
+	} else {
+		out.Info("Due to security reasons, you have to login again on the next reboot")
+	}
+
+	return path
 }

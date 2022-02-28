@@ -11,37 +11,48 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var sessionIDPath = filepath.Join(os.TempDir(), ".crunchy")
+
+var (
+	invalidWindowsChars = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
+	invalidLinuxChars   = []string{"/"}
+)
 
 // systemLocale receives the system locale
 // https://stackoverflow.com/questions/51829386/golang-get-system-language/51831590#51831590
 func systemLocale() crunchyroll.LOCALE {
 	if runtime.GOOS != "windows" {
 		if lang, ok := os.LookupEnv("LANG"); ok {
-			return localeToLOCALE(strings.ReplaceAll(strings.Split(lang, ".")[0], "_", "-"))
+			prefix := strings.Split(lang, "_")[0]
+			suffix := strings.Split(strings.Split(lang, ".")[0], "_")[1]
+			l := crunchyroll.LOCALE(fmt.Sprintf("%s-%s", prefix, suffix))
+			if !utils.ValidateLocale(l) {
+				out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				l = crunchyroll.US
+			}
+			return l
 		}
 	} else {
 		cmd := exec.Command("powershell", "Get-Culture | select -exp Name")
-		if output, err := cmd.Output(); err != nil {
-			return localeToLOCALE(strings.Trim(string(output), "\r\n"))
+		if output, err := cmd.Output(); err == nil {
+			l := crunchyroll.LOCALE(strings.Trim(string(output), "\r\n"))
+			if !utils.ValidateLocale(l) {
+				out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				l = crunchyroll.US
+			}
+			return l
 		}
 	}
-	return localeToLOCALE("en-US")
-}
-
-func localeToLOCALE(locale string) crunchyroll.LOCALE {
-	if l := crunchyroll.LOCALE(locale); utils.ValidateLocale(l) {
-		return l
-	} else {
-		out.Errf("%s is not a supported locale, using %s as fallback\n", locale, crunchyroll.US)
-		return crunchyroll.US
-	}
+	out.Err("Failed to get locale, using %s", crunchyroll.US)
+	return crunchyroll.US
 }
 
 func allLocalesAsStrings() (locales []string) {
@@ -55,7 +66,7 @@ func createOrDefaultClient(proxy string) (*http.Client, error) {
 	if proxy == "" {
 		return http.DefaultClient, nil
 	} else {
-		out.Infof("Using custom proxy %s\n", proxy)
+		out.Info("Using custom proxy %s", proxy)
 		proxyURL, err := url.Parse(proxy)
 		if err != nil {
 			return nil, err
@@ -86,7 +97,8 @@ func freeFileName(filename string) (string, bool) {
 
 func loadSessionID() (string, error) {
 	if _, stat := os.Stat(sessionIDPath); os.IsNotExist(stat) {
-		out.Fatalf("To use this command, login first. Type `%s login -h` to get help\n", os.Args[0])
+		out.Err("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
+		os.Exit(1)
 	}
 	body, err := ioutil.ReadFile(sessionIDPath)
 	if err != nil {
@@ -96,39 +108,197 @@ func loadSessionID() (string, error) {
 }
 
 func loadCrunchy() {
-	out.StartProgress("Logging in")
+	out.SetProgress("Logging in")
 	sessionID, err := loadSessionID()
 	if err == nil {
-		if crunchy, err = crunchyroll.LoginWithSessionID(sessionID, locale, client); err != nil {
-			out.EndProgress(false, err.Error())
+		if crunchy, err = crunchyroll.LoginWithSessionID(sessionID, systemLocale(), client); err != nil {
+			out.StopProgress(err.Error())
 			os.Exit(1)
 		}
 	} else {
-		out.EndProgress(false, err.Error())
+		out.StopProgress(err.Error())
 		os.Exit(1)
 	}
-	out.EndProgress(true, "Logged in")
-	out.Debugf("Logged in with session id %s\n", sessionID)
+	out.StopProgress("Logged in")
+	out.Debug("Logged in with session id %s", sessionID)
 }
 
 func hasFFmpeg() bool {
-	cmd := exec.Command("ffmpeg", "-h")
-	return cmd.Run() == nil
+	return exec.Command("ffmpeg", "-h").Run() == nil
 }
 
 func terminalWidth() int {
 	if runtime.GOOS != "windows" {
 		cmd := exec.Command("stty", "size")
 		cmd.Stdin = os.Stdin
-		out, err := cmd.Output()
+		res, err := cmd.Output()
 		if err != nil {
 			return 60
 		}
-		width, err := strconv.Atoi(strings.Split(strings.ReplaceAll(string(out), "\n", ""), " ")[1])
+		width, err := strconv.Atoi(strings.Split(strings.ReplaceAll(string(res), "\n", ""), " ")[1])
 		if err != nil {
 			return 60
 		}
 		return width
 	}
 	return 60
+}
+
+func generateFilename(name, directory string) string {
+	if runtime.GOOS != "windows" {
+		for _, char := range invalidLinuxChars {
+			strings.ReplaceAll(name, char, "")
+		}
+		out.Debug("Replaced invalid characters (not windows)")
+	} else {
+		for _, char := range invalidWindowsChars {
+			strings.ReplaceAll(name, char, "")
+		}
+		out.Debug("Replaced invalid characters (windows)")
+	}
+
+	if directory != "" {
+		name = filepath.Join(directory, name)
+	}
+
+	filename, changed := freeFileName(name)
+	if changed {
+		out.Info("File %s already exists, changing name to %s", name, filename)
+	}
+
+	return filename
+}
+
+func extractEpisodes(url string, locales ...crunchyroll.LOCALE) [][]*crunchyroll.Episode {
+	final := make([][]*crunchyroll.Episode, len(locales))
+	episodes, err := utils.ExtractEpisodesFromUrl(crunchy, url, locales...)
+	if err != nil {
+		out.Err("Failed to get episodes: %v", err)
+		os.Exit(1)
+	}
+
+	// fetch all episodes and sort them by their locale
+	var wg sync.WaitGroup
+	for _, episode := range episodes {
+		episode := episode
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			audioLocale, err := episode.AudioLocale()
+			if err != nil {
+				out.Err("Failed to get audio locale: %v", err)
+				os.Exit(1)
+			}
+
+			for i, locale := range locales {
+				if locale == audioLocale {
+					final[i] = append(final[i], episode)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	return final
+}
+
+type FormatInformation struct {
+	// the format to download
+	format *crunchyroll.Format
+
+	// additional formats which are only used by archive.go
+	additionalFormats []*crunchyroll.Format
+
+	Title         string             `json:"title"`
+	SeriesName    string             `json:"series_name"`
+	SeasonNumber  int                `json:"season_number"`
+	EpisodeNumber int                `json:"episode_number"`
+	Resolution    string             `json:"resolution"`
+	FPS           float64            `json:"fps"`
+	Audio         crunchyroll.LOCALE `json:"audio"`
+	Subtitle      crunchyroll.LOCALE `json:"subtitle"`
+}
+
+func (fi FormatInformation) Format(source string) string {
+	fields := reflect.TypeOf(fi)
+	values := reflect.ValueOf(fi)
+
+	for i := 0; i < fields.NumField(); i++ {
+		var valueAsString string
+		switch value := values.Field(i); value.Kind() {
+		case reflect.String:
+			valueAsString = value.String()
+		case reflect.Int:
+			valueAsString = fmt.Sprintf("%02d", value.Int())
+		case reflect.Float64:
+			valueAsString = fmt.Sprintf("%.2f", value.Float())
+		case reflect.Bool:
+			valueAsString = fields.Field(i).Tag.Get("json")
+			if !value.Bool() {
+				valueAsString = "no " + valueAsString
+			}
+		}
+		source = strings.ReplaceAll(source, "{"+fields.Field(i).Tag.Get("json")+"}", valueAsString)
+	}
+
+	return source
+}
+
+type DownloadProgress struct {
+	Prefix  string
+	Message string
+
+	Total   int
+	Current int
+
+	Dev   bool
+	Quiet bool
+
+	lock sync.Mutex
+}
+
+func (dp *DownloadProgress) Update() {
+	dp.update("", false)
+}
+
+func (dp *DownloadProgress) UpdateMessage(msg string, permanent bool) {
+	dp.update(msg, permanent)
+}
+
+func (dp *DownloadProgress) update(msg string, permanent bool) {
+	if dp.Quiet {
+		return
+	}
+
+	if dp.Current >= dp.Total {
+		return
+	}
+
+	dp.lock.Lock()
+	defer dp.lock.Unlock()
+	dp.Current++
+
+	if msg == "" {
+		msg = dp.Message
+	}
+	if permanent {
+		dp.Message = msg
+	}
+
+	if dp.Dev {
+		fmt.Printf("%s%s\n", dp.Prefix, msg)
+		return
+	}
+
+	percentage := float32(dp.Current) / float32(dp.Total) * 100
+	progressWidth := float32(terminalWidth() - (12 + len(dp.Prefix) + len(dp.Message)) - (len(fmt.Sprint(dp.Total)))*2)
+
+	repeatCount := int(percentage / (float32(100) / progressWidth))
+	// it can be lower than zero when the terminal is very tiny
+	if repeatCount < 0 {
+		repeatCount = 0
+	}
+	progressPercentage := (strings.Repeat("=", repeatCount) + ">")[1:]
+
+	fmt.Printf("\r%s%s [%-"+fmt.Sprint(progressWidth)+"s]%4d%% %8d/%d", dp.Prefix, msg, progressPercentage, int(percentage), dp.Current, dp.Total)
 }

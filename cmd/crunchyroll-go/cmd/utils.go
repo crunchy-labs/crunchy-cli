@@ -121,7 +121,7 @@ func loadCrunchy() {
 	}
 
 	split := strings.SplitN(string(body), "\n", 2)
-	if len(split) == 1 || split[2] == "" {
+	if len(split) == 1 || split[1] == "" {
 		if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(), client); err != nil {
 			out.StopProgress(err.Error())
 			os.Exit(1)

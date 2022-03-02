@@ -1,19 +1,18 @@
-package utils
+package crunchyroll
 
 import (
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go"
 )
 
 // ExtractEpisodesFromUrl extracts all episodes from an url.
 // If audio is not empty, the episodes gets filtered after the given locale
-func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio ...crunchyroll.LOCALE) ([]*crunchyroll.Episode, error) {
-	series, episodes, err := ParseUrl(crunchy, url)
+func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Episode, error) {
+	series, episodes, err := c.ParseUrl(url)
 	if err != nil {
 		return nil, err
 	}
 
-	var eps []*crunchyroll.Episode
+	var eps []*Episode
 
 	if series != nil {
 		seasons, err := series.Seasons()
@@ -80,27 +79,27 @@ func ExtractEpisodesFromUrl(crunchy *crunchyroll.Crunchyroll, url string, audio 
 
 // ParseUrl parses the given url into a series or episode.
 // The returning episode is a slice because non-beta urls have the same episode with different languages
-func ParseUrl(crunchy *crunchyroll.Crunchyroll, url string) (*crunchyroll.Series, []*crunchyroll.Episode, error) {
-	if seriesId, ok := crunchyroll.ParseBetaSeriesURL(url); ok {
-		series, err := crunchyroll.SeriesFromID(crunchy, seriesId)
+func (c *Crunchyroll) ParseUrl(url string) (*Series, []*Episode, error) {
+	if seriesId, ok := ParseBetaSeriesURL(url); ok {
+		series, err := SeriesFromID(c, seriesId)
 		if err != nil {
 			return nil, nil, err
 		}
 		return series, nil, nil
-	} else if episodeId, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
-		episode, err := crunchyroll.EpisodeFromID(crunchy, episodeId)
+	} else if episodeId, ok := ParseBetaEpisodeURL(url); ok {
+		episode, err := EpisodeFromID(c, episodeId)
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, []*crunchyroll.Episode{episode}, nil
-	} else if seriesName, ok := crunchyroll.ParseVideoURL(url); ok {
-		video, err := crunchy.FindVideoByName(seriesName)
+		return nil, []*Episode{episode}, nil
+	} else if seriesName, ok := ParseVideoURL(url); ok {
+		video, err := c.FindVideoByName(seriesName)
 		if err != nil {
 			return nil, nil, err
 		}
-		return video.(*crunchyroll.Series), nil, nil
-	} else if seriesName, title, _, _, ok := crunchyroll.ParseEpisodeURL(url); ok {
-		episodes, err := crunchy.FindEpisodeByName(seriesName, title)
+		return video.(*Series), nil, nil
+	} else if seriesName, title, _, _, ok := ParseEpisodeURL(url); ok {
+		episodes, err := c.FindEpisodeByName(seriesName, title)
 		if err != nil {
 			return nil, nil, err
 		}

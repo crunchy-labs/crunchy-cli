@@ -79,7 +79,7 @@ func (l *logger) Exit(format string, v ...interface{}) {
 }
 
 func (l *logger) Empty() {
-	if l.InfoLog.Writer() != io.Discard {
+	if !l.devView && l.InfoLog.Writer() != io.Discard {
 		fmt.Println("")
 	}
 }

@@ -186,33 +186,20 @@ func generateFilename(name, directory string) string {
 
 func extractEpisodes(url string, locales ...crunchyroll.LOCALE) [][]*crunchyroll.Episode {
 	final := make([][]*crunchyroll.Episode, len(locales))
-	episodes, err := utils.ExtractEpisodesFromUrl(crunchy, url, locales...)
+	episodes, err := crunchy.ExtractEpisodesFromUrl(url, locales...)
 	if err != nil {
 		out.Err("Failed to get episodes: %v", err)
 		os.Exit(1)
 	}
 
-	// fetch all episodes and sort them by their locale
-	var wg sync.WaitGroup
-	for _, episode := range episodes {
-		episode := episode
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			audioLocale, err := episode.AudioLocale()
-			if err != nil {
-				out.Err("Failed to get audio locale: %v", err)
-				os.Exit(1)
-			}
-
-			for i, locale := range locales {
-				if locale == audioLocale {
-					final[i] = append(final[i], episode)
-				}
-			}
-		}()
+	localeSorted, err := utils.SortEpisodesByAudio(episodes)
+	if err != nil {
+		out.Err("Failed to get audio locale: %v", err)
+		os.Exit(1)
 	}
-	wg.Wait()
+	for i, locale := range locales {
+		final[i] = append(final[i], localeSorted[locale]...)
+	}
 
 	return final
 }
@@ -306,14 +293,21 @@ func (dp *DownloadProgress) update(msg string, permanent bool) {
 	}
 
 	percentage := float32(dp.Current) / float32(dp.Total) * 100
-	progressWidth := float32(terminalWidth() - (12 + len(dp.Prefix) + len(dp.Message)) - (len(fmt.Sprint(dp.Total)))*2)
 
-	repeatCount := int(percentage / (float32(100) / progressWidth))
+	pre := fmt.Sprintf("%s%s [", dp.Prefix, msg)
+	post := fmt.Sprintf("]%4d%% %8d/%d", int(percentage), dp.Current, dp.Total)
+
+	// i don't really know why +2 is needed here but without it the Printf below would not print to the line end
+	progressWidth := terminalWidth() - len(pre) - len(post) + 2
+	repeatCount := int(percentage / float32(100) * float32(progressWidth))
 	// it can be lower than zero when the terminal is very tiny
 	if repeatCount < 0 {
 		repeatCount = 0
 	}
-	progressPercentage := (strings.Repeat("=", repeatCount) + ">")[1:]
+	progressPercentage := strings.Repeat("=", repeatCount)
+	if dp.Current != dp.Total {
+		progressPercentage += ">"
+	}
 
-	fmt.Printf("\r%s%s [%-"+fmt.Sprint(progressWidth)+"s]%4d%% %8d/%d", dp.Prefix, msg, progressPercentage, int(percentage), dp.Current, dp.Total)
+	fmt.Printf("\r%s%-"+fmt.Sprint(progressWidth)+"s%s", pre, progressPercentage, post)
 }

@@ -74,6 +74,10 @@ func (l *logger) Err(format string, v ...interface{}) {
 	l.ErrLog.Printf(format, v...)
 }
 
+func (l *logger) Exit(format string, v ...interface{}) {
+	fmt.Fprintln(l.ErrLog.Writer(), fmt.Sprintf(format, v...))
+}
+
 func (l *logger) Empty() {
 	if l.InfoLog.Writer() != io.Discard {
 		fmt.Println("")

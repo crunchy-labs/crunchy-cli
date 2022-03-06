@@ -204,7 +204,7 @@ func extractEpisodes(url string, locales ...crunchyroll.LOCALE) [][]*crunchyroll
 	return final
 }
 
-type FormatInformation struct {
+type formatInformation struct {
 	// the format to download
 	format *crunchyroll.Format
 
@@ -221,7 +221,7 @@ type FormatInformation struct {
 	Subtitle      crunchyroll.LOCALE `json:"subtitle"`
 }
 
-func (fi FormatInformation) Format(source string) string {
+func (fi formatInformation) Format(source string) string {
 	fields := reflect.TypeOf(fi)
 	values := reflect.ValueOf(fi)
 
@@ -246,7 +246,7 @@ func (fi FormatInformation) Format(source string) string {
 	return source
 }
 
-type DownloadProgress struct {
+type downloadProgress struct {
 	Prefix  string
 	Message string
 
@@ -259,15 +259,15 @@ type DownloadProgress struct {
 	lock sync.Mutex
 }
 
-func (dp *DownloadProgress) Update() {
+func (dp *downloadProgress) Update() {
 	dp.update("", false)
 }
 
-func (dp *DownloadProgress) UpdateMessage(msg string, permanent bool) {
+func (dp *downloadProgress) UpdateMessage(msg string, permanent bool) {
 	dp.update(msg, permanent)
 }
 
-func (dp *DownloadProgress) update(msg string, permanent bool) {
+func (dp *downloadProgress) update(msg string, permanent bool) {
 	if dp.Quiet {
 		return
 	}

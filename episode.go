@@ -119,6 +119,7 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 	return streams[0].AudioLocale, nil
 }
 
+// GetFormat returns the format which matches the given resolution and subtitle locale
 func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*Format, error) {
 	streams, err := e.Streams()
 	if err != nil {

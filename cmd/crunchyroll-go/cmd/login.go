@@ -64,11 +64,11 @@ func loginStorePath() string {
 	if loginPersistentFlag {
 		if runtime.GOOS != "windows" {
 			usr, _ := user.Current()
-			path = filepath.Join(usr.HomeDir, ".config/crunchyroll-go")
+			path = filepath.Join(usr.HomeDir, ".config/crunchy")
 		}
 
 		out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", path)
-	} else {
+	} else if runtime.GOOS != "windows" {
 		out.Info("Due to security reasons, you have to login again on the next reboot")
 	}
 

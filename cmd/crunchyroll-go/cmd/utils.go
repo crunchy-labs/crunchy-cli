@@ -100,7 +100,7 @@ func loadCrunchy() {
 
 	if runtime.GOOS != "windows" {
 		usr, _ := user.Current()
-		files = append(files, filepath.Join(usr.HomeDir, ".config/crunchyroll-go"))
+		files = append(files, filepath.Join(usr.HomeDir, ".config/crunchy"))
 	}
 
 	var body []byte

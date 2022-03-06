@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // SortEpisodesBySeason sorts the given episodes by their seasons.
@@ -40,6 +41,44 @@ func SortEpisodesBySeason(episodes []*crunchyroll.Episode) [][]*crunchyroll.Epis
 	}
 
 	return eps
+}
+
+// SortEpisodesByAudio sort the given episodes by their audio locale
+func SortEpisodesByAudio(episodes []*crunchyroll.Episode) (map[crunchyroll.LOCALE][]*crunchyroll.Episode, error) {
+	eps := map[crunchyroll.LOCALE][]*crunchyroll.Episode{}
+
+	errChan := make(chan error)
+
+	var wg sync.WaitGroup
+	var lock sync.Mutex
+	for _, episode := range episodes {
+		episode := episode
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			audioLocale, err := episode.AudioLocale()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			lock.Lock()
+			defer lock.Unlock()
+
+			if _, ok := eps[audioLocale]; !ok {
+				eps[audioLocale] = make([]*crunchyroll.Episode, 0)
+			}
+			eps[audioLocale] = append(eps[audioLocale], episode)
+		}()
+	}
+	go func() {
+		wg.Wait()
+		errChan <- nil
+	}()
+
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+	return eps, nil
 }
 
 // MovieListingsByDuration sorts movie listings by their duration

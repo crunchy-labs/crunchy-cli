@@ -14,13 +14,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
-
-var ffmpegInfoPattern = regexp.MustCompile(`Output #0, (.+),`)
 
 // NewDownloader creates a downloader with default settings which should
 // fit the most needs
@@ -160,62 +158,54 @@ func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 	}
 	if d.FFmpegOpts != nil {
 		command = append(command, d.FFmpegOpts...)
-		var found bool
+	}
+
+	var tmpfile string
+	if _, ok := d.Writer.(*io.PipeWriter); ok {
+		if file, ok := d.Writer.(*os.File); ok {
+			tmpfile = filepath.Base(file.Name())
+		}
+	}
+	if filepath.Ext(tmpfile) == "" {
+		// checks if the -f flag is set (overwrites the output format)
+		var hasF bool
 		for _, opts := range d.FFmpegOpts {
-			if opts == "-f" {
-				found = true
+			if strings.TrimSpace(opts) == "-f" {
+				hasF = true
 				break
 			}
 		}
-		if !found {
-			if file, ok := d.Writer.(*os.File); ok {
-				var outBuf bytes.Buffer
-				infoCmd := exec.Command("ffmpeg", file.Name())
-				infoCmd.Stderr = &outBuf
-
-				if infoCmd.Run(); err != nil {
-					return err
-				}
-				if parsed := ffmpegInfoPattern.FindStringSubmatch(outBuf.String()); parsed != nil {
-					command = append(command, "-f", parsed[1])
-				}
-			} else {
-				command = append(command, "-f", "mpegts")
-			}
-		}
-	}
-	command = append(command, "pipe:1")
-
-	var errBuf bytes.Buffer
-	cmd := exec.Command("ffmpeg",
-		command...)
-	cmd.Stderr = &errBuf
-	// io.Copy may be better but this uses less code so ¯\_(ツ)_/¯
-	cmd.Stdout = d.Writer
-
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-
-	cmdChan := make(chan error, 1)
-	go func() {
-		cmdChan <- cmd.Wait()
-	}()
-
-	select {
-	case err = <-cmdChan:
-		if err != nil {
-			if errBuf.Len() > 0 {
-				return fmt.Errorf(errBuf.String())
-			} else {
+		if !hasF {
+			command = append(command, "-f", "matroska")
+			f, err := os.CreateTemp(d.TempDir, "")
+			if err != nil {
 				return err
 			}
+			f.Close()
+			tmpfile = f.Name()
 		}
-		return nil
-	case <-d.Context.Done():
-		cmd.Process.Kill()
-		return d.Context.Err()
 	}
+	command = append(command, tmpfile)
+
+	var errBuf bytes.Buffer
+	cmd := exec.CommandContext(d.Context, "ffmpeg",
+		command...)
+	cmd.Stderr = &errBuf
+
+	if err = cmd.Run(); err != nil {
+		if errBuf.Len() > 0 {
+			return fmt.Errorf(errBuf.String())
+		} else {
+			return err
+		}
+	}
+	file, err := os.Open(tmpfile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = io.Copy(d.Writer, file)
+	return err
 }
 
 // downloadSegments downloads every mpeg transport stream segment to a given

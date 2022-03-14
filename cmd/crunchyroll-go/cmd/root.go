@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
 	"net/http"
@@ -21,6 +22,10 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "crunchyroll",
 	Short: "Download crunchyroll videos with ease",
+
+	SilenceErrors: true,
+	SilenceUsage:  true,
+
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if verboseFlag {
 			out = newLogger(true, true, true)
@@ -46,14 +51,17 @@ func Execute() {
 	defer func() {
 		if r := recover(); r != nil {
 			if out.IsDev() {
-				out.Err(string(debug.Stack()))
+				out.Err("%v: %s", r, debug.Stack())
 			} else {
 				out.Err("Unexpected error: %v", r)
 			}
 			os.Exit(1)
 		}
 	}()
-	if rootCmd.Execute() != nil {
+	if err := rootCmd.Execute(); err != nil {
+		if err != context.Canceled {
+			out.Exit("An error occurred: %v", err)
+		}
 		os.Exit(1)
 	}
 }

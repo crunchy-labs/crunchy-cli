@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -81,8 +80,13 @@ func createOrDefaultClient(proxy string) (*http.Client, error) {
 }
 
 func freeFileName(filename string) (string, bool) {
-	ext := path.Ext(filename)
+	ext := filepath.Ext(filename)
 	base := strings.TrimSuffix(filename, ext)
+	// checks if a .tar stands before the "actual" file ending
+	if extraExt := filepath.Ext(base); extraExt == ".tar" {
+		ext = extraExt + ext
+		base = strings.TrimSuffix(base, extraExt)
+	}
 	j := 0
 	for ; ; j++ {
 		if _, stat := os.Stat(filename); stat != nil && !os.IsExist(stat) {

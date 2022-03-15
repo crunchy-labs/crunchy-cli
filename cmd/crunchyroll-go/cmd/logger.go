@@ -117,7 +117,7 @@ func (l *logger) SetProgress(format string, v ...interface{}) {
 						fmt.Printf("\r" + strings.Repeat(" ", 2+len(message)))
 						fmt.Printf("\r➞ %s\n", p.message)
 					} else {
-						l.Debug(message)
+						l.Debug(p.message)
 					}
 
 					l.progress = nil

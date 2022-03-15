@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -22,6 +23,8 @@ var (
 	invalidWindowsChars = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
 	invalidLinuxChars   = []string{"/"}
 )
+
+var urlFilter = regexp.MustCompile(`(S(\d+))?(E(\d+))?((-)(S(\d+))?(E(\d+))?)?(,|$)`)
 
 // systemLocale receives the system locale
 // https://stackoverflow.com/questions/51829386/golang-get-system-language/51831590#51831590
@@ -188,24 +191,86 @@ func generateFilename(name, directory string) string {
 	return filename
 }
 
-func extractEpisodes(url string, locales ...crunchyroll.LOCALE) [][]*crunchyroll.Episode {
+func extractEpisodes(url string, locales ...crunchyroll.LOCALE) ([][]*crunchyroll.Episode, error) {
+	var matches [][]string
+
+	lastOpen := strings.LastIndex(url, "[")
+	if strings.HasSuffix(url, "]") && lastOpen != -1 && lastOpen < len(url) {
+		matches = urlFilter.FindAllStringSubmatch(url[lastOpen+1:len(url)-1], -1)
+
+		var all string
+		for _, match := range matches {
+			all += match[0]
+		}
+		if all != url[lastOpen+1:len(url)-1] {
+			return nil, fmt.Errorf("invalid episode filter")
+		}
+		url = url[:lastOpen]
+	}
+
 	final := make([][]*crunchyroll.Episode, len(locales))
 	episodes, err := crunchy.ExtractEpisodesFromUrl(url, locales...)
 	if err != nil {
-		out.Err("Failed to get episodes: %v", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to get episodes: %v", err)
+	}
+
+	if len(episodes) == 0 {
+		return nil, fmt.Errorf("no episodes found")
+	}
+
+	if matches != nil {
+		for _, match := range matches {
+			fromSeason, fromEpisode, toSeason, toEpisode := -1, -1, -1, -1
+			if match[2] != "" {
+				fromSeason, _ = strconv.Atoi(match[2])
+			}
+			if match[4] != "" {
+				fromEpisode, _ = strconv.Atoi(match[4])
+			}
+			if match[8] != "" {
+				toSeason, _ = strconv.Atoi(match[8])
+			}
+			if match[10] != "" {
+				toEpisode, _ = strconv.Atoi(match[10])
+			}
+
+			if match[6] != "-" {
+				toSeason = fromSeason
+				toEpisode = fromEpisode
+			}
+
+			tmpEps := make([]*crunchyroll.Episode, 0)
+			for _, episode := range episodes {
+				if fromSeason != -1 && episode.SeasonNumber < fromSeason {
+					continue
+				} else if toSeason != -1 && episode.SeasonNumber > toSeason {
+					continue
+				} else if fromEpisode != -1 && episode.EpisodeNumber < fromEpisode {
+					continue
+				} else if toEpisode != -1 && episode.EpisodeNumber > toEpisode {
+					continue
+				} else {
+					tmpEps = append(tmpEps, episode)
+				}
+			}
+
+			if len(tmpEps) == 0 {
+				return nil, fmt.Errorf("no episodes are matching the given filter")
+			}
+
+			episodes = tmpEps
+		}
 	}
 
 	localeSorted, err := utils.SortEpisodesByAudio(episodes)
 	if err != nil {
-		out.Err("Failed to get audio locale: %v", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to get audio locale: %v", err)
 	}
 	for i, locale := range locales {
 		final[i] = append(final[i], localeSorted[locale]...)
 	}
 
-	return final
+	return final, nil
 }
 
 type formatInformation struct {

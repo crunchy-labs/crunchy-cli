@@ -241,13 +241,13 @@ func extractEpisodes(url string, locales ...crunchyroll.LOCALE) ([][]*crunchyrol
 
 			tmpEps := make([]*crunchyroll.Episode, 0)
 			for _, episode := range episodes {
-				if fromSeason != -1 && episode.SeasonNumber < fromSeason {
+				if fromSeason != -1 && (episode.SeasonNumber < fromSeason || (fromEpisode != -1 && episode.EpisodeNumber < fromEpisode)) {
 					continue
-				} else if toSeason != -1 && episode.SeasonNumber > toSeason {
+				} else if fromSeason == -1 && fromEpisode != -1 && fromEpisode < episode.EpisodeNumber {
 					continue
-				} else if fromEpisode != -1 && episode.EpisodeNumber < fromEpisode {
+				} else if toSeason != -1 && (episode.SeasonNumber > toSeason || (toEpisode != -1 && episode.EpisodeNumber > toEpisode)) {
 					continue
-				} else if toEpisode != -1 && episode.EpisodeNumber > toEpisode {
+				} else if toSeason == -1 && toEpisode != -1 && episode.EpisodeNumber > toEpisode {
 					continue
 				} else {
 					tmpEps = append(tmpEps, episode)

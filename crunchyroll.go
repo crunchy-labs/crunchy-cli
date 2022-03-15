@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -68,7 +68,7 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	defer sessResp.Body.Close()
 
 	var data map[string]interface{}
-	body, _ := ioutil.ReadAll(sessResp.Body)
+	body, _ := io.ReadAll(sessResp.Body)
 	json.Unmarshal(body, &data)
 
 	sessionID := data["data"].(map[string]interface{})["session_id"].(string)
@@ -211,7 +211,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 
 	resp, err := c.Client.Do(req)
 	if err == nil {
-		bodyAsBytes, _ := ioutil.ReadAll(resp.Body)
+		bodyAsBytes, _ := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, &AccessError{
@@ -231,7 +231,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 				}
 			}
 		}
-		resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyAsBytes))
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyAsBytes))
 	}
 	return resp, err
 }

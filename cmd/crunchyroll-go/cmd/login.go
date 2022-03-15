@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -46,7 +45,7 @@ func loginCredentials(user, password string) error {
 		os.Exit(1)
 	}
 
-	return ioutil.WriteFile(loginStorePath(), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600)
+	return os.WriteFile(loginStorePath(), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600)
 }
 
 func loginSessionID(sessionID string) error {
@@ -56,7 +55,7 @@ func loginSessionID(sessionID string) error {
 		os.Exit(1)
 	}
 
-	return ioutil.WriteFile(loginStorePath(), []byte(sessionID), 0600)
+	return os.WriteFile(loginStorePath(), []byte(sessionID), 0600)
 }
 
 func loginStorePath() string {

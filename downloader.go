@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/grafov/m3u8"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
@@ -324,7 +323,7 @@ func getCrypt(format *Format, segment *m3u8.MediaSegment) (block cipher.Block, i
 		return nil, nil, err
 	}
 	defer resp.Body.Close()
-	key, err := ioutil.ReadAll(resp.Body)
+	key, err := io.ReadAll(resp.Body)
 
 	block, err = aes.NewCipher(key)
 	if err != nil {
@@ -372,7 +371,7 @@ func (d Downloader) decryptSegment(client *http.Client, segment *m3u8.MediaSegme
 	}
 	defer resp.Body.Close()
 
-	raw, err := ioutil.ReadAll(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

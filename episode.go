@@ -94,6 +94,7 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 
 	episode := &Episode{
 		crunchy: crunchy,
+		ID:      id,
 	}
 	if err := decodeMapToStruct(jsonBody, episode); err != nil {
 		return nil, err

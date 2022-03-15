@@ -86,6 +86,7 @@ func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
 	movieListing := &Movie{
 		crunchy: crunchy,
 	}
+	movieListing.ID = id
 	if err = decodeMapToStruct(jsonBody, movieListing); err != nil {
 		return nil, err
 	}
@@ -182,6 +183,7 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 	series := &Series{
 		crunchy: crunchy,
 	}
+	series.ID = id
 	if err = decodeMapToStruct(jsonBody, series); err != nil {
 		return nil, err
 	}

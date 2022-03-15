@@ -56,6 +56,7 @@ func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) 
 
 	movieListing := &MovieListing{
 		crunchy: crunchy,
+		ID:      id,
 	}
 	if err = decodeMapToStruct(jsonBody, movieListing); err != nil {
 		return nil, err

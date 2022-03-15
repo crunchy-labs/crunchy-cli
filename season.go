@@ -61,6 +61,7 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 
 	season := &Season{
 		crunchy: crunchy,
+		ID:      id,
 	}
 	if err := decodeMapToStruct(jsonBody, season); err != nil {
 		return nil, err

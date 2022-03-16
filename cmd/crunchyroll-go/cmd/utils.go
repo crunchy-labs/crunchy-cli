@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	invalidWindowsChars = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
-	invalidLinuxChars   = []string{"/"}
+	// ahh i love windows :)))
+	invalidWindowsChars    = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
+	invalidNotWindowsChars = []string{"/"}
 )
 
 var urlFilter = regexp.MustCompile(`(S(\d+))?(E(\d+))?((-)(S(\d+))?(E(\d+))?)?(,|$)`)
@@ -168,13 +169,13 @@ func terminalWidth() int {
 
 func generateFilename(name, directory string) string {
 	if runtime.GOOS != "windows" {
-		for _, char := range invalidLinuxChars {
-			strings.ReplaceAll(name, char, "")
+		for _, char := range invalidNotWindowsChars {
+			name = strings.ReplaceAll(name, char, "")
 		}
 		out.Debug("Replaced invalid characters (not windows)")
 	} else {
 		for _, char := range invalidWindowsChars {
-			strings.ReplaceAll(name, char, "")
+			name = strings.ReplaceAll(name, char, "")
 		}
 		out.Debug("Replaced invalid characters (windows)")
 	}

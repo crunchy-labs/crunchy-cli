@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	loginSessionIDFlag bool
-
 	loginPersistentFlag bool
+
+	loginSessionIDFlag bool
 )
 
 var loginCmd = &cobra.Command{
@@ -31,9 +31,15 @@ var loginCmd = &cobra.Command{
 }
 
 func init() {
-	loginCmd.Flags().BoolVar(&loginSessionIDFlag, "session-id", false, "Use a session id to login instead of username and password")
+	loginCmd.Flags().BoolVar(&loginPersistentFlag,
+		"persistent",
+		false,
+		"If the given credential should be stored persistent")
 
-	loginCmd.Flags().BoolVar(&loginPersistentFlag, "persistent", false, "If the given credential should be stored persistent")
+	loginCmd.Flags().BoolVar(&loginSessionIDFlag,
+		"session-id",
+		false,
+		"Use a session id to login instead of username and password")
 
 	rootCmd.AddCommand(loginCmd)
 }

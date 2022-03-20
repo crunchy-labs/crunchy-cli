@@ -160,9 +160,9 @@ func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 	}
 
 	var tmpfile string
-	if _, ok := d.Writer.(*io.PipeWriter); ok {
+	if _, ok := d.Writer.(*io.PipeWriter); !ok {
 		if file, ok := d.Writer.(*os.File); ok {
-			tmpfile = filepath.Base(file.Name())
+			tmpfile = file.Name()
 		}
 	}
 	if filepath.Ext(tmpfile) == "" {
@@ -198,12 +198,14 @@ func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 			return err
 		}
 	}
-	file, err := os.Open(tmpfile)
-	if err != nil {
-		return err
+	if f, ok := d.Writer.(*os.File); !ok || f.Name() != tmpfile {
+		file, err := os.Open(tmpfile)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(d.Writer, file)
 	}
-	defer file.Close()
-	_, err = io.Copy(d.Writer, file)
 	return err
 }
 

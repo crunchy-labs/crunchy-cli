@@ -283,6 +283,7 @@ type formatInformation struct {
 
 	Title         string             `json:"title"`
 	SeriesName    string             `json:"series_name"`
+	SeasonName    string             `json:"season_name"`
 	SeasonNumber  int                `json:"season_number"`
 	EpisodeNumber int                `json:"episode_number"`
 	Resolution    string             `json:"resolution"`

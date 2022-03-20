@@ -167,23 +167,7 @@ func terminalWidth() int {
 	return 60
 }
 
-func generateFilename(name, directory string) string {
-	if runtime.GOOS != "windows" {
-		for _, char := range invalidNotWindowsChars {
-			name = strings.ReplaceAll(name, char, "")
-		}
-		out.Debug("Replaced invalid characters (not windows)")
-	} else {
-		for _, char := range invalidWindowsChars {
-			name = strings.ReplaceAll(name, char, "")
-		}
-		out.Debug("Replaced invalid characters (windows)")
-	}
-
-	if directory != "" {
-		name = filepath.Join(directory, name)
-	}
-
+func generateFilename(name string) string {
 	filename, changed := freeFileName(name)
 	if changed {
 		out.Info("File %s already exists, changing name to %s", name, filename)
@@ -292,7 +276,7 @@ type formatInformation struct {
 	Subtitle      crunchyroll.LOCALE `json:"subtitle"`
 }
 
-func (fi formatInformation) Format(source string) string {
+func (fi formatInformation) Format(source string, removeInvalidChars bool) string {
 	fields := reflect.TypeOf(fi)
 	values := reflect.ValueOf(fi)
 
@@ -311,6 +295,19 @@ func (fi formatInformation) Format(source string) string {
 				valueAsString = "no " + valueAsString
 			}
 		}
+
+		if removeInvalidChars {
+			if runtime.GOOS != "windows" {
+				for _, char := range invalidNotWindowsChars {
+					valueAsString = strings.ReplaceAll(valueAsString, char, "")
+				}
+			} else {
+				for _, char := range invalidWindowsChars {
+					valueAsString = strings.ReplaceAll(valueAsString, char, "")
+				}
+			}
+		}
+
 		source = strings.ReplaceAll(source, "{"+fields.Field(i).Tag.Get("json")+"}", valueAsString)
 	}
 

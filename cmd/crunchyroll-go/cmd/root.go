@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strings"
 )
 
 var (
@@ -59,7 +60,7 @@ func Execute() {
 		}
 	}()
 	if err := rootCmd.Execute(); err != nil {
-		if err != context.Canceled {
+		if !strings.HasSuffix(err.Error(), context.Canceled.Error()) {
 			out.Exit("An error occurred: %v", err)
 		}
 		os.Exit(1)

@@ -29,14 +29,16 @@ var urlFilter = regexp.MustCompile(`(S(\d+))?(E(\d+))?((-)(S(\d+))?(E(\d+))?)?(,
 
 // systemLocale receives the system locale
 // https://stackoverflow.com/questions/51829386/golang-get-system-language/51831590#51831590
-func systemLocale() crunchyroll.LOCALE {
+func systemLocale(verbose bool) crunchyroll.LOCALE {
 	if runtime.GOOS != "windows" {
 		if lang, ok := os.LookupEnv("LANG"); ok {
 			prefix := strings.Split(lang, "_")[0]
 			suffix := strings.Split(strings.Split(lang, ".")[0], "_")[1]
 			l := crunchyroll.LOCALE(fmt.Sprintf("%s-%s", prefix, suffix))
 			if !utils.ValidateLocale(l) {
-				out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				if verbose {
+					out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				}
 				l = crunchyroll.US
 			}
 			return l
@@ -46,13 +48,17 @@ func systemLocale() crunchyroll.LOCALE {
 		if output, err := cmd.Output(); err == nil {
 			l := crunchyroll.LOCALE(strings.Trim(string(output), "\r\n"))
 			if !utils.ValidateLocale(l) {
-				out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				if verbose {
+					out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)
+				}
 				l = crunchyroll.US
 			}
 			return l
 		}
 	}
-	out.Err("Failed to get locale, using %s", crunchyroll.US)
+	if verbose {
+		out.Err("Failed to get locale, using %s", crunchyroll.US)
+	}
 	return crunchyroll.US
 }
 
@@ -130,13 +136,13 @@ func loadCrunchy() {
 
 	split := strings.SplitN(string(body), "\n", 2)
 	if len(split) == 1 || split[1] == "" {
-		if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(), client); err != nil {
+		if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err != nil {
 			out.StopProgress(err.Error())
 			os.Exit(1)
 		}
 		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 	} else {
-		if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(), client); err != nil {
+		if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
 			out.StopProgress(err.Error())
 			os.Exit(1)
 		}

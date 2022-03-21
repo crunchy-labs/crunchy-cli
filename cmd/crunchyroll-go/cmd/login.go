@@ -46,7 +46,7 @@ func init() {
 
 func loginCredentials(user, password string) error {
 	out.Debug("Logging in via credentials")
-	if _, err := crunchyroll.LoginWithCredentials(user, password, systemLocale(), client); err != nil {
+	if _, err := crunchyroll.LoginWithCredentials(user, password, systemLocale(false), client); err != nil {
 		out.Err(err.Error())
 		os.Exit(1)
 	}
@@ -56,7 +56,7 @@ func loginCredentials(user, password string) error {
 
 func loginSessionID(sessionID string) error {
 	out.Debug("Logging in via session id")
-	if _, err := crunchyroll.LoginWithSessionID(sessionID, systemLocale(), client); err != nil {
+	if _, err := crunchyroll.LoginWithSessionID(sessionID, systemLocale(false), client); err != nil {
 		out.Err(err.Error())
 		os.Exit(1)
 	}

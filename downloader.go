@@ -89,7 +89,7 @@ func (d Downloader) download(format *Format) error {
 	}
 
 	if _, err := os.Stat(d.TempDir); os.IsNotExist(err) {
-		if err := os.Mkdir(d.TempDir, 0700); err != nil {
+		if err = os.Mkdir(d.TempDir, 0700); err != nil {
 			return err
 		}
 	}
@@ -267,12 +267,14 @@ func (d Downloader) downloadSegments(format *Format) ([]string, error) {
 							break
 						}
 						if k == 2 {
+							file.Close()
 							cancel()
 							return
 						}
 						select {
 						case <-d.Context.Done():
 						case <-ctx.Done():
+							file.Close()
 							return
 						case <-time.After(5 * time.Duration(k) * time.Second):
 							// sleep if an error occurs. very useful because sometimes the connection times out

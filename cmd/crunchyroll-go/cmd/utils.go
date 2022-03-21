@@ -21,7 +21,7 @@ import (
 
 var (
 	// ahh i love windows :)))
-	invalidWindowsChars    = []string{"<", ">", ":", "\"", "/", "|", "\\", "?", "*"}
+	invalidWindowsChars    = []string{"\\", "<", ">", ":", "\"", "/", "|", "?", "*"}
 	invalidNotWindowsChars = []string{"/"}
 )
 
@@ -167,7 +167,29 @@ func terminalWidth() int {
 	return 60
 }
 
-func generateFilename(name string) string {
+func generateFilename(name, directory string) string {
+	if runtime.GOOS != "windows" {
+		for _, char := range invalidNotWindowsChars {
+			name = strings.ReplaceAll(name, char, "")
+		}
+		out.Debug("Replaced invalid characters (not windows)")
+	} else {
+		for _, char := range invalidWindowsChars {
+			name = strings.ReplaceAll(name, char, "")
+		}
+		// this needs only to be done on windows lol :)
+		if directory != "" {
+			for _, char := range invalidWindowsChars[1:] {
+				directory = strings.ReplaceAll(directory, char, "")
+			}
+		}
+		out.Debug("Replaced invalid characters (windows)")
+	}
+
+	if directory != "" {
+		name = filepath.Join(directory, name)
+	}
+
 	filename, changed := freeFileName(name)
 	if changed {
 		out.Info("File %s already exists, changing name to %s", name, filename)
@@ -276,7 +298,7 @@ type formatInformation struct {
 	Subtitle      crunchyroll.LOCALE `json:"subtitle"`
 }
 
-func (fi formatInformation) Format(source string, removeInvalidChars bool) string {
+func (fi formatInformation) Format(source string) string {
 	fields := reflect.TypeOf(fi)
 	values := reflect.ValueOf(fi)
 
@@ -293,18 +315,6 @@ func (fi formatInformation) Format(source string, removeInvalidChars bool) strin
 			valueAsString = fields.Field(i).Tag.Get("json")
 			if !value.Bool() {
 				valueAsString = "no " + valueAsString
-			}
-		}
-
-		if removeInvalidChars {
-			if runtime.GOOS != "windows" {
-				for _, char := range invalidNotWindowsChars {
-					valueAsString = strings.ReplaceAll(valueAsString, char, "")
-				}
-			} else {
-				for _, char := range invalidWindowsChars {
-					valueAsString = strings.ReplaceAll(valueAsString, char, "")
-				}
 			}
 		}
 

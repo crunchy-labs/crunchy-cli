@@ -2,6 +2,7 @@ package crunchyroll
 
 import (
 	"io"
+	"net/http"
 )
 
 type Subtitle struct {
@@ -13,7 +14,12 @@ type Subtitle struct {
 }
 
 func (s Subtitle) Save(writer io.Writer) error {
-	resp, err := s.crunchy.Client.Get(s.URL)
+	req, err := http.NewRequestWithContext(s.crunchy.Context, http.MethodGet, s.URL, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.crunchy.Client.Do(req)
 	if err != nil {
 		return err
 	}

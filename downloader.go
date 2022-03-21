@@ -363,11 +363,10 @@ func (d Downloader) downloadSegment(format *Format, segment *m3u8.MediaSegment, 
 
 // https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/tool/crypt.go#L25
 func (d Downloader) decryptSegment(client *http.Client, segment *m3u8.MediaSegment, block cipher.Block, iv []byte) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, segment.URI, nil)
+	req, err := http.NewRequestWithContext(d.Context, http.MethodGet, segment.URI, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.WithContext(d.Context)
 
 	resp, err := client.Do(req)
 	if err != nil {

@@ -2,6 +2,7 @@ package crunchyroll
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +33,8 @@ const (
 type Crunchyroll struct {
 	// Client is the http.Client to perform all requests over
 	Client *http.Client
+	// Context can be used to stop requests with Client and is context.Background by default
+	Context context.Context
 	// Locale specifies in which language all results should be returned / requested
 	Locale LOCALE
 	// SessionID is the crunchyroll session id which was used for authentication
@@ -88,6 +91,7 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	crunchy := &Crunchyroll{
 		Client:    client,
+		Context:   context.Background(),
 		Locale:    locale,
 		SessionID: sessionID,
 		cache:     true,

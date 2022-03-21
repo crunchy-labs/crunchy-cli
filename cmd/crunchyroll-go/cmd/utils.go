@@ -177,20 +177,10 @@ func generateFilename(name, directory string) string {
 		for _, char := range invalidWindowsChars {
 			name = strings.ReplaceAll(name, char, "")
 		}
-		// this needs only to be done on windows lol :)
-		if directory != "" {
-			for _, char := range invalidWindowsChars[1:] {
-				directory = strings.ReplaceAll(directory, char, "")
-			}
-		}
 		out.Debug("Replaced invalid characters (windows)")
 	}
 
-	if directory != "" {
-		name = filepath.Join(directory, name)
-	}
-
-	filename, changed := freeFileName(name)
+	filename, changed := freeFileName(filepath.Join(directory, name))
 	if changed {
 		out.Info("File %s already exists, changing name to %s", name, filename)
 	}
@@ -316,6 +306,18 @@ func (fi formatInformation) Format(source string) string {
 			if !value.Bool() {
 				valueAsString = "no " + valueAsString
 			}
+		}
+
+		if runtime.GOOS != "windows" {
+			for _, char := range invalidNotWindowsChars {
+				valueAsString = strings.ReplaceAll(valueAsString, char, "")
+			}
+			out.Debug("Replaced invalid characters (not windows)")
+		} else {
+			for _, char := range invalidWindowsChars {
+				valueAsString = strings.ReplaceAll(valueAsString, char, "")
+			}
+			out.Debug("Replaced invalid characters (windows)")
 		}
 
 		source = strings.ReplaceAll(source, "{"+fields.Field(i).Tag.Get("json")+"}", valueAsString)

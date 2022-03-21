@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +24,7 @@ type logger struct {
 
 	progress chan progress
 	done     chan interface{}
+	lock     sync.Mutex
 }
 
 func newLogger(debug, info, err bool) *logger {
@@ -87,69 +88,66 @@ func (l *logger) Empty() {
 func (l *logger) SetProgress(format string, v ...interface{}) {
 	if out.InfoLog.Writer() == io.Discard {
 		return
-	}
-
-	message := fmt.Sprintf(format, v...)
-
-	if l.progress != nil {
-		l.progress <- progress{
-			message: message,
-			stop:    false,
-		}
+	} else if l.devView {
+		l.Debug(format, v...)
 		return
 	}
 
-	l.progress = make(chan progress)
-	l.done = make(chan interface{})
+	initialMessage := fmt.Sprintf(format, v...)
+
+	p := progress{
+		message: initialMessage,
+	}
+
+	l.lock.Lock()
+	if l.done != nil {
+		l.progress <- p
+		return
+	} else {
+		l.progress = make(chan progress, 1)
+		l.progress <- p
+		l.done = make(chan interface{})
+	}
 
 	go func() {
 		states := []string{"-", "\\", "|", "/"}
+
 		var count int
 
 		for i := 0; ; i++ {
-			ctx, cancel := context.WithTimeout(context.Background(), 35*time.Millisecond)
 			select {
 			case p := <-l.progress:
-				cancel()
-
 				if p.stop {
-					if !l.devView {
-						fmt.Printf("\r" + strings.Repeat(" ", 2+len(message)))
-						fmt.Printf("\r➞ %s\n", p.message)
+					fmt.Printf("\r" + strings.Repeat(" ", 2+len(initialMessage)))
+					if count > 1 {
+						fmt.Printf("\r↳ %s\n", p.message)
 					} else {
-						l.Debug(p.message)
+						fmt.Printf("\r➞ %s\n", p.message)
 					}
 
+					if l.done != nil {
+						l.done <- nil
+					}
 					l.progress = nil
 
-					if count > 0 {
-						fmt.Printf("↳ %s\n", p.message)
-					}
-
-					l.done <- nil
+					l.lock.Unlock()
 					return
 				} else {
-					if !l.devView {
-						fmt.Printf("\r↓ %s\n", message)
-					} else {
-						l.Debug(message)
+					if count > 0 {
+						fmt.Printf("\r↓ %s\n", p.message)
 					}
+					l.progress = make(chan progress, 1)
 
-					l.progress = make(chan progress)
 					count++
 
-					if !l.devView {
-						fmt.Printf("\r" + strings.Repeat(" ", 2+len(message)))
-						fmt.Printf("\r➞ %s\n", p.message)
-					} else {
-						l.Debug(p.message)
-					}
-					message = p.message
+					fmt.Printf("\r%s %s", states[i/10%4], initialMessage)
+					l.lock.Unlock()
 				}
-			case <-ctx.Done():
-				if !l.devView && i%10 == 0 {
-					fmt.Printf("\r%s %s", states[i/10%4], message)
+			default:
+				if i%10 == 0 {
+					fmt.Printf("\r%s %s", states[i/10%4], initialMessage)
 				}
+				time.Sleep(35 * time.Millisecond)
 			}
 		}
 	}()
@@ -160,9 +158,11 @@ func (l *logger) StopProgress(format string, v ...interface{}) {
 		return
 	}
 
+	l.lock.Lock()
 	l.progress <- progress{
 		message: fmt.Sprintf(format, v...),
 		stop:    true,
 	}
 	<-l.done
+	l.done = nil
 }

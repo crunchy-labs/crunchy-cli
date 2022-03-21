@@ -5,10 +5,30 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 )
+
+var prefix, progressDown, progressDownFinish string
+
+func initPrefixBecauseWindowsSucksBallsHard() {
+	// dear windows user, please change to a good OS, linux in the best case.
+	// MICROSHIT DOES NOT GET IT DONE TO SHOW THE SYMBOLS IN THE ELSE CLAUSE
+	// CORRECTLY. NOT IN THE CMD NOR POWERSHELL. WHY TF, IT IS ONE OF THE MOST
+	// PROFITABLE COMPANIES ON THIS PLANET AND CANNOT SHOW A PROPER UTF-8 SYMBOL
+	// IN THEIR OWN PRODUCT WHICH GETS USED MILLION TIMES A DAY
+	if runtime.GOOS == "windows" {
+		prefix = "=>"
+		progressDown = "|"
+		progressDownFinish = "->"
+	} else {
+		prefix = "➞"
+		progressDown = "↓"
+		progressDownFinish = "↳"
+	}
+}
 
 type progress struct {
 	message string
@@ -28,7 +48,9 @@ type logger struct {
 }
 
 func newLogger(debug, info, err bool) *logger {
-	debugLog, infoLog, errLog := log.New(io.Discard, "➞ ", 0), log.New(io.Discard, "➞ ", 0), log.New(io.Discard, "➞ ", 0)
+	initPrefixBecauseWindowsSucksBallsHard()
+
+	debugLog, infoLog, errLog := log.New(io.Discard, prefix+" ", 0), log.New(io.Discard, prefix+" ", 0), log.New(io.Discard, prefix+" ", 0)
 
 	if debug {
 		debugLog.SetOutput(os.Stdout)
@@ -118,11 +140,11 @@ func (l *logger) SetProgress(format string, v ...interface{}) {
 			select {
 			case p := <-l.progress:
 				if p.stop {
-					fmt.Printf("\r" + strings.Repeat(" ", 2+len(initialMessage)))
+					fmt.Printf("\r" + strings.Repeat(" ", len(prefix)+len(initialMessage)))
 					if count > 1 {
-						fmt.Printf("\r↳ %s\n", p.message)
+						fmt.Printf("\r%s %s\n", progressDownFinish, p.message)
 					} else {
-						fmt.Printf("\r➞ %s\n", p.message)
+						fmt.Printf("\r%s %s\n", prefix, p.message)
 					}
 
 					if l.done != nil {
@@ -134,7 +156,7 @@ func (l *logger) SetProgress(format string, v ...interface{}) {
 					return
 				} else {
 					if count > 0 {
-						fmt.Printf("\r↓ %s\n", p.message)
+						fmt.Printf("\r%s %s\n", progressDown, p.message)
 					}
 					l.progress = make(chan progress, 1)
 

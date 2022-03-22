@@ -1,34 +1,37 @@
 package cmd
 
 import (
+	"context"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
-	"runtime"
 	"runtime/debug"
+	"strings"
 )
 
 var (
 	client  *http.Client
-	locale  crunchyroll.LOCALE
 	crunchy *crunchyroll.Crunchyroll
-	out     = newLogger(false, true, true, colorFlag)
+	out     = newLogger(false, true, true)
 
 	quietFlag   bool
 	verboseFlag bool
 	proxyFlag   string
-	colorFlag   bool
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "crunchyroll",
-	Short: "Download crunchyroll videos with ease",
+	Short: "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
+
+	SilenceErrors: true,
+	SilenceUsage:  true,
+
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if verboseFlag {
-			out = newLogger(true, true, true, colorFlag)
+			out = newLogger(true, true, true)
 		} else if quietFlag {
-			out = newLogger(false, false, false, false)
+			out = newLogger(false, false, false)
 		}
 
 		out.DebugLog.Printf("Executing `%s` command with %d arg(s)\n", cmd.Name(), len(args))
@@ -42,23 +45,24 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Disable all output")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Adds debug messages to the normal output")
 	rootCmd.PersistentFlags().StringVarP(&proxyFlag, "proxy", "p", "", "Proxy to use")
-	rootCmd.PersistentFlags().BoolVar(&colorFlag, "color", false, "Colored output. Only available on not windows systems")
 }
 
 func Execute() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	defer func() {
 		if r := recover(); r != nil {
-			out.Errln(r)
-			// change color to red
-			if colorFlag && runtime.GOOS != "windows" {
-				out.ErrLog.SetOutput(&loggerWriter{original: out.ErrLog.Writer(), color: "\033[31m"})
+			if out.IsDev() {
+				out.Err("%v: %s", r, debug.Stack())
+			} else {
+				out.Err("Unexpected error: %v", r)
 			}
-			out.Debugln(string(debug.Stack()))
-			os.Exit(2)
+			os.Exit(1)
 		}
 	}()
 	if err := rootCmd.Execute(); err != nil {
-		out.Fatalln(err)
+		if !strings.HasSuffix(err.Error(), context.Canceled.Error()) {
+			out.Exit("An error occurred: %v", err)
+		}
+		os.Exit(1)
 	}
 }

@@ -2,10 +2,11 @@ package crunchyroll
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -18,19 +19,22 @@ type LOCALE string
 const (
 	JP LOCALE = "ja-JP"
 	US        = "en-US"
-	LA        = "es-LA"
+	LA        = "es-419"
 	ES        = "es-ES"
 	FR        = "fr-FR"
+	PT        = "pt-PT"
 	BR        = "pt-BR"
 	IT        = "it-IT"
 	DE        = "de-DE"
 	RU        = "ru-RU"
-	ME        = "ar-ME"
+	AR        = "ar-SA"
 )
 
 type Crunchyroll struct {
 	// Client is the http.Client to perform all requests over
 	Client *http.Client
+	// Context can be used to stop requests with Client and is context.Background by default
+	Context context.Context
 	// Locale specifies in which language all results should be returned / requested
 	Locale LOCALE
 	// SessionID is the crunchyroll session id which was used for authentication
@@ -51,10 +55,13 @@ type Crunchyroll struct {
 		ExternalID     string
 		MaturityRating string
 	}
+
+	// If cache is true, internal caching is enabled
+	cache bool
 }
 
-// LoginWithCredentials logs in via crunchyroll email and password
-func LoginWithCredentials(email string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+// LoginWithCredentials logs in via crunchyroll username or email and password
+func LoginWithCredentials(user string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	sessionIDEndpoint := fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?version=1.0&access_token=%s&device_type=%s&device_id=%s",
 		"LNDJgOit5yaRIWN", "com.crunchyroll.windows.desktop", "Az2srGnChW65fuxYz2Xxl1GcZQgtGgI")
 	sessResp, err := client.Get(sessionIDEndpoint)
@@ -64,7 +71,7 @@ func LoginWithCredentials(email string, password string, locale LOCALE, client *
 	defer sessResp.Body.Close()
 
 	var data map[string]interface{}
-	body, _ := ioutil.ReadAll(sessResp.Body)
+	body, _ := io.ReadAll(sessResp.Body)
 	json.Unmarshal(body, &data)
 
 	sessionID := data["data"].(map[string]interface{})["session_id"].(string)
@@ -72,7 +79,7 @@ func LoginWithCredentials(email string, password string, locale LOCALE, client *
 	loginEndpoint := "https://api.crunchyroll.com/login.0.json"
 	authValues := url.Values{}
 	authValues.Set("session_id", sessionID)
-	authValues.Set("account", email)
+	authValues.Set("account", user)
 	authValues.Set("password", password)
 	client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
 
@@ -84,8 +91,10 @@ func LoginWithCredentials(email string, password string, locale LOCALE, client *
 func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	crunchy := &Crunchyroll{
 		Client:    client,
+		Context:   context.Background(),
 		Locale:    locale,
 		SessionID: sessionID,
+		cache:     true,
 	}
 	var endpoint string
 	var err error
@@ -206,7 +215,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 
 	resp, err := c.Client.Do(req)
 	if err == nil {
-		bodyAsBytes, _ := ioutil.ReadAll(resp.Body)
+		bodyAsBytes, _ := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, &AccessError{
@@ -226,9 +235,23 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 				}
 			}
 		}
-		resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyAsBytes))
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyAsBytes))
 	}
 	return resp, err
+}
+
+// IsCaching returns if data gets cached or not.
+// See SetCaching for more information
+func (c *Crunchyroll) IsCaching() bool {
+	return c.cache
+}
+
+// SetCaching enables or disables internal caching of requests made.
+// Caching is enabled by default.
+// If it is disabled the already cached data still gets called.
+// The best way to prevent this is to create a complete new Crunchyroll struct
+func (c *Crunchyroll) SetCaching(caching bool) {
+	c.cache = caching
 }
 
 // Search searches a query and returns all found series and movies within the given limit
@@ -280,59 +303,53 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 	return s, m, nil
 }
 
-// FindVideo finds a Video (Season or Movie) by a crunchyroll link
-// e.g. https://www.crunchyroll.com/darling-in-the-franxx
-func (c *Crunchyroll) FindVideo(seriesUrl string) (Video, error) {
-	if series, ok := MatchVideo(seriesUrl); ok {
-		s, m, err := c.Search(series, 1)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(s) > 0 {
-			return s[0], nil
-		} else if len(m) > 0 {
-			return m[0], nil
-		}
-		return nil, errors.New("no series or movie could be found")
+// FindVideoByName finds a Video (Season or Movie) by its name.
+// Use this in combination with ParseVideoURL and hand over the corresponding results
+// to this function.
+func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
+	s, m, err := c.Search(seriesName, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid url")
+	if len(s) > 0 {
+		return s[0], nil
+	} else if len(m) > 0 {
+		return m[0], nil
+	}
+	return nil, errors.New("no series or movie could be found")
 }
 
-// FindEpisode finds an episode by its crunchyroll link
-// e.g. https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
-func (c *Crunchyroll) FindEpisode(url string) ([]*Episode, error) {
-	if series, title, _, _, ok := ParseEpisodeURL(url); ok {
-		video, err := c.FindVideo(fmt.Sprintf("https://www.crunchyroll.com/%s", series))
-		if err != nil {
-			return nil, err
-		}
-		seasons, err := video.(*Series).Seasons()
-		if err != nil {
-			return nil, err
-		}
-
-		var matchingEpisodes []*Episode
-		for _, season := range seasons {
-			episodes, err := season.Episodes()
-			if err != nil {
-				return nil, err
-			}
-			for _, episode := range episodes {
-				if episode.SlugTitle == title {
-					matchingEpisodes = append(matchingEpisodes, episode)
-				}
-			}
-		}
-		return matchingEpisodes, nil
+// FindEpisodeByName finds an episode by its crunchyroll series name and episode title.
+// Use this in combination with ParseEpisodeURL and hand over the corresponding results
+// to this function.
+func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Episode, error) {
+	video, err := c.FindVideoByName(seriesName)
+	if err != nil {
+		return nil, err
+	}
+	seasons, err := video.(*Series).Seasons()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid url")
+	var matchingEpisodes []*Episode
+	for _, season := range seasons {
+		episodes, err := season.Episodes()
+		if err != nil {
+			return nil, err
+		}
+		for _, episode := range episodes {
+			if episode.SlugTitle == episodeTitle {
+				matchingEpisodes = append(matchingEpisodes, episode)
+			}
+		}
+	}
+	return matchingEpisodes, nil
 }
 
-// MatchVideo tries to extract the crunchyroll series / movie name out of the given url
-func MatchVideo(url string) (seriesName string, ok bool) {
+// ParseVideoURL tries to extract the crunchyroll series / movie name out of the given url
+func ParseVideoURL(url string) (seriesName string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
 		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
@@ -342,14 +359,6 @@ func MatchVideo(url string) (seriesName string, ok bool) {
 			ok = true
 		}
 	}
-	return
-}
-
-// MatchEpisode tries to extract the crunchyroll series name and title out of the given url
-//
-// Deprecated: Use ParseEpisodeURL instead
-func MatchEpisode(url string) (seriesName, title string, ok bool) {
-	seriesName, title, _, _, ok = ParseEpisodeURL(url)
 	return
 }
 

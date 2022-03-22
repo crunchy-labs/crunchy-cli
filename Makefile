@@ -1,4 +1,4 @@
-VERSION=1.2.4
+VERSION=2.0.0
 BINARY_NAME=crunchy
 VERSION_BINARY_NAME=$(BINARY_NAME)-v$(VERSION)
 
@@ -21,13 +21,10 @@ uninstall:
 		rm -f $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 		rm -f $(DESTDIR)$(PREFIX)/share/licenses/crunchyroll-go/LICENSE
 
-test:
-		go test -v .
-
 release:
-		cd cmd/crunchyroll-go && GOOS=linux GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_linux
-		cd cmd/crunchyroll-go && GOOS=windows GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_windows.exe
-		cd cmd/crunchyroll-go && GOOS=darwin GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_darwin
+		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_linux
+		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_windows.exe
+		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_darwin
 
 		strip cmd/crunchyroll-go/$(VERSION_BINARY_NAME)_linux
 

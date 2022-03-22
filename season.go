@@ -9,24 +9,36 @@ import (
 type Season struct {
 	crunchy *Crunchyroll
 
-	ID             string   `json:"id"`
-	Title          string   `json:"title"`
-	SlugTitle      string   `json:"slug_title"`
-	SeriesID       string   `json:"series_id"`
-	SeasonNumber   int      `json:"season_number"`
-	IsComplete     bool     `json:"is_complete"`
-	Description    string   `json:"description"`
-	Keywords       []string `json:"keywords"`
-	SeasonTags     []string `json:"season_tags"`
-	IsMature       bool     `json:"is_mature"`
-	MatureBlocked  bool     `json:"mature_blocked"`
-	IsSubbed       bool     `json:"is_subbed"`
-	IsDubbed       bool     `json:"is_dubbed"`
-	IsSimulcast    bool     `json:"is_simulcast"`
-	SeoTitle       string   `json:"seo_title"`
-	SeoDescription string   `json:"seo_description"`
+	children []*Episode
 
-	Language LOCALE
+	ID        string `json:"id"`
+	ChannelID string `json:"channel_id"`
+
+	Title     string `json:"title"`
+	SlugTitle string `json:"slug_title"`
+
+	SeriesID     string `json:"series_id"`
+	SeasonNumber int    `json:"season_number"`
+
+	IsComplete bool `json:"is_complete"`
+
+	Description   string   `json:"description"`
+	Keywords      []string `json:"keywords"`
+	SeasonTags    []string `json:"season_tags"`
+	IsMature      bool     `json:"is_mature"`
+	MatureBlocked bool     `json:"mature_blocked"`
+	IsSubbed      bool     `json:"is_subbed"`
+	IsDubbed      bool     `json:"is_dubbed"`
+	IsSimulcast   bool     `json:"is_simulcast"`
+
+	SeoTitle       string `json:"seo_title"`
+	SeoDescription string `json:"seo_description"`
+
+	AvailabilityNotes string `json:"availability_notes"`
+
+	// the locales are always empty, idk why this may change in the future
+	AudioLocales    []LOCALE
+	SubtitleLocales []LOCALE
 }
 
 // SeasonFromID returns a season by its api id
@@ -49,6 +61,7 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 
 	season := &Season{
 		crunchy: crunchy,
+		ID:      id,
 	}
 	if err := decodeMapToStruct(jsonBody, season); err != nil {
 		return nil, err
@@ -57,8 +70,20 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 	return season, nil
 }
 
+func (s *Season) AudioLocale() (LOCALE, error) {
+	episodes, err := s.Episodes()
+	if err != nil {
+		return "", err
+	}
+	return episodes[0].AudioLocale()
+}
+
 // Episodes returns all episodes which are available for the season
 func (s *Season) Episodes() (episodes []*Episode, err error) {
+	if s.children != nil {
+		return s.children, nil
+	}
+
 	resp, err := s.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes?season_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		s.crunchy.Config.CountryCode,
 		s.crunchy.Config.MaturityRating,
@@ -91,5 +116,8 @@ func (s *Season) Episodes() (episodes []*Episode, err error) {
 		episodes = append(episodes, episode)
 	}
 
+	if s.crunchy.cache {
+		s.children = episodes
+	}
 	return
 }

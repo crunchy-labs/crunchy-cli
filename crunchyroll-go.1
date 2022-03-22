@@ -1,16 +1,18 @@
-.TH crunchyroll-go 1 "13 September 2021" "crunchyroll-go" "Crunchyroll Downloader"
+.TH crunchyroll-go 1 "21 March 2022" "crunchyroll-go" "Crunchyroll Downloader"
 
 .SH NAME
 crunchyroll-go - A cli for downloading videos and entire series from crunchyroll.
 
 .SH SYNOPSIS
-crunchyroll-go [\fB-h\fR] [\fB--color\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
+crunchyroll-go [\fB-h\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
 .br
 crunchyroll-go help
 .br
-crunchyroll-go login [\fB--session-id\fR \fISESSION_ID\fR] [\fIemail\fR, \fIpassword\fR]
+crunchyroll-go login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] [\fIusername\fR, \fIpassword\fR]
 .br
-crunchyroll-go download [\fB--alternative-progress\fR] [\fB-a\fR \fILOCALE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB--no-hardsub\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-s\fR \fILOCALE\fR] \fIURL…\fR
+crunchyroll-go download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+.br
+crunchyroll-go archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
 
 .SH DESCRIPTION
 .TP
@@ -28,10 +30,6 @@ This options can be passed to every action.
 Shows help.
 .TP
 
-\fB--color\fR
-Shows the output in different colors which will make it easier to differ the output.
-.TP
-
 \fB-p, --proxy PROXY\fR
 Sets a proxy through which all traffic will be routed.
 .TP
@@ -43,42 +41,40 @@ Disables all output.
 \fB-v, --verbose\fR
 Shows verbose output.
 
-.SH LOGIN OPTIONS
-This options can only be used when calling the \fIlogin\fR action.
+.SH LOGIN COMMAND
+This command logs in to crunchyroll and stores the session id or credentials on the drive. This needs to be done before calling other commands since they need a valid login to operate.
+.TP
+
+\fB--persistent\fR
+Stores the given credentials permanent on the drive. The *nix path for it is $HOME/.config/crunchy.
+.br
+NOTE: The credentials are stored in plain text and if you not use \fB--session-id\fR your credentials are used (if you not use the \fB--persistent\fR flag only a session id gets stored regardless if you login with username/password or a session id).
 .TP
 
 \fB--session-id SESSION_ID\fR
-Login via a session id (which can be extracted from a crunchyroll browser cookie) instead of using email and password.
+Login via a session id (which can be extracted from a crunchyroll browser cookie) instead of using username and password.
 
-.SH DOWNLOAD OPTIONS
-This options can only be used when calling the \fIdownload\fR action.
+.SH DOWNLOAD COMMAND
+A command to simply download videos. The output file is stored as a \fI.ts\fR file. \fIffmpeg\fR has to be installed if you want to change the format the videos are stored in.
 .TP
 
-\fB--alternative-progress\fR
-Shows an alternative, not so user-friendly progress instead of the progress bar which contains more information.
+\fB-a, --audio AUDIO\fR
+Forces to download videos with the given audio locale. If no video with this audio locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-419, es-ES, fr-FR, pt-PT, pt-BR, it-IT, de-DE, ru-RU, ar-SA.
 .TP
 
-\fB-a, --audio LOCALE\fR
-Forces to download videos with the given audio locale. If no video with this audio locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-LA, es-ES, fr-FR, pt-BR, it-IT, de-DE, ru-RU, ar-ME.
+\fB-s, --subtitle SUBTITLE\fR
+Forces to download the videos with subtitles in the given locale / language. If no video with this subtitle locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-419, es-ES, fr-FR, pt-PT, pt-BR, it-IT, de-DE, ru-RU, ar-SA.
 .TP
 
 \fB-d, --directory DIRECTORY\fR
 The directory to download all files to.
 .TP
 
-\fB--no-hardsub\fR
-Same as '-s', but the subtitles are not stored in the video itself, but in a separate file.
-.TP
-
-\fB--only-sub\fR
-Downloads only the subtitles without the corresponding video.
-.TP
-
 \fB-o, --output OUTPUT\fR
 Name of the output file. Formatting is also supported, so if the name contains one or more of the following things, they will get replaced.
     {title} » Title of the video.
     {series_name} » Name of the series.
-    {season_title} » Title of the season.
+    {season_name} » Name of the season.
     {season_number} » Number of the season.
     {episode_number} » Number of the episode.
     {resolution} » Resolution of the video.
@@ -94,12 +90,66 @@ The video resolution. Can either be specified via the pixels (e.g. 1920x1080), t
     Available common-use words: best (best available resolution), worst (worst available resolution).
 .TP
 
-\fB-s, --subtitle LOCALE\fR
-Forces to download the videos with subtitles in the given locale / language. If no video with this subtitle locale is available, nothing will be downloaded. Available locales are: ja-JP, en-US, es-LA, es-ES, fr-FR, pt-BR, it-IT, de-DE, ru-RU, ar-ME.
+\fB-g, --goroutines GOROUTINES\fR
+Sets the number of parallel downloads for the segments the final video is made of. Default is the number of cores the computer has.
+
+.SH ARCHIVE COMMAND
+This command behaves like \fBdownload\fR besides the fact that it requires \fIffmpeg\fR and stores the output only to .mkv files.
+.TP
+
+\fB-l, --language LANGUAGE\fR
+Audio locales which should be downloaded. Can be used multiple times. Available locales are: ja-JP, en-US, es-419, es-ES, fr-FR, pt-PT, pt-BR, it-IT, de-DE, ru-RU, ar-SA.
+.TP
+
+\fB-d, --directory DIRECTORY\fR
+The directory to download all files to.
+.TP
+
+\fB-o, --output OUTPUT\fR
+Name of the output file. Formatting is also supported, so if the name contains one or more of the following things, they will get replaced.
+    {title} » Title of the video.
+    {series_name} » Name of the series.
+    {season_name} » Name of the season.
+    {season_number} » Number of the season.
+    {episode_number} » Number of the episode.
+    {resolution} » Resolution of the video.
+    {fps} » Frame Rate of the video.
+    {audio} » Audio locale of the video.
+    {subtitle} » Subtitle locale of the video.
+.TP
+
+\fB-m, --merge MERGE BEHAVIOR\fR
+Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'. \fB--audio\fR stores one video and only the audio of all other languages, \fBvideo\fR stores all videos of the given languages and their audio, \fBauto\fR (which is the default) only behaves like video if the length of two videos are different (and only for the two videos), else like audio.
+.TP
+
+\fB-c, --compress COMPRESS\fR
+If is set, all output will be compresses into an archive (every url generates a new one). This flag sets the name of the compressed output file. The file ending specifies the compression algorithm. The following algorithms are supported: gzip, tar, zip.
+Just like \fB--output\fR the name can be formatted. But the only option available here is \fI{series_name}\fR.
+.TP
+
+\fB-r, resolution RESOLUTION\fR
+The video resolution. Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or "common-use" words (e.g. best).
+    Available pixels: 1920x1080, 1280x720, 640x480, 480x360, 426x240.
+    Available abbreviations: 1080p, 720p, 480p, 360p, 240p.
+    Available common-use words: best (best available resolution), worst (worst available resolution).
 .TP
 
 \fB-g, --goroutines GOROUTINES\fR
-Sets the number of parallel downloads for the segments the final video is made of.
+Sets the number of parallel downloads for the segments the final video is made of. Default is the number of cores the computer has.
+
+.SH URL OPTIONS
+If you want to download only specific episode of a series, you could either pass every single episode url to the downloader (which is fine for 1 - 3 episodes) or use filtering.
+It works pretty simple, just put a specific pattern surrounded by square brackets at the end of the url from the anime you want to download. A season and / or episode as well as a range from where to where episodes should be downloaded can be specified.
+Use the list below to get a better overview what is possible
+    ...[E5] - Download the fifth episode.
+    ...[S1] - Download the full first season.
+    ...[-S2] - Download all seasons up to and including season 2.
+    ...[S3E4-] - Download all episodes from and including season 3, episode 4.
+    ...[S1E4-S3] - Download all episodes from and including season 1, episode 4, until and including season 3.
+
+In practise, it would look like this: \fIhttps://beta.crunchyroll.com/series/12345678/example[S1E5-S3E2]\fR.
+
+The \fBS\fR, followed by the number indicates the season number, \fBE\fR, followed by the number indicates an episode number. It doesn't matter if \fBS\fR, \fBE\fR or both are missing. Theoretically \fB[-]\fR is a valid pattern too. Note that \fBS\fR must always stay before \fBE\fR when used.
 
 .SH EXAMPLES
 Login via crunchyroll account email and password.
@@ -116,7 +166,15 @@ $ crunchyroll-go download -o "darling.mp4" -r 720p https://www.crunchyroll.com/d
 
 Download a episode with japanese audio and american subtitles.
 .br
-$ crunchyroll-go download -a ja-JP -s en-US https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+$ crunchyroll-go download -a ja-JP -s en-US https://www.crunchyroll.com/darling-in-the-franxx[E3-E5]
+
+Stores the episode in a .mkv file.
+.br
+$ crunchyroll-go archive https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+
+Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
+.br
+$ crunchyroll-go archive -c "ditf.tar.gz" https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx[E1-E2]
 
 .SH BUGS
 If you notice any bug or want an enhancement, feel free to create a new issue or pull request in the GitHub repository.
@@ -127,7 +185,7 @@ ByteDream
 Source: https://github.com/ByteDream/crunchyroll-go
 
 .SH COPYRIGHT
-Copyright (C) 2021 ByteDream
+Copyright (C) 2022 ByteDream
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

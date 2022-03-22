@@ -1,10 +1,8 @@
-**This branch is under highly development, so it may contain errors which are making compiling not possible**
+<p align="center"><strong>Version 2 is out 🥳, see all the <a href="https://github.com/ByteDream/crunchyroll-go/releases/tag/v2.0.0">changes.</a></strong></p>
 
 # crunchyroll-go
 
-A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](https://www.crunchyroll.com) api.
-
-**You surely need a crunchyroll premium account to get full (api) access.**
+A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](https://www.crunchyroll.com) api. To use it, you need a crunchyroll premium account to for full (api) access.
 
 <p align="center">
   <a href="https://github.com/ByteDream/crunchyroll-go">
@@ -32,20 +30,22 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   •
   <a href="#-library">Library 📚</a>
   •
-  <a href="#-credits">Credits 🙏</a>
-  •
-  <a href="#️-notice">Notice 🗒️</a>
+  <a href="#%EF%B8%8F-disclaimer">Disclaimer ☝️</a>
   •
   <a href="#-license">License ⚖</a>
 </p>
 
-## 🖥️ CLI
+# 🖥️ CLI
 
-#### ✨ Features
-- Download single videos and entire series from [crunchyroll](https://www.crunchyroll.com)
+## ✨ Features
 
-#### Get the executable
-- 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below
+- Download single videos and entire series from [crunchyroll](https://www.crunchyroll.com).
+- Archive episode or seasons in an `.mkv` file with multiple subtitles and audios and compress them to gzip or zip files.
+- Specify a range which episodes to download from an anime.
+
+## 💾 Get the executable
+
+- 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below:
   - [Linux (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_linux)
   - [Windows (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_windows.exe)
   - [MacOS (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_darwin)
@@ -54,22 +54,26 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   $ yay -S crunchyroll-go
   ```
 - 🛠 Build it yourself
-    - use `make` (requires `go` to be installed):
+  - use `make` (requires `go` to be installed):
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go
   $ make && sudo make install
   ```
-    - use `go`:
+  - use `go`:
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go/cmd/crunchyroll-go
   $ go build -o crunchy
   ```
 
-### 📝 Examples
+## 📝 Examples
 
-#### Login
+_Before reading_: Because of the huge functionality not all cases can be covered in the README.
+Make sure to check the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Cli), further usages and options are described there.
+
+### Login
+
 Before you can do something, you have to login first.
 
 This can be performed via crunchyroll account email and password.
@@ -82,11 +86,9 @@ or via session id
 $ crunchy login --session-id 8e9gs135defhga790dvrf2i0eris8gts
 ```
 
-#### Download
+### Download
 
-**With the cli you can download single videos or entire series.**
-
-By default the cli tries to download the episode with your system language as audio.
+By default, the cli tries to download the episode with your system language as audio.
 If no streams with your system language are available, the video will be downloaded with japanese audio and hardsubbed subtitles in your system language.
 **If your system language is not supported, an error message will be displayed and en-US (american english) will be chosen as language.**
 
@@ -95,7 +97,6 @@ $ crunchy download https://www.crunchyroll.com/darling-in-the-franxx/episode-1-a
 ```
 
 With `-r best` the video(s) will have the best available resolution (mostly 1920x1080 / Full HD).
-
 ```
 $ crunchy download -r best https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
@@ -105,250 +106,106 @@ The file is by default saved as a `.ts` (mpeg transport stream) file.
 With the `-o` flag, you can change the name (and file ending) of the output file.
 So if you want to save it as, for example, `mp4` file, just name it `whatever.mp4`.
 **You need [ffmpeg](https://ffmpeg.org) to store the video in other file formats.**
-
 ```
 $ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
 With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have.
 Type `crunchy help download` to see all available locales.
-
 ```
 $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/darling-in-the-franxx
 ```
 
 ##### Flags
-- `--audio` » forces audio of the video(s)
-- `--subtitle` » forces subtitle of the video(s)
-- `--no-hardsub` » forces that the subtitles are stored as a separate file and are not directly embedded into the video
-- `--only-sub` » downloads only the subtitles without the corresponding video
 
-- `-d`, `--directory` » directory to download the video(s) to
-- `-o`, `--output` » name of the output file
+The following flags can be (optional) passed to modify the [download](#download) process.
 
-- `-r`, `--resolution` » the resolution of the video(s). `best` for best resolution, `worst` for worst
+| Short | Extended       | Description                                                                    |
+|-------|----------------|--------------------------------------------------------------------------------|
+| `-a`  | `--audio`      | Forces audio of the video(s).                                                  |
+| `-s`  | `--subtitle`   | Forces subtitle of the video(s).                                               |
+| `-d`  | `--directory`  | Directory to download the video(s) to.                                         |
+| `-o`  | `--output`     | Name of the output file.                                                       |
+| `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst. |
+| `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                       |
 
-- `--alternative-progress` » shows an alternative, not so user-friendly progress instead of the progress bar
+### Archive
 
-- `-g`, `--goroutines` » sets how many parallel segment downloads should be used
+Archive works just like [download](#download). It downloads the given videos as `.mkv` files and stores all (soft) subtitles in it.
+Default audio locales are japanese and your system language (if available) but you can set more or less with the `--language` flag.
 
-#### Help
+Archive a file
+```shell
+$ crunchy archive https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+```
+
+Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
+```shell
+$ crunchy archive -c "ditf.tar.gz" https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx
+```
+
+##### Flags
+
+The following flags can be (optional) passed to modify the [archive](#archive) process.
+
+| Short | Extended       | Description                                                                                                                                                                                             |
+|-------|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `-l`  | `--language`   | Audio locale which should be downloaded. Can be used multiple times.                                                                                                                                    |
+| `-d`  | `--directory`  | Directory to download the video(s) to.                                                                                                                                                                  |
+| `-o`  | `--output`     | Name of the output file.                                                                                                                                                                                |
+| `-m`  | `--merge`      | Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'. See the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Cli#archive) for more information.               |
+| `-c`  | `--compress`   | If is set, all output will be compresses into an archive. This flag sets the name of the compressed output file and the file ending specifies the compression algorithm (gzip, tar, zip are supported). |
+| `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst.                                                                                                                          |
+| `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                                                                                                                                                |
+
+### Help
+
 - General help
-  ```
+  ```shell
   $ crunchy help
   ```
 - Login help
-  ```
+  ```shell
   $ crunchy help login
   ```
 - Download help
-  ```
+  ```shell
   $ crunchy help download
   ```
 
-#### Global flags
+- Archive help
+  ```shell
+  $ crunchy help archive
+  ```
+
+### Global flags
+
 These flags you can use across every sub-command
 
-- `-q`, `--quiet` » disables all output
-- `-v`, `--verbose` » shows additional debug output
-- `--color` » adds color to the output (works only on not windows systems)
+| Flag | Description                                          |
+|------|------------------------------------------------------|
+| `-q` | Disables all output.                                 |
+| `-v` | Shows additional debug output.                       |
+| `-p` | Use a proxy to hide your ip / redirect your traffic. |
 
-- `-p`, `--proxy` » use a proxy to hide your ip / redirect your traffic
+# 📚 Library
 
-- `-l`, `--locale` » the language to display video specific things like the title. default is your system language
-
-## 📚 Library
 Download the library via `go get`
-
-```
+```shell
 $ go get github.com/ByteDream/crunchyroll-go
 ```
 
-### 📝 Examples
-```go
-func main() {
-    // login with credentials 
-    crunchy, err := crunchyroll.LoginWithCredentials("user@example.com", "password", crunchyroll.US, http.DefaultClient)
-    if err != nil {
-        panic(err)
-    }
+The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go).
 
-    // finds a series or movie by a crunchyroll link
-    video, err := crunchy.FindVideo("https://www.crunchyroll.com/darling-in-the-franxx")
-    if err != nil {
-        panic(err)
-    }
+Examples how to use the library and some features of it are described in the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Library).
 
-    series := video.(*crunchyroll.Series)
-    seasons, err := series.Seasons()
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d seasons for series %s\n", len(seasons), series.Title)
+# ☝️ Disclaimer
 
-    // search `Darling` and return 20 results
-    series, movies, err := crunchy.Search("Darling", 20)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d series and %d movies for query `Darling`\n", len(series), len(movies))
-}
-```
+This tool is **ONLY** meant to be used for private purposes.
+To use this tool you need crunchyroll premium anyway, so there is no reason why rip and share the episodes.
 
-```go
-func main() {
-    crunchy, err := crunchyroll.LoginWithSessionID("8e9gs135defhga790dvrf2i0eris8gts", crunchyroll.US, http.DefaultClient)
-    if err != nil {
-        panic(err)
-    }
-
-    // returns an episode slice with all episodes which are matching the given url.
-    // the episodes in the returning slice differs from the underlying streams, but are all pointing to the first ditf episode
-    episodes, err := crunchy.FindEpisode("https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575")
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d episodes\n", len(episodes))
-}
-```
-
-<h4 align="center">Structure</h4>
-
-Because of the apis structure, it can lead very fast much redundant code for simple tasks, like getting all episodes
-with japanese audio and german subtitle. For this case and some other, the api has a utility called `Structure` in its utils.
-
-```go
-func main() {
-    crunchy, err := crunchyroll.LoginWithCredentials("user@example.com", "password", crunchyroll.US, http.DefaultClient)
-    if err != nil {
-        panic(err)
-    }
-
-    // search `Darling` and return 20 results (series and movies) or less
-    series, movies, err := crunchy.Search("Darling", 20)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d series and %d movies for search query `Darling`\n", len(series), len(movies))
-
-    seasons, err := series[0].Seasons()
-    if err != nil {
-        panic(err)
-    }
-
-    // in the crunchyroll.utils package, you find some structs which can be used to simplify tasks.
-    // you can recursively search all underlying content
-    seriesStructure := utils.NewSeasonStructure(seasons)
-
-    // this returns every format of all the above given seasons
-    formats, err := seriesStructure.Formats()
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d formats\n", len(formats))
-
-    filteredFormats, err := seriesStructure.FilterFormatsByLocales(crunchyroll.JP, crunchyroll.DE, true)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Printf("Found %d formats with japanese audio and hardsubbed german subtitles\n", len(filteredFormats))
-
-    // reverse sorts the formats after their resolution by calling a sort type which is also defined in the api utils
-    // and stores the format with the highest resolution in a variable
-    sort.Sort(sort.Reverse(utils.FormatsByResolution(filteredFormats)))
-    format := formats[0]
-    // get the episode from which the format is a child
-    episode, err := seriesStructure.FilterEpisodeByFormat(format)
-    if err != nil {
-        panic(err)
-    }
-
-    file, err := os.Create(fmt.Sprintf("%s.ts", episode.Title))
-    if err != nil {
-        panic(err)
-    }
-
-    // download the format to the file
-    if err := format.DownloadGoroutines(file, 4, nil); err != nil {
-        panic(err)
-    }
-    fmt.Printf("Downloaded %s with %s resolution and %.2f fps as %s\n", episode.Title, format.Video.Resolution, format.Video.FPS, file.Name())
-
-    // for more useful structure function just let your IDE's autocomplete make its thing
-}
-```
-
-As you can see in the example above, most of the `crunchyroll.utils` Structure functions are returning errors. There is
-a build-in functionality with are avoiding causing the most errors and let you safely ignore them as well.
-**Note that errors still can appear**
-
-```go
-func main() {
-    crunchy, err := crunchyroll.LoginWithCredentials("user@example.com", "password", crunchyroll.US, http.DefaultClient)
-    if err != nil {
-        panic(err)
-    }
-
-    foundEpisodes, err := crunchy.FindEpisode("https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575")
-    if err != nil {
-    	panic(err)
-    }
-    episodeStructure := utils.NewEpisodeStructure(foundEpisodes)
-
-    // this function recursively calls all api endpoints, receives everything and stores it in memory,
-    // so that after executing this, no more request to the crunchyroll server has to be made.
-    // note that it could cause much network load while running this method.
-    //
-    // you should check the InitAllState before, because InitAll could have been already called or
-    // another function has the initialization as side effect and re-initializing everything
-    // will change every pointer in the struct which can cause massive problems afterwards. 
-    if !episodeStructure.InitAllState() {
-        if err := episodeStructure.InitAll(); err != nil {
-            panic(err)
-        }
-    }
-
-    formats, _ := episodeStructure.Formats()
-    streams, _ := episodeStructure.Streams()
-    episodes, _ := episodeStructure.Episodes()
-    fmt.Printf("Initialized %d formats, %d streams and %d episodes\n", len(formats), len(streams), len(episodes))
-}
-```
-
-### Tests
-You can also run test to see if the api works correctly.
-Before doing this, make sure to either set your crunchyroll email and password or sessions as environment variable.
-The email variable has to be named `EMAIL` and the password variable `PASSWORD`. If you want to use your session id, the variable must be named `SESSION_ID`.
-
-You can run the test via `make`
-```
-$ make test
-```
-
-or via `go` directly
-```
-$ go test .
-```
-
-# 🙏 Credits
-
-### [Kamyroll-Python](https://github.com/hyugogirubato/Kamyroll-Python)
-- Extracted all api endpoints and the login process from this
-
-### [m3u8](https://github.com/oopsguy/m3u8)
-- Decrypting mpeg stream files
-
-### All libraries
-- [m3u8](https://github.com/grafov/m3u8) (not the m3u8 library from above) » mpeg stream info library
-- [cobra](https://github.com/spf13/cobra) » cli library
-
-# 🗒️ Notice
-
-Sometimes the download stops without a reason on linux and does not go further. In this case the `tmpfs` / `/tmp` directory may be full. Execute `df /tmp` to see how much of the space is used.
-
-I would really appreciate if someone rewrites the complete cli. I'm not satisfied with it's current structure but at the moment I have no time and no desire to do it myself.
+**The responsibility for what happens to the downloaded videos lies entirely with the user who downloaded them.**
 
 # ⚖ License
 
-This project is licensed under the GNU Lesser General Public License v3.0 (LGPL-3.0) - see the [LICENSE](LICENSE) file
-for more details.
+This project is licensed under the GNU Lesser General Public License v3.0 (LGPL-3.0) - see the [LICENSE](LICENSE) file for more details.

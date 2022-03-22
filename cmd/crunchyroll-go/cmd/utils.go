@@ -102,7 +102,7 @@ func freeFileName(filename string) (string, bool) {
 		if _, stat := os.Stat(filename); stat != nil && !os.IsExist(stat) {
 			break
 		}
-		filename = fmt.Sprintf("%s (%d)%s", base, j, ext)
+		filename = fmt.Sprintf("%s (%d)%s", base, j+1, ext)
 	}
 	return filename, j != 0
 }
@@ -188,7 +188,7 @@ func generateFilename(name, directory string) string {
 
 	filename, changed := freeFileName(filepath.Join(directory, name))
 	if changed {
-		out.Info("File %s already exists, changing name to %s", name, filename)
+		out.Debug("File `%s` already exists, changing name to `%s`", filepath.Base(name), filepath.Base(filename))
 	}
 
 	return filename

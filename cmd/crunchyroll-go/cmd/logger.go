@@ -178,6 +178,9 @@ func (l *logger) SetProgress(format string, v ...interface{}) {
 func (l *logger) StopProgress(format string, v ...interface{}) {
 	if out.InfoLog.Writer() == io.Discard {
 		return
+	} else if l.devView {
+		l.Debug(format, v...)
+		return
 	}
 
 	l.lock.Lock()

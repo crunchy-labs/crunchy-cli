@@ -127,10 +127,10 @@ func loadCrunchy() {
 		break
 	}
 	if body == nil {
-		out.Err("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
+		out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
 		os.Exit(1)
 	} else if err != nil {
-		out.Err("Failed to read login information: %v", err)
+		out.StopProgress("Failed to read login information: %v", err)
 		os.Exit(1)
 	}
 

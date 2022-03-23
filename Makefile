@@ -9,9 +9,12 @@ build:
 		cd cmd/crunchyroll-go && go build -o $(BINARY_NAME)
 		mv cmd/crunchyroll-go/$(BINARY_NAME) .
 
+clean:
+		rm $(BINARY_NAME)
+
 install:
 		install -Dm755 $(BINARY_NAME) $(DESTDIR)$(PREFIX)/bin/crunchyroll-go
-		cp -f $(DESTDIR)$(PREFIX)/bin/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
+		ln -sf $(DESTDIR)$(PREFIX)/bin/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
 		install -Dm644 crunchyroll-go.1 $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 		install -Dm644 LICENSE $(DESTDIR)$(PREFIX)/share/licenses/crunchyroll-go/LICENSE
 

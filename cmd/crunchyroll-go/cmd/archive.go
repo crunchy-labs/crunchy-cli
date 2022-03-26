@@ -385,13 +385,15 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	}
 
 	sort.Sort(utils.SubtitlesByLocale(info.format.Subtitles))
-	if len(archiveLanguagesFlag) > 0 && archiveLanguagesFlag[0] != "all" {
-		for j, language := range archiveLanguagesFlag {
-			locale := crunchyroll.LOCALE(language)
-			for k, subtitle := range info.format.Subtitles {
-				if subtitle.Locale == locale {
-					info.format.Subtitles = append(info.format.Subtitles[:k], info.format.Subtitles[k+1:]...)
-					info.format.Subtitles = append(info.format.Subtitles[:j], append([]*crunchyroll.Subtitle{subtitle}, info.format.Subtitles[j:]...)...)
+
+	sortSubtitles, _ := strconv.ParseBool(os.Getenv("SORT_SUBTITLES"))
+	if sortSubtitles && len(archiveLanguagesFlag) > 0 {
+		// this sort the subtitle locales after the languages which were specified
+		// with the `archiveLanguagesFlag` flag
+		for _, language := range archiveLanguagesFlag {
+			for i, subtitle := range info.format.Subtitles {
+				if subtitle.Locale == crunchyroll.LOCALE(language) {
+					info.format.Subtitles = append([]*crunchyroll.Subtitle{subtitle}, append(info.format.Subtitles[:i], info.format.Subtitles[i+1:]...)...)
 					break
 				}
 			}

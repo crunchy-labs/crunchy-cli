@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,6 +67,7 @@ func allLocalesAsStrings() (locales []string) {
 	for _, locale := range utils.AllLocales {
 		locales = append(locales, string(locale))
 	}
+	sort.Strings(locales)
 	return
 }
 

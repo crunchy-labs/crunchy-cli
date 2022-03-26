@@ -149,5 +149,5 @@ func (sbl SubtitlesByLocale) Swap(i, j int) {
 	sbl[i], sbl[j] = sbl[j], sbl[i]
 }
 func (sbl SubtitlesByLocale) Less(i, j int) bool {
-	return sbl[i].Locale < sbl[j].Locale
+	return LocaleLanguage(sbl[i].Locale) < LocaleLanguage(sbl[j].Locale)
 }

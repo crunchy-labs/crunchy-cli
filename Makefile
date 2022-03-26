@@ -1,4 +1,4 @@
-VERSION=2.0.0
+VERSION=2.0.1
 BINARY_NAME=crunchy
 VERSION_BINARY_NAME=$(BINARY_NAME)-v$(VERSION)
 
@@ -10,7 +10,7 @@ build:
 		mv cmd/crunchyroll-go/$(BINARY_NAME) .
 
 clean:
-		rm $(BINARY_NAME)
+		rm -f $(BINARY_NAME) $(VERSION_BINARY_NAME)_*
 
 install:
 		install -Dm755 $(BINARY_NAME) $(DESTDIR)$(PREFIX)/bin/crunchyroll-go

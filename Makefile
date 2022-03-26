@@ -14,7 +14,7 @@ clean:
 
 install:
 		install -Dm755 $(BINARY_NAME) $(DESTDIR)$(PREFIX)/bin/crunchyroll-go
-		ln -sf $(DESTDIR)$(PREFIX)/bin/crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
+		ln -sf ./crunchyroll-go $(DESTDIR)$(PREFIX)/bin/crunchy
 		install -Dm644 crunchyroll-go.1 $(DESTDIR)$(PREFIX)/share/man/man1/crunchyroll-go.1
 		install -Dm644 LICENSE $(DESTDIR)$(PREFIX)/share/licenses/crunchyroll-go/LICENSE
 

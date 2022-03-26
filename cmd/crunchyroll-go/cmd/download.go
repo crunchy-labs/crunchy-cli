@@ -190,6 +190,11 @@ func downloadInfo(info formatInformation, file *os.File) error {
 	if out.IsDev() {
 		downloadProgress.Prefix = out.DebugLog.Prefix()
 	}
+	defer func() {
+		if downloadProgress.Total != downloadProgress.Current {
+			fmt.Println()
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -274,6 +274,11 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	if err != nil {
 		return fmt.Errorf("error while setting up downloader: %v", err)
 	}
+	defer func() {
+		if downloadProgress.Total != downloadProgress.Current {
+			fmt.Println()
+		}
+	}()
 
 	rootFile, err := os.CreateTemp("", fmt.Sprintf("%s_*.ts", strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))))
 	if err != nil {

@@ -164,7 +164,13 @@ func terminalWidth() int {
 		if err != nil {
 			return 60
 		}
-		width, err := strconv.Atoi(strings.Split(strings.ReplaceAll(string(res), "\n", ""), " ")[1])
+		// on alpine linux the command `stty size` does not respond the terminal size
+		// but something like "stty: standard input". this may also apply to other systems
+		splitOutput := strings.SplitN(strings.ReplaceAll(string(res), "\n", ""), " ", 2)
+		if len(splitOutput) == 1 {
+			return 60
+		}
+		width, err := strconv.Atoi(splitOutput[1])
 		if err != nil {
 			return 60
 		}

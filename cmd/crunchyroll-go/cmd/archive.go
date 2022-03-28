@@ -270,12 +270,12 @@ func archive(urls []string) error {
 func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename string) error {
 	out.Debug("Entering season %d, episode %d with %d additional formats", info.SeasonNumber, info.EpisodeNumber, len(info.additionalFormats))
 
-	downloadProgress, err := createArchiveProgress(info)
+	dp, err := createArchiveProgress(info)
 	if err != nil {
 		return fmt.Errorf("error while setting up downloader: %v", err)
 	}
 	defer func() {
-		if downloadProgress.Total != downloadProgress.Current {
+		if dp.Total != dp.Current {
 			fmt.Println()
 		}
 	}()
@@ -297,13 +297,13 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 		}
 
 		if out.IsDev() {
-			downloadProgress.UpdateMessage(fmt.Sprintf("Downloading %d/%d (%.2f%%) » %s", current, total, float32(current)/float32(total)*100, segment.URI), false)
+			dp.UpdateMessage(fmt.Sprintf("Downloading %d/%d (%.2f%%) » %s", current, total, float32(current)/float32(total)*100, segment.URI), false)
 		} else {
-			downloadProgress.Update()
+			dp.Update()
 		}
 
 		if current == total {
-			downloadProgress.UpdateMessage("Merging segments", false)
+			dp.UpdateMessage("Merging segments", false)
 		}
 		return nil
 	})
@@ -415,7 +415,7 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 		return fmt.Errorf("failed to merge files: %v", err)
 	}
 
-	downloadProgress.UpdateMessage("Download finished", false)
+	dp.UpdateMessage("Download finished", false)
 
 	signal.Stop(sig)
 	out.Debug("Stopped signal catcher")
@@ -445,7 +445,7 @@ func createArchiveProgress(info formatInformation) (*downloadProgress, error) {
 		progressCount += int(f.Video.Chunklist.Count()) + 1
 	}
 
-	downloadProgress := &downloadProgress{
+	dp := &downloadProgress{
 		Prefix:  out.InfoLog.Prefix(),
 		Message: "Downloading video",
 		// number of segments a video +1 is for the success message
@@ -454,10 +454,10 @@ func createArchiveProgress(info formatInformation) (*downloadProgress, error) {
 		Quiet: out.IsQuiet(),
 	}
 	if out.IsDev() {
-		downloadProgress.Prefix = out.DebugLog.Prefix()
+		dp.Prefix = out.DebugLog.Prefix()
 	}
 
-	return downloadProgress, nil
+	return dp, nil
 }
 
 func archiveDownloadVideos(downloader crunchyroll.Downloader, filename string, video bool, formats ...*crunchyroll.Format) ([]string, error) {

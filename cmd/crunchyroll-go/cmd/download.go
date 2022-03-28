@@ -179,7 +179,7 @@ func downloadInfo(info formatInformation, file *os.File) error {
 		return fmt.Errorf("error while initializing the video: %v", err)
 	}
 
-	downloadProgress := &downloadProgress{
+	dp := &downloadProgress{
 		Prefix:  out.InfoLog.Prefix(),
 		Message: "Downloading video",
 		// number of segments a video has +2 is for merging and the success message
@@ -188,10 +188,10 @@ func downloadInfo(info formatInformation, file *os.File) error {
 		Quiet: out.IsQuiet(),
 	}
 	if out.IsDev() {
-		downloadProgress.Prefix = out.DebugLog.Prefix()
+		dp.Prefix = out.DebugLog.Prefix()
 	}
 	defer func() {
-		if downloadProgress.Total != downloadProgress.Current {
+		if dp.Total != dp.Current {
 			fmt.Println()
 		}
 	}()
@@ -206,13 +206,13 @@ func downloadInfo(info formatInformation, file *os.File) error {
 		}
 
 		if out.IsDev() {
-			downloadProgress.UpdateMessage(fmt.Sprintf("Downloading %d/%d (%.2f%%) » %s", current, total, float32(current)/float32(total)*100, segment.URI), false)
+			dp.UpdateMessage(fmt.Sprintf("Downloading %d/%d (%.2f%%) » %s", current, total, float32(current)/float32(total)*100, segment.URI), false)
 		} else {
-			downloadProgress.Update()
+			dp.Update()
 		}
 
 		if current == total {
-			downloadProgress.UpdateMessage("Merging segments", false)
+			dp.UpdateMessage("Merging segments", false)
 		}
 		return nil
 	})
@@ -248,7 +248,7 @@ func downloadInfo(info formatInformation, file *os.File) error {
 		return fmt.Errorf("error while downloading: %v", err)
 	}
 
-	downloadProgress.UpdateMessage("Download finished", false)
+	dp.UpdateMessage("Download finished", false)
 
 	signal.Stop(sig)
 	out.Debug("Stopped signal catcher")

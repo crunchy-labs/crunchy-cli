@@ -229,7 +229,7 @@ func archive(urls []string) error {
 						return fmt.Errorf("failed to pre generate new archive file: %v", err)
 					}
 				} else {
-					dir := info.Format(downloadDirectoryFlag)
+					dir := info.Format(archiveDirectoryFlag)
 					if _, err = os.Stat(dir); os.IsNotExist(err) {
 						if err = os.MkdirAll(dir, 0777); err != nil {
 							return fmt.Errorf("error while creating directory: %v", err)
@@ -289,7 +289,7 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	downloader := crunchyroll.NewDownloader(ctx, rootFile, downloadGoroutinesFlag, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
+	downloader := crunchyroll.NewDownloader(ctx, rootFile, archiveGoroutinesFlag, func(segment *m3u8.MediaSegment, current, total int, file *os.File) error {
 		// check if the context was cancelled.
 		// must be done in to not print any progress messages if ctrl+c was pressed
 		if ctx.Err() != nil {

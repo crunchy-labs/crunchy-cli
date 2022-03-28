@@ -147,8 +147,8 @@ func download(urls []string) error {
 		}
 		out.Empty()
 
-		for _, season := range episodes {
-			for _, info := range season {
+		for j, season := range episodes {
+			for k, info := range season {
 				dir := info.Format(downloadDirectoryFlag)
 				if _, err = os.Stat(dir); os.IsNotExist(err) {
 					if err = os.MkdirAll(dir, 0777); err != nil {
@@ -166,6 +166,10 @@ func download(urls []string) error {
 					return err
 				}
 				file.Close()
+
+				if i != len(urls)-1 || j != len(episodes)-1 || k != len(season)-1 {
+					out.Empty()
+				}
 			}
 		}
 	}
@@ -253,7 +257,6 @@ func downloadInfo(info formatInformation, file *os.File) error {
 	signal.Stop(sig)
 	out.Debug("Stopped signal catcher")
 
-	out.Empty()
 	out.Empty()
 
 	return nil

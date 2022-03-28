@@ -218,8 +218,8 @@ func archive(urls []string) error {
 		}
 		out.Empty()
 
-		for _, season := range episodes {
-			for _, info := range season {
+		for j, season := range episodes {
+			for k, info := range season {
 				var filename string
 				var writeCloser io.WriteCloser
 				if c != nil {
@@ -253,8 +253,11 @@ func archive(urls []string) error {
 					}
 					return err
 				}
-
 				writeCloser.Close()
+
+				if i != len(urls)-1 || j != len(episodes)-1 || k != len(season)-1 {
+					out.Empty()
+				}
 			}
 		}
 		if c != nil {
@@ -420,7 +423,6 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	signal.Stop(sig)
 	out.Debug("Stopped signal catcher")
 
-	out.Empty()
 	out.Empty()
 
 	return nil

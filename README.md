@@ -46,21 +46,21 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 ## 💾 Get the executable
 
 - 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchyroll-go/releases/latest) or get it from below:
-  - [Linux (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_linux)
-  - [Windows (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_windows.exe)
-  - [MacOS (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_darwin)
+    - [Linux (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_linux)
+    - [Windows (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_windows.exe)
+    - [MacOS (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```
   $ yay -S crunchyroll-go
   ```
 - 🛠 Build it yourself
-  - use `make` (requires `go` to be installed):
+    - use `make` (requires `go` to be installed):
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go
   $ make && sudo make install
   ```
-  - use `go`:
+    - use `go`:
   ```
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go/cmd/crunchyroll-go
@@ -69,27 +69,27 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
 
 ## 📝 Examples
 
-_Before reading_: Because of the huge functionality not all cases can be covered in the README.
-Make sure to check the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Cli), further usages and options are described there.
+_Before reading_: Because of the huge functionality not all cases can be covered in the README. Make sure to check the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Cli), further usages and options are described there.
 
 ### Login
 
 Before you can do something, you have to login first.
 
 This can be performed via crunchyroll account email and password.
+
 ```
 $ crunchy login user@example.com password
 ```
 
 or via session id
+
 ```
 $ crunchy login --session-id 8e9gs135defhga790dvrf2i0eris8gts
 ```
 
 ### Download
 
-By default, the cli tries to download the episode with your system language as audio.
-If no streams with your system language are available, the video will be downloaded with japanese audio and hardsubbed subtitles in your system language.
+By default, the cli tries to download the episode with your system language as audio. If no streams with your system language are available, the video will be downloaded with japanese audio and hardsubbed subtitles in your system language.
 **If your system language is not supported, an error message will be displayed and en-US (american english) will be chosen as language.**
 
 ```
@@ -97,21 +97,22 @@ $ crunchy download https://www.crunchyroll.com/darling-in-the-franxx/episode-1-a
 ```
 
 With `-r best` the video(s) will have the best available resolution (mostly 1920x1080 / Full HD).
+
 ```
 $ crunchy download -r best https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
 The file is by default saved as a `.ts` (mpeg transport stream) file.
-`.ts` files may can't be played or are looking very weird (it depends on the video player you are using).
-With the `-o` flag, you can change the name (and file ending) of the output file.
-So if you want to save it as, for example, `mp4` file, just name it `whatever.mp4`.
+`.ts` files may can't be played or are looking very weird (it depends on the video player you are using). With the `-o` flag, you can change the name (and file ending) of the output file. So if you want to save it as, for example, `mp4`
+file, just name it `whatever.mp4`.
 **You need [ffmpeg](https://ffmpeg.org) to store the video in other file formats.**
+
 ```
 $ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
-With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have.
-Type `crunchy help download` to see all available locales.
+With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have. Type `crunchy help download` to see all available locales.
+
 ```
 $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/darling-in-the-franxx
 ```
@@ -131,15 +132,17 @@ The following flags can be (optional) passed to modify the [download](#download)
 
 ### Archive
 
-Archive works just like [download](#download). It downloads the given videos as `.mkv` files and stores all (soft) subtitles in it.
-Default audio locales are japanese and your system language (if available) but you can set more or less with the `--language` flag.
+Archive works just like [download](#download). It downloads the given videos as `.mkv` files and stores all (soft) subtitles in it. Default audio locales are japanese and your system language (if available) but you can set more or less with
+the `--language` flag.
 
 Archive a file
+
 ```shell
 $ crunchy archive https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
+
 ```shell
 $ crunchy archive -c "ditf.tar.gz" https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx
 ```
@@ -191,6 +194,7 @@ These flags you can use across every sub-command
 # 📚 Library
 
 Download the library via `go get`
+
 ```shell
 $ go get github.com/ByteDream/crunchyroll-go
 ```
@@ -201,8 +205,7 @@ Examples how to use the library and some features of it are described in the [wi
 
 # ☝️ Disclaimer
 
-This tool is **ONLY** meant to be used for private purposes.
-To use this tool you need crunchyroll premium anyway, so there is no reason why rip and share the episodes.
+This tool is **ONLY** meant to be used for private purposes. To use this tool you need crunchyroll premium anyway, so there is no reason why rip and share the episodes.
 
 **The responsibility for what happens to the downloaded videos lies entirely with the user who downloaded them.**
 

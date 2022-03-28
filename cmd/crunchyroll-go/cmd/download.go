@@ -216,6 +216,9 @@ func downloadInfo(info formatInformation, file *os.File) error {
 		}
 		return nil
 	})
+	if hasFFmpeg() {
+		downloader.FFmpegOpts = make([]string, 0)
+	}
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)

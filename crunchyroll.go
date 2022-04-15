@@ -354,7 +354,7 @@ func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Epi
 // if possible since beta url are always safe to use.
 // The method will stay in the library until only beta urls are supported by crunchyroll itself.
 func ParseVideoURL(url string) (seriesName string, ok bool) {
-	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
+	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)(/videos)?/?$`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
 		groups := regexGroups(urlMatch, pattern.SubexpNames()...)
 		seriesName = groups["series"]

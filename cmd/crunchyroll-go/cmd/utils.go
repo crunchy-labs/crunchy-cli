@@ -119,39 +119,51 @@ func loadCrunchy() {
 		files = append(files, filepath.Join(usr.HomeDir, ".config/crunchy"))
 	}
 
-	var body []byte
 	var err error
 	for _, file := range files {
 		if _, err = os.Stat(file); os.IsNotExist(err) {
+			err = nil
 			continue
 		}
-		body, err = os.ReadFile(file)
-		break
-	}
-	if body == nil {
-		out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
-		os.Exit(1)
-	} else if err != nil {
-		out.StopProgress("Failed to read login information: %v", err)
-		os.Exit(1)
-	}
-
-	split := strings.SplitN(string(body), "\n", 2)
-	if len(split) == 1 || split[1] == "" {
-		if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err != nil {
-			out.StopProgress(err.Error())
+		var body []byte
+		if body, err = os.ReadFile(file); err != nil {
+			out.StopProgress("Failed to read login information: %v", err)
 			os.Exit(1)
+		} else if body == nil {
+			continue
 		}
-		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+
+		split := strings.SplitN(string(body), "\n", 2)
+		if len(split) == 1 || split[1] == "" {
+			if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err == nil {
+				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+			}
+		} else {
+			if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
+				continue
+			}
+			out.Debug("Logged in with username '%s' and password '%s'. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0], split[1])
+			if runtime.GOOS != "windows" {
+				// the session id is written to a temp file to reduce the amount of re-logging in.
+				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
+				if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600); err != nil {
+					out.StopProgress("Failed to write session id to temp file")
+					os.Exit(1)
+				}
+				out.Debug("Wrote session id to temp file")
+			}
+		}
+
+		out.StopProgress("Logged in")
+		return
+	}
+	if err != nil {
+		out.StopProgress(err.Error())
 	} else {
-		if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
-			out.StopProgress(err.Error())
-			os.Exit(1)
-		}
-		out.Debug("Logged in with username '%s' and password '%s'. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0], split[1])
+		out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
 	}
 
-	out.StopProgress("Logged in")
+	os.Exit(1)
 }
 
 func hasFFmpeg() bool {

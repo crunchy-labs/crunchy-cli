@@ -143,7 +143,7 @@ func loadCrunchy() {
 				continue
 			}
 			out.Debug("Logged in with username '%s' and password '%s'. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0], split[1])
-			if runtime.GOOS != "windows" {
+			if file != filepath.Join(os.TempDir(), ".crunchy") {
 				// the session id is written to a temp file to reduce the amount of re-logging in.
 				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
 				if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600); err != nil {

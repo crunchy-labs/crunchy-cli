@@ -306,6 +306,10 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 // FindVideoByName finds a Video (Season or Movie) by its name.
 // Use this in combination with ParseVideoURL and hand over the corresponding results
 // to this function.
+//
+// Deprecated: Use Search instead. The first result sometimes isn't the correct one
+// so this function is inaccurate in some cases.
+// See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information.
 func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
 	s, m, err := c.Search(seriesName, 1)
 	if err != nil {
@@ -324,27 +328,31 @@ func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
 // Use this in combination with ParseEpisodeURL and hand over the corresponding results
 // to this function.
 func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Episode, error) {
-	video, err := c.FindVideoByName(seriesName)
-	if err != nil {
-		return nil, err
-	}
-	seasons, err := video.(*Series).Seasons()
+	series, _, err := c.Search(seriesName, 5)
 	if err != nil {
 		return nil, err
 	}
 
 	var matchingEpisodes []*Episode
-	for _, season := range seasons {
-		episodes, err := season.Episodes()
+	for _, s := range series {
+		seasons, err := s.Seasons()
 		if err != nil {
 			return nil, err
 		}
-		for _, episode := range episodes {
-			if episode.SlugTitle == episodeTitle {
-				matchingEpisodes = append(matchingEpisodes, episode)
+
+		for _, season := range seasons {
+			episodes, err := season.Episodes()
+			if err != nil {
+				return nil, err
+			}
+			for _, episode := range episodes {
+				if episode.SlugTitle == episodeTitle {
+					matchingEpisodes = append(matchingEpisodes, episode)
+				}
 			}
 		}
 	}
+
 	return matchingEpisodes, nil
 }
 

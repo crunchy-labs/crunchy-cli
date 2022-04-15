@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/ByteDream/crunchyroll-go"
 	"github.com/spf13/cobra"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"strings"
 )
 
+var Version = "development"
+
 var (
 	client  *http.Client
 	crunchy *crunchyroll.Crunchyroll
@@ -17,7 +20,10 @@ var (
 
 	quietFlag   bool
 	verboseFlag bool
-	proxyFlag   string
+
+	proxyFlag string
+
+	useragentFlag string
 )
 
 var rootCmd = &cobra.Command{
@@ -36,7 +42,7 @@ var rootCmd = &cobra.Command{
 
 		out.DebugLog.Printf("Executing `%s` command with %d arg(s)\n", cmd.Name(), len(args))
 
-		client, err = createOrDefaultClient(proxyFlag)
+		client, err = createOrDefaultClient(proxyFlag, useragentFlag)
 		return
 	},
 }
@@ -44,7 +50,10 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Disable all output")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Adds debug messages to the normal output")
+
 	rootCmd.PersistentFlags().StringVarP(&proxyFlag, "proxy", "p", "", "Proxy to use")
+
+	rootCmd.PersistentFlags().StringVar(&useragentFlag, "useragent", fmt.Sprintf("crunchyroll-go/%s", Version), "Useragent to do all request with")
 }
 
 func Execute() {

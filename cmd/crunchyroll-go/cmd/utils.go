@@ -71,7 +71,23 @@ func allLocalesAsStrings() (locales []string) {
 	return
 }
 
-func createOrDefaultClient(proxy string) (*http.Client, error) {
+type headerRoundTripper struct {
+	http.RoundTripper
+	header map[string]string
+}
+
+func (rht headerRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	resp, err := rht.RoundTripper.RoundTrip(r)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range rht.header {
+		resp.Header.Set(k, v)
+	}
+	return resp, nil
+}
+
+func createOrDefaultClient(proxy, useragent string) (*http.Client, error) {
 	if proxy == "" {
 		return http.DefaultClient, nil
 	} else {
@@ -80,12 +96,21 @@ func createOrDefaultClient(proxy string) (*http.Client, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		var rt http.RoundTripper = &http.Transport{
+			DisableCompression: true,
+			Proxy:              http.ProxyURL(proxyURL),
+		}
+		if useragent != "" {
+			rt = headerRoundTripper{
+				RoundTripper: rt,
+				header:       map[string]string{"User-Agent": useragent},
+			}
+		}
+
 		client := &http.Client{
-			Transport: &http.Transport{
-				DisableCompression: true,
-				Proxy:              http.ProxyURL(proxyURL),
-			},
-			Timeout: 30 * time.Second,
+			Transport: rt,
+			Timeout:   30 * time.Second,
 		}
 		return client, nil
 	}

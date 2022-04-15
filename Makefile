@@ -6,8 +6,7 @@ DESTDIR=
 PREFIX=/usr
 
 build:
-		cd cmd/crunchyroll-go && go build -o $(BINARY_NAME)
-		mv cmd/crunchyroll-go/$(BINARY_NAME) .
+		go build -ldflags "-X 'github.com/ByteDream/crunchyroll-go/cmd/crunchyroll-go/cmd.Version=$(VERSION)'" -o $(BINARY_NAME) cmd/crunchyroll-go/main.go
 
 clean:
 		rm -f $(BINARY_NAME) $(VERSION_BINARY_NAME)_*
@@ -25,10 +24,8 @@ uninstall:
 		rm -f $(DESTDIR)$(PREFIX)/share/licenses/crunchyroll-go/LICENSE
 
 release:
-		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_linux
-		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_windows.exe
-		cd cmd/crunchyroll-go && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o $(VERSION_BINARY_NAME)_darwin
+		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchyroll-go/cmd/crunchyroll-go/cmd.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_linux cmd/crunchyroll-go/main.go
+		CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchyroll-go/cmd/crunchyroll-go/cmd.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_windows.exe cmd/crunchyroll-go/main.go
+		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchyroll-go/cmd/crunchyroll-go/cmd.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_darwin cmd/crunchyroll-go/main.go
 
-		strip cmd/crunchyroll-go/$(VERSION_BINARY_NAME)_linux
-
-		mv cmd/crunchyroll-go/$(VERSION_BINARY_NAME)_* .
+		strip $(VERSION_BINARY_NAME)_linux

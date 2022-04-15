@@ -1,0 +1,22 @@
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.16
+
+    - name: Build
+      run: go build -v cmd/crunchyroll-go/main.go
+
+    - name: Test
+      run: go test -v cmd/crunchyroll-go/main.go

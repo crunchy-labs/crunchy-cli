@@ -403,7 +403,7 @@ func (dp *downloadProgress) update(msg string, permanent bool) {
 	pre := fmt.Sprintf("%s%s [", dp.Prefix, msg)
 	post := fmt.Sprintf("]%4d%% %8d/%d", int(percentage), dp.Current, dp.Total)
 
-	// i don't really know why +2 is needed here but without it the Printf below would not print to the line end
+	// I don't really know why +2 is needed here but without it the Printf below would not print to the line end
 	progressWidth := terminalWidth() - len(pre) - len(post) + 2
 	repeatCount := int(percentage / float32(100) * float32(progressWidth))
 	// it can be lower than zero when the terminal is very tiny

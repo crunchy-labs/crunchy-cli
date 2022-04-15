@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// Subtitle contains the information about a video subtitle.
 type Subtitle struct {
 	crunchy *Crunchyroll
 
@@ -13,6 +14,7 @@ type Subtitle struct {
 	Format string `json:"format"`
 }
 
+// Save writes the subtitle to the given io.Writer.
 func (s Subtitle) Save(writer io.Writer) error {
 	req, err := http.NewRequestWithContext(s.crunchy.Context, http.MethodGet, s.URL, nil)
 	if err != nil {

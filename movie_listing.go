@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// MovieListing contains information about something which is called
+// movie listing. I don't know what this means thb.
 type MovieListing struct {
 	crunchy *Crunchyroll
 
@@ -36,7 +38,7 @@ type MovieListing struct {
 	AvailabilityNotes string `json:"availability_notes"`
 }
 
-// MovieListingFromID returns a movie listing by its api id
+// MovieListingFromID returns a movie listing by its api id.
 func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movie_listing/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -65,7 +67,7 @@ func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) 
 	return movieListing, nil
 }
 
-// AudioLocale is same as Episode.AudioLocale
+// AudioLocale is same as Episode.AudioLocale.
 func (ml *MovieListing) AudioLocale() (LOCALE, error) {
 	resp, err := ml.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		ml.crunchy.Config.CountryCode,
@@ -86,7 +88,7 @@ func (ml *MovieListing) AudioLocale() (LOCALE, error) {
 	return LOCALE(jsonBody["audio_locale"].(string)), nil
 }
 
-// Streams returns all streams which are available for the movie listing
+// Streams returns all streams which are available for the movie listing.
 func (ml *MovieListing) Streams() ([]*Stream, error) {
 	return fromVideoStreams(ml.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		ml.crunchy.Config.CountryCode,

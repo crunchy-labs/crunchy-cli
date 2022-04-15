@@ -8,6 +8,7 @@ import (
 	"regexp"
 )
 
+// Stream contains information about all available video stream of an episode.
 type Stream struct {
 	crunchy *Crunchyroll
 
@@ -22,7 +23,7 @@ type Stream struct {
 	streamURL  string
 }
 
-// StreamsFromID returns a stream by its api id
+// StreamsFromID returns a stream by its api id.
 func StreamsFromID(crunchy *Crunchyroll, id string) ([]*Stream, error) {
 	return fromVideoStreams(crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -35,7 +36,7 @@ func StreamsFromID(crunchy *Crunchyroll, id string) ([]*Stream, error) {
 		crunchy.Config.KeyPairID))
 }
 
-// Formats returns all formats which are available for the stream
+// Formats returns all formats which are available for the stream.
 func (s *Stream) Formats() ([]*Format, error) {
 	if s.children != nil {
 		return s.children, nil
@@ -70,7 +71,7 @@ func (s *Stream) Formats() ([]*Format, error) {
 	return formats, nil
 }
 
-// fromVideoStreams returns all streams which are accessible via the endpoint
+// fromVideoStreams returns all streams which are accessible via the endpoint.
 func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream, err error) {
 	resp, err := crunchy.request(endpoint)
 	if err != nil {

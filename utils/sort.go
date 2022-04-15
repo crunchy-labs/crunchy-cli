@@ -9,7 +9,7 @@ import (
 )
 
 // SortEpisodesBySeason sorts the given episodes by their seasons.
-// Note that the same episodes just with different audio locales will cause problems
+// Note that the same episodes just with different audio locales will cause problems.
 func SortEpisodesBySeason(episodes []*crunchyroll.Episode) [][]*crunchyroll.Episode {
 	sortMap := map[string]map[int][]*crunchyroll.Episode{}
 
@@ -43,7 +43,7 @@ func SortEpisodesBySeason(episodes []*crunchyroll.Episode) [][]*crunchyroll.Epis
 	return eps
 }
 
-// SortEpisodesByAudio sort the given episodes by their audio locale
+// SortEpisodesByAudio sort the given episodes by their audio locale.
 func SortEpisodesByAudio(episodes []*crunchyroll.Episode) (map[crunchyroll.LOCALE][]*crunchyroll.Episode, error) {
 	eps := map[crunchyroll.LOCALE][]*crunchyroll.Episode{}
 
@@ -81,7 +81,7 @@ func SortEpisodesByAudio(episodes []*crunchyroll.Episode) (map[crunchyroll.LOCAL
 	return eps, nil
 }
 
-// MovieListingsByDuration sorts movie listings by their duration
+// MovieListingsByDuration sorts movie listings by their duration.
 type MovieListingsByDuration []*crunchyroll.MovieListing
 
 func (mlbd MovieListingsByDuration) Len() int {
@@ -94,7 +94,7 @@ func (mlbd MovieListingsByDuration) Less(i, j int) bool {
 	return mlbd[i].DurationMS < mlbd[j].DurationMS
 }
 
-// EpisodesByDuration sorts episodes by their duration
+// EpisodesByDuration sorts episodes by their duration.
 type EpisodesByDuration []*crunchyroll.Episode
 
 func (ebd EpisodesByDuration) Len() int {
@@ -107,6 +107,7 @@ func (ebd EpisodesByDuration) Less(i, j int) bool {
 	return ebd[i].DurationMS < ebd[j].DurationMS
 }
 
+// EpisodesByNumber sorts episodes after their episode number.
 type EpisodesByNumber []*crunchyroll.Episode
 
 func (ebn EpisodesByNumber) Len() int {
@@ -119,7 +120,7 @@ func (ebn EpisodesByNumber) Less(i, j int) bool {
 	return ebn[i].EpisodeNumber < ebn[j].EpisodeNumber
 }
 
-// FormatsByResolution sorts formats after their resolution
+// FormatsByResolution sorts formats after their resolution.
 type FormatsByResolution []*crunchyroll.Format
 
 func (fbr FormatsByResolution) Len() int {
@@ -140,6 +141,7 @@ func (fbr FormatsByResolution) Less(i, j int) bool {
 	return iResX+iResY < jResX+jResY
 }
 
+// SubtitlesByLocale sorts subtitles after their locale.
 type SubtitlesByLocale []*crunchyroll.Subtitle
 
 func (sbl SubtitlesByLocale) Len() int {

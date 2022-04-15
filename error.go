@@ -3,7 +3,7 @@ package crunchyroll
 import "fmt"
 
 // AccessError is an error which will be returned when some special sort of api request fails.
-// See Crunchyroll.request when the error gets used
+// See Crunchyroll.request when the error gets used.
 type AccessError struct {
 	error
 

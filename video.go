@@ -30,8 +30,10 @@ type video struct {
 	} `json:"images"`
 }
 
+// Video is the base for Movie and Season.
 type Video interface{}
 
+// Movie contains information about a movie.
 type Movie struct {
 	video
 	Video
@@ -40,7 +42,7 @@ type Movie struct {
 
 	children []*MovieListing
 
-	// not generated when calling MovieFromID
+	// not generated when calling MovieFromID.
 	MovieListingMetadata struct {
 		AvailabilityNotes   string   `json:"availability_notes"`
 		AvailableOffline    bool     `json:"available_offline"`
@@ -65,7 +67,7 @@ type Movie struct {
 	}
 }
 
-// MovieFromID returns a movie by its api id
+// MovieFromID returns a movie by its api id.
 func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -95,8 +97,6 @@ func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
 }
 
 // MovieListing returns all videos corresponding with the movie.
-// Beside the normal movie, sometimes movie previews are returned too, but you can try to get the actual movie
-// by sorting the returning MovieListing slice with the utils.MovieListingByDuration interface
 func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
 	if m.children != nil {
 		return m.children, nil
@@ -134,6 +134,7 @@ func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
 	return movieListings, nil
 }
 
+// Series contains information about an anime series.
 type Series struct {
 	video
 	Video
@@ -156,13 +157,13 @@ type Series struct {
 	MatureRatings       []string `json:"mature_ratings"`
 	SeasonCount         int      `json:"season_count"`
 
-	// not generated when calling SeriesFromID
+	// not generated when calling SeriesFromID.
 	SearchMetadata struct {
 		Score float64 `json:"score"`
 	}
 }
 
-// SeriesFromID returns a series by its api id
+// SeriesFromID returns a series by its api id.
 func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -191,7 +192,7 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 	return series, nil
 }
 
-// Seasons returns all seasons of a series
+// Seasons returns all seasons of a series.
 func (s *Series) Seasons() (seasons []*Season, err error) {
 	if s.children != nil {
 		return s.children, nil

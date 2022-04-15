@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Episode contains all information about an episode.
 type Episode struct {
 	crunchy *Crunchyroll
 
@@ -74,7 +75,7 @@ type Episode struct {
 	StreamID string
 }
 
-// EpisodeFromID returns an episode by its api id
+// EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -111,7 +112,8 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 
 // AudioLocale returns the audio locale of the episode.
 // Every episode in a season (should) have the same audio locale,
-// so if you want to get the audio locale of a season, just call this method on the first episode of the season
+// so if you want to get the audio locale of a season, just call
+// this method on the first episode of the season.
 func (e *Episode) AudioLocale() (LOCALE, error) {
 	streams, err := e.Streams()
 	if err != nil {
@@ -120,7 +122,7 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 	return streams[0].AudioLocale, nil
 }
 
-// GetFormat returns the format which matches the given resolution and subtitle locale
+// GetFormat returns the format which matches the given resolution and subtitle locale.
 func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*Format, error) {
 	streams, err := e.Streams()
 	if err != nil {
@@ -186,7 +188,7 @@ func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*
 	return nil, fmt.Errorf("no matching resolution found")
 }
 
-// Streams returns all streams which are available for the episode
+// Streams returns all streams which are available for the episode.
 func (e *Episode) Streams() ([]*Stream, error) {
 	if e.children != nil {
 		return e.children, nil

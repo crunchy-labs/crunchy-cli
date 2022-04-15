@@ -20,7 +20,7 @@ import (
 )
 
 // NewDownloader creates a downloader with default settings which should
-// fit the most needs
+// fit the most needs.
 func NewDownloader(context context.Context, writer io.Writer, goroutines int, onSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error) Downloader {
 	tmp, _ := os.MkdirTemp("", "crunchy_")
 
@@ -43,12 +43,12 @@ type Downloader struct {
 	// The files will be placed directly into the root of the directory.
 	// If empty a random temporary directory on the system's default tempdir
 	// will be created.
-	// If the directory does not exist, it will be created
+	// If the directory does not exist, it will be created.
 	TempDir string
 	// If DeleteTempAfter is true, the temp directory gets deleted afterwards.
 	// Note that in case of a hard signal exit (os.Interrupt, ...) the directory
 	// will NOT be deleted. In such situations try to catch the signal and
-	// cancel Context
+	// cancel Context.
 	DeleteTempAfter bool
 
 	// Context to control the download process with.
@@ -56,7 +56,7 @@ type Downloader struct {
 	// process. So it is not recommend stopping the program immediately after calling
 	// the cancel function. It's better when canceling it and then exit the program
 	// when Format.Download throws an error. See the signal handling section in
-	// cmd/crunchyroll-go/cmd/download.go for an example
+	// cmd/crunchyroll-go/cmd/download.go for an example.
 	Context context.Context
 
 	// Goroutines is the number of goroutines to download segments with
@@ -65,11 +65,11 @@ type Downloader struct {
 	// A method to call when a segment was downloaded.
 	// Note that the segments are downloaded asynchronously (depending on the count of
 	// Goroutines) and the function gets called asynchronously too, so for example it is
-	// first called on segment 1, then segment 254, then segment 3 and so on
+	// first called on segment 1, then segment 254, then segment 3 and so on.
 	OnSegmentDownload func(segment *m3u8.MediaSegment, current, total int, file *os.File) error
 	// If LockOnSegmentDownload is true, only one OnSegmentDownload function can be called at
 	// once. Normally (because of the use of goroutines while downloading) multiple could get
-	// called simultaneously
+	// called simultaneously.
 	LockOnSegmentDownload bool
 
 	// If FFmpegOpts is not nil, ffmpeg will be used to merge and convert files.
@@ -82,7 +82,7 @@ type Downloader struct {
 	FFmpegOpts []string
 }
 
-// download's the given format
+// download's the given format.
 func (d Downloader) download(format *Format) error {
 	if err := format.InitVideo(); err != nil {
 		return err
@@ -109,7 +109,7 @@ func (d Downloader) download(format *Format) error {
 }
 
 // mergeSegments reads every file in tempDir and writes their content to Downloader.Writer.
-// The given output file gets created or overwritten if already existing
+// The given output file gets created or overwritten if already existing.
 func (d Downloader) mergeSegments(files []string) error {
 	for _, file := range files {
 		select {
@@ -132,7 +132,7 @@ func (d Downloader) mergeSegments(files []string) error {
 
 // mergeSegmentsFFmpeg reads every file in tempDir and merges their content to the outputFile
 // with ffmpeg (https://ffmpeg.org/).
-// The given output file gets created or overwritten if already existing
+// The given output file gets created or overwritten if already existing.
 func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 	list, err := os.Create(filepath.Join(d.TempDir, "list.txt"))
 	if err != nil {
@@ -214,13 +214,13 @@ func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 // After every segment download onSegmentDownload will be called with:
 //		the downloaded segment, the current position, the total size of segments to download,
 //		the file where the segment content was written to an error (if occurred).
-// The filename is always <number of downloaded segment>.ts
+// The filename is always <number of downloaded segment>.ts.
 //
 // Short explanation:
 // 		The actual crunchyroll video is split up in multiple segments (or video files) which
 //		have to be downloaded and merged after to generate a single video file.
 //		And this function just downloads each of this segment into the given directory.
-// 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information
+// 		See https://en.wikipedia.org/wiki/MPEG_transport_stream for more information.
 func (d Downloader) downloadSegments(format *Format) ([]string, error) {
 	if err := format.InitVideo(); err != nil {
 		return nil, err
@@ -318,7 +318,7 @@ func (d Downloader) downloadSegments(format *Format) ([]string, error) {
 	}
 }
 
-// getCrypt extracts the key and iv of a m3u8 segment and converts it into a cipher.Block and an iv byte sequence
+// getCrypt extracts the key and iv of a m3u8 segment and converts it into a cipher.Block and an iv byte sequence.
 func getCrypt(format *Format, segment *m3u8.MediaSegment) (block cipher.Block, iv []byte, err error) {
 	var resp *http.Response
 
@@ -341,7 +341,7 @@ func getCrypt(format *Format, segment *m3u8.MediaSegment) (block cipher.Block, i
 	return block, iv, nil
 }
 
-// downloadSegment downloads a segment, decrypts it and names it after the given index
+// downloadSegment downloads a segment, decrypts it and names it after the given index.
 func (d Downloader) downloadSegment(format *Format, segment *m3u8.MediaSegment, filename string, block cipher.Block, iv []byte) (*os.File, error) {
 	// every segment is aes-128 encrypted and has to be decrypted when downloaded
 	content, err := d.decryptSegment(format.crunchy.Client, segment, block, iv)
@@ -361,7 +361,7 @@ func (d Downloader) downloadSegment(format *Format, segment *m3u8.MediaSegment, 
 	return file, nil
 }
 
-// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/tool/crypt.go#L25
+// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/tool/crypt.go#L25.
 func (d Downloader) decryptSegment(client *http.Client, segment *m3u8.MediaSegment, block cipher.Block, iv []byte) ([]byte, error) {
 	req, err := http.NewRequestWithContext(d.Context, http.MethodGet, segment.URI, nil)
 	if err != nil {
@@ -387,7 +387,7 @@ func (d Downloader) decryptSegment(client *http.Client, segment *m3u8.MediaSegme
 	return raw, nil
 }
 
-// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/tool/crypt.go#L47
+// https://github.com/oopsguy/m3u8/blob/4150e93ec8f4f8718875a02973f5d792648ecb97/tool/crypt.go#L47.
 func (d Downloader) pkcs5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unPadding := int(origData[length-1])

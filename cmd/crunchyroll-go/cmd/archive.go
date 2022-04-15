@@ -728,7 +728,7 @@ func (tc *tarCompress) Close() error {
 	err = tc.dst.Close()
 
 	if err != nil && err2 != nil {
-		// best way to show double errors at once that i've found
+		// best way to show double errors at once that I've found
 		return fmt.Errorf("%v\n%v", err, err2)
 	} else if err == nil && err2 != nil {
 		err = err2
@@ -750,11 +750,11 @@ func (tc *tarCompress) NewFile(information formatInformation) (io.WriteCloser, e
 			ModTime:  time.Now(),
 			Mode:     0644,
 			Typeflag: tar.TypeReg,
-			// fun fact: i did not set the size for quiet some time because i thought that it isn't
-			// required. well because of this i debugged this part for multiple hours because without
+			// fun fact: I did not set the size for quiet some time because I thought that it isn't
+			// required. well because of this I debugged this part for multiple hours because without
 			// proper size information only a tiny amount gets copied into the tar (or zip) writer.
 			// this is also the reason why the file content is completely copied into a buffer before
-			// writing it to the writer. i could bypass this and save some memory but this requires
+			// writing it to the writer. I could bypass this and save some memory but this requires
 			// some rewriting and im nearly at the (planned) finish for version 2 so nah in the future
 			// maybe
 			Size: int64(buf.Len()),

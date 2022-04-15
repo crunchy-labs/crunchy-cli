@@ -73,7 +73,7 @@ _Before reading_: Because of the huge functionality not all cases can be covered
 
 ### Login
 
-Before you can do something, you have to login first.
+Before you can do something, you have to log in first.
 
 This can be performed via crunchyroll account email and password.
 

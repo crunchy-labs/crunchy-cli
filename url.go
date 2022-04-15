@@ -5,7 +5,7 @@ import (
 )
 
 // ExtractEpisodesFromUrl extracts all episodes from an url.
-// If audio is not empty, the episodes gets filtered after the given locale
+// If audio is not empty, the episodes gets filtered after the given locale.
 func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Episode, error) {
 	series, episodes, err := c.ParseUrl(url)
 	if err != nil {
@@ -78,7 +78,7 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 }
 
 // ParseUrl parses the given url into a series or episode.
-// The returning episode is a slice because non-beta urls have the same episode with different languages
+// The returning episode is a slice because non-beta urls have the same episode with different languages.
 func (c *Crunchyroll) ParseUrl(url string) (*Series, []*Episode, error) {
 	if seriesId, ok := ParseBetaSeriesURL(url); ok {
 		series, err := SeriesFromID(c, seriesId)

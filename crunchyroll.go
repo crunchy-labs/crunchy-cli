@@ -13,7 +13,7 @@ import (
 	"strconv"
 )
 
-// LOCALE represents a locale / language
+// LOCALE represents a locale / language.
 type LOCALE string
 
 const (
@@ -31,16 +31,16 @@ const (
 )
 
 type Crunchyroll struct {
-	// Client is the http.Client to perform all requests over
+	// Client is the http.Client to perform all requests over.
 	Client *http.Client
-	// Context can be used to stop requests with Client and is context.Background by default
+	// Context can be used to stop requests with Client and is context.Background by default.
 	Context context.Context
-	// Locale specifies in which language all results should be returned / requested
+	// Locale specifies in which language all results should be returned / requested.
 	Locale LOCALE
-	// SessionID is the crunchyroll session id which was used for authentication
+	// SessionID is the crunchyroll session id which was used for authentication.
 	SessionID string
 
-	// Config stores parameters which are needed by some api calls
+	// Config stores parameters which are needed by some api calls.
 	Config struct {
 		TokenType   string
 		AccessToken string
@@ -56,11 +56,11 @@ type Crunchyroll struct {
 		MaturityRating string
 	}
 
-	// If cache is true, internal caching is enabled
+	// If cache is true, internal caching is enabled.
 	cache bool
 }
 
-// LoginWithCredentials logs in via crunchyroll username or email and password
+// LoginWithCredentials logs in via crunchyroll username or email and password.
 func LoginWithCredentials(user string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	sessionIDEndpoint := fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?version=1.0&access_token=%s&device_type=%s&device_id=%s",
 		"LNDJgOit5yaRIWN", "com.crunchyroll.windows.desktop", "Az2srGnChW65fuxYz2Xxl1GcZQgtGgI")
@@ -87,7 +87,7 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 }
 
 // LoginWithSessionID logs in via a crunchyroll session id.
-// Session ids are automatically generated as a cookie when visiting https://www.crunchyroll.com
+// Session ids are automatically generated as a cookie when visiting https://www.crunchyroll.com.
 func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
 	crunchy := &Crunchyroll{
 		Client:    client,
@@ -205,7 +205,7 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	return crunchy, nil
 }
 
-// request is a base function which handles api requests
+// request is a base function which handles api requests.
 func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -241,7 +241,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 }
 
 // IsCaching returns if data gets cached or not.
-// See SetCaching for more information
+// See SetCaching for more information.
 func (c *Crunchyroll) IsCaching() bool {
 	return c.cache
 }
@@ -249,12 +249,12 @@ func (c *Crunchyroll) IsCaching() bool {
 // SetCaching enables or disables internal caching of requests made.
 // Caching is enabled by default.
 // If it is disabled the already cached data still gets called.
-// The best way to prevent this is to create a complete new Crunchyroll struct
+// The best way to prevent this is to create a complete new Crunchyroll struct.
 func (c *Crunchyroll) SetCaching(caching bool) {
 	c.cache = caching
 }
 
-// Search searches a query and returns all found series and movies within the given limit
+// Search searches a query and returns all found series and movies within the given limit.
 func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie, err error) {
 	searchEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/search?q=%s&n=%d&type=&locale=%s",
 		query, limit, c.Locale)
@@ -397,7 +397,7 @@ func ParseEpisodeURL(url string) (seriesName, title string, episodeNumber int, w
 	return
 }
 
-// ParseBetaSeriesURL tries to extract the season id of the given crunchyroll beta url, pointing to a season
+// ParseBetaSeriesURL tries to extract the season id of the given crunchyroll beta url, pointing to a season.
 func ParseBetaSeriesURL(url string) (seasonId string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?beta\.crunchyroll\.com/(\w{2}/)?series/(?P<seasonId>\w+).*`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
@@ -408,7 +408,7 @@ func ParseBetaSeriesURL(url string) (seasonId string, ok bool) {
 	return
 }
 
-// ParseBetaEpisodeURL tries to extract the episode id of the given crunchyroll beta url, pointing to an episode
+// ParseBetaEpisodeURL tries to extract the episode id of the given crunchyroll beta url, pointing to an episode.
 func ParseBetaEpisodeURL(url string) (episodeId string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?beta\.crunchyroll\.com/(\w{2}/)?watch/(?P<episodeId>\w+).*`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {

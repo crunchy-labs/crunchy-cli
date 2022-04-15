@@ -4,6 +4,7 @@ import (
 	"github.com/ByteDream/crunchyroll-go"
 )
 
+// AllLocales is an array of all available locales.
 var AllLocales = []crunchyroll.LOCALE{
 	crunchyroll.JP,
 	crunchyroll.US,
@@ -18,7 +19,7 @@ var AllLocales = []crunchyroll.LOCALE{
 	crunchyroll.AR,
 }
 
-// ValidateLocale validates if the given locale actually exist
+// ValidateLocale validates if the given locale actually exist.
 func ValidateLocale(locale crunchyroll.LOCALE) bool {
 	for _, l := range AllLocales {
 		if l == locale {
@@ -28,7 +29,7 @@ func ValidateLocale(locale crunchyroll.LOCALE) bool {
 	return false
 }
 
-// LocaleLanguage returns the country by its locale
+// LocaleLanguage returns the country by its locale.
 func LocaleLanguage(locale crunchyroll.LOCALE) string {
 	switch locale {
 	case crunchyroll.JP:

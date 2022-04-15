@@ -6,6 +6,7 @@ import (
 	"regexp"
 )
 
+// Season contains information about an anime season.
 type Season struct {
 	crunchy *Crunchyroll
 
@@ -41,7 +42,7 @@ type Season struct {
 	SubtitleLocales []LOCALE
 }
 
-// SeasonFromID returns a season by its api id
+// SeasonFromID returns a season by its api id.
 func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 	resp, err := crunchy.Client.Get(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/seasons/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
 		crunchy.Config.CountryCode,
@@ -70,6 +71,7 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 	return season, nil
 }
 
+// AudioLocale returns the audio locale of the season.
 func (s *Season) AudioLocale() (LOCALE, error) {
 	episodes, err := s.Episodes()
 	if err != nil {
@@ -78,7 +80,7 @@ func (s *Season) AudioLocale() (LOCALE, error) {
 	return episodes[0].AudioLocale()
 }
 
-// Episodes returns all episodes which are available for the season
+// Episodes returns all episodes which are available for the season.
 func (s *Season) Episodes() (episodes []*Episode, err error) {
 	if s.children != nil {
 		return s.children, nil

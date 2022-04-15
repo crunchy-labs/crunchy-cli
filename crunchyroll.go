@@ -348,7 +348,11 @@ func (c *Crunchyroll) FindEpisodeByName(seriesName, episodeTitle string) ([]*Epi
 	return matchingEpisodes, nil
 }
 
-// ParseVideoURL tries to extract the crunchyroll series / movie name out of the given url
+// ParseVideoURL tries to extract the crunchyroll series / movie name out of the given url.
+//
+// Deprecated: Crunchyroll classic urls are sometimes not safe to use, use ParseBetaSeriesURL
+// if possible since beta url are always safe to use.
+// The method will stay in the library until only beta urls are supported by crunchyroll itself.
 func ParseVideoURL(url string) (seriesName string, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/?$`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {
@@ -364,7 +368,11 @@ func ParseVideoURL(url string) (seriesName string, ok bool) {
 
 // ParseEpisodeURL tries to extract the crunchyroll series name, title, episode number and web id out of the given crunchyroll url
 // Note that the episode number can be misleading. For example if an episode has the episode number 23.5 (slime isekai)
-// the episode number will be 235
+// the episode number will be 235.
+//
+// Deprecated: Crunchyroll classic urls are sometimes not safe to use, use ParseBetaEpisodeURL
+// if possible since beta url are always safe to use.
+// The method will stay in the library until only beta urls are supported by crunchyroll itself.
 func ParseEpisodeURL(url string) (seriesName, title string, episodeNumber int, webId int, ok bool) {
 	pattern := regexp.MustCompile(`(?m)^https?://(www\.)?crunchyroll\.com(/\w{2}(-\w{2})?)?/(?P<series>[^/]+)/episode-(?P<number>\d+)-(?P<title>.+)-(?P<webId>\d+).*`)
 	if urlMatch := pattern.FindAllStringSubmatch(url, -1); len(urlMatch) != 0 {

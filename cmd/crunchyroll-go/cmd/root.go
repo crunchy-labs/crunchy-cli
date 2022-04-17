@@ -27,8 +27,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "crunchyroll",
-	Short: "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
+	Use:     "crunchyroll",
+	Version: Version,
+	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
 
 	SilenceErrors: true,
 	SilenceUsage:  true,

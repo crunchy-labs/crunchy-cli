@@ -24,7 +24,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
     <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
   </a>
   <a href="https://github.com/ByteDream/crunchyroll-go/actions/workflows/ci.yml">
-    <img src="https://github.com/ByteDream/crunchyroll-go/actions/workflows/ci.yml/badge.svg" alt="CI">
+    <img src="https://github.com/ByteDream/crunchyroll-go/workflows/CI/badge.svg?style=flat" alt="CI">
   </a>
 </p>
 

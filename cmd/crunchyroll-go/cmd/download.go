@@ -28,7 +28,7 @@ var (
 	downloadGoroutinesFlag int
 )
 
-var getCmd = &cobra.Command{
+var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "Download a video",
 	Args:  cobra.MinimumNArgs(1),
@@ -72,23 +72,23 @@ var getCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.Flags().StringVarP(&downloadAudioFlag, "audio",
+	downloadCmd.Flags().StringVarP(&downloadAudioFlag, "audio",
 		"a",
 		string(systemLocale(false)),
 		"The locale of the audio. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
-	getCmd.Flags().StringVarP(&downloadSubtitleFlag,
+	downloadCmd.Flags().StringVarP(&downloadSubtitleFlag,
 		"subtitle",
 		"s",
 		"",
 		"The locale of the subtitle. Available locales: "+strings.Join(allLocalesAsStrings(), ", "))
 
 	cwd, _ := os.Getwd()
-	getCmd.Flags().StringVarP(&downloadDirectoryFlag,
+	downloadCmd.Flags().StringVarP(&downloadDirectoryFlag,
 		"directory",
 		"d",
 		cwd,
 		"The directory to download the file(s) into")
-	getCmd.Flags().StringVarP(&downloadOutputFlag,
+	downloadCmd.Flags().StringVarP(&downloadOutputFlag,
 		"output",
 		"o",
 		"{title}.ts",
@@ -104,7 +104,7 @@ func init() {
 			"\t{audio} » Audio locale of the video\n"+
 			"\t{subtitle} » Subtitle locale of the video")
 
-	getCmd.Flags().StringVarP(&downloadResolutionFlag,
+	downloadCmd.Flags().StringVarP(&downloadResolutionFlag,
 		"resolution",
 		"r",
 		"best",
@@ -113,13 +113,13 @@ func init() {
 			"\tAvailable abbreviations: 1080p, 720p, 480p, 360p, 240p\n"+
 			"\tAvailable common-use words: best (best available resolution), worst (worst available resolution)")
 
-	getCmd.Flags().IntVarP(&downloadGoroutinesFlag,
+	downloadCmd.Flags().IntVarP(&downloadGoroutinesFlag,
 		"goroutines",
 		"g",
 		runtime.NumCPU(),
 		"Sets how many parallel segment downloads should be used")
 
-	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(downloadCmd)
 }
 
 func download(urls []string) error {

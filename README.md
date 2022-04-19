@@ -53,18 +53,19 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
     - [Windows (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_windows.exe)
     - [MacOS (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchyroll-go/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
-  ```
+  ```shell
   $ yay -S crunchyroll-go
   ```
-- 🛠 Build it yourself
+- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/ByteDream/crunchyroll-go/releases/latest) (like Raspberry Pi or M1 mac):
     - use `make` (requires `go` to be installed):
-  ```
+  ```shell
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go
-  $ make && sudo make install
+  $ make
+  $ sudo make install # <- only if you want to install it on your system
   ```
     - use `go`:
-  ```
+  ```shell
   $ git clone https://github.com/ByteDream/crunchyroll-go
   $ cd crunchyroll-go/cmd/crunchyroll-go
   $ go build -o crunchy
@@ -80,13 +81,13 @@ Before you can do something, you have to log in first.
 
 This can be performed via crunchyroll account email and password.
 
-```
+```shell
 $ crunchy login user@example.com password
 ```
 
 or via session id
 
-```
+```shell
 $ crunchy login --session-id 8e9gs135defhga790dvrf2i0eris8gts
 ```
 
@@ -95,13 +96,13 @@ $ crunchy login --session-id 8e9gs135defhga790dvrf2i0eris8gts
 By default, the cli tries to download the episode with your system language as audio. If no streams with your system language are available, the video will be downloaded with japanese audio and hardsubbed subtitles in your system language.
 **If your system language is not supported, an error message will be displayed and en-US (american english) will be chosen as language.**
 
-```
+```shell
 $ crunchy download https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
 With `-r best` the video(s) will have the best available resolution (mostly 1920x1080 / Full HD).
 
-```
+```shell
 $ crunchy download -r best https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
@@ -110,13 +111,13 @@ The file is by default saved as a `.ts` (mpeg transport stream) file.
 file, just name it `whatever.mp4`.
 **You need [ffmpeg](https://ffmpeg.org) to store the video in other file formats.**
 
-```
+```shell
 $ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
 ```
 
 With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have. Type `crunchy help download` to see all available locales.
 
-```
+```shell
 $ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/darling-in-the-franxx
 ```
 

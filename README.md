@@ -67,8 +67,8 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
     - use `go`:
   ```shell
   $ git clone https://github.com/ByteDream/crunchyroll-go
-  $ cd crunchyroll-go/cmd/crunchyroll-go
-  $ go build -o crunchy
+  $ cd crunchyroll-go
+  $ go build -o crunchy cmd/crunchyroll-go/main.go
   ```
 
 ## 📝 Examples

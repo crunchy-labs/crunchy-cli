@@ -56,8 +56,8 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   ```shell
   $ yay -S crunchyroll-go
   ```
-  - On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
-- ```shell
+- On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
+  ```shell
   $ scoop bucket add extra # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```

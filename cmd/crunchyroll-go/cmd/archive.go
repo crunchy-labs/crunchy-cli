@@ -530,21 +530,25 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		input = append(input, "-i", video)
 		maps = append(maps, "-map", strconv.Itoa(i))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(video)[1])
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("language=%s", utils.LocaleLanguage(locale)))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("language=%s", locale))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
 	}
 
 	for i, audio := range audioFiles {
 		input = append(input, "-i", audio)
 		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles)))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(audio)[1])
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
 	}
 
 	for i, subtitle := range subtitleFiles {
 		input = append(input, "-i", subtitle)
 		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles)+len(audioFiles)))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(subtitle)[1])
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("language=%s", locale))
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
 	}
 

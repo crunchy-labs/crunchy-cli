@@ -58,7 +58,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   ```
 - On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
   ```shell
-  $ scoop bucket add extra # <- in case you haven't added the extra repository already
+  $ scoop bucket add extras # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```
 - 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/ByteDream/crunchyroll-go/releases/latest) (like Raspberry Pi or M1 mac):

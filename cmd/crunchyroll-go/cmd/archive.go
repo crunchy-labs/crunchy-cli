@@ -568,7 +568,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 	file.Close()
 	defer os.Remove(file.Name())
 
-	commandOptions = append(commandOptions, "-c", "copy", "-f", "matroska", file.Name())
+	commandOptions = append(commandOptions, "-disposition:s:0", "0", "-c", "copy", "-f", "matroska", file.Name())
 
 	// just a little nicer debug output to copy and paste the ffmpeg for debug reasons
 	if out.IsDev() {

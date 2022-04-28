@@ -41,7 +41,7 @@ var rootCmd = &cobra.Command{
 			out = newLogger(false, false, false)
 		}
 
-		out.DebugLog.Printf("Executing `%s` command with %d arg(s)\n", cmd.Name(), len(args))
+		out.Debug("Executing `%s` command with %d arg(s)", cmd.Name(), len(args))
 
 		client, err = createOrDefaultClient(proxyFlag, useragentFlag)
 		return

@@ -76,7 +76,9 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 
 	var data map[string]interface{}
 	body, _ := io.ReadAll(sessResp.Body)
-	json.Unmarshal(body, &data)
+	if err = json.Unmarshal(body, &data); err != nil {
+		return nil, fmt.Errorf("failed to parse start session with credentials response: %w", err)
+	}
 
 	sessionID := data["data"].(map[string]interface{})["session_id"].(string)
 
@@ -126,7 +128,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
 	}
 
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
+	}
 	if _, ok := jsonBody["message"]; ok {
 		return nil, errors.New("invalid session id")
 	}
@@ -178,7 +182,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'token' response: %w", err)
+	}
 	crunchy.Config.TokenType = jsonBody["token_type"].(string)
 	crunchy.Config.AccessToken = jsonBody["access_token"].(string)
 
@@ -189,7 +195,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'index' response: %w", err)
+	}
 	cms := jsonBody["cms"].(map[string]interface{})
 
 	crunchy.Config.Policy = cms["policy"].(string)
@@ -203,7 +211,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
+	}
 
 	crunchy.Config.AccountID = jsonBody["account_id"].(string)
 	crunchy.Config.ExternalID = jsonBody["external_id"].(string)
@@ -215,7 +225,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
+	}
 
 	crunchy.Config.MaturityRating = jsonBody["maturity_rating"].(string)
 

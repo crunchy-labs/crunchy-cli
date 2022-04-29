@@ -71,7 +71,7 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	defer sessResp.Body.Close()
 
 	if sessResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Failed to start session: %s", sessResp.Status)
+		return nil, fmt.Errorf("failed to start session for credentials login: %s", sessResp.Status)
 	}
 
 	var data map[string]interface{}
@@ -85,7 +85,15 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	authValues.Set("session_id", sessionID)
 	authValues.Set("account", user)
 	authValues.Set("password", password)
-	client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
+	loginResp, err := client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer loginResp.Body.Close()
+
+	if loginResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to auth with credentials: %s", loginResp.Status)
+	}
 
 	return LoginWithSessionID(sessionID, locale, client)
 }

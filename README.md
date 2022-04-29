@@ -61,7 +61,7 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   $ scoop bucket add extras # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```
-- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/ByteDream/crunchyroll-go/releases/latest) (like Raspberry Pi or M1 mac):
+- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/ByteDream/crunchyroll-go/releases/latest) (like Raspberry Pi or M1 Mac):
     - use `make` (requires `go` to be installed):
   ```shell
   $ git clone https://github.com/ByteDream/crunchyroll-go

@@ -295,7 +295,9 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 	defer resp.Body.Close()
 
 	var jsonBody map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'search' response: %w", err)
+	}
 
 	for _, item := range jsonBody["items"].([]interface{}) {
 		item := item.(map[string]interface{})

@@ -244,6 +244,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 
 	resp, err := c.Client.Do(req)
 	if err == nil {
+		defer resp.Body.Close()
 		bodyAsBytes, _ := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusUnauthorized {

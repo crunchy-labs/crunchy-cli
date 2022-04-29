@@ -123,7 +123,7 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Failed to start session: %s", resp.Status)
+		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
 	}
 
 	json.NewDecoder(resp.Body).Decode(&jsonBody)

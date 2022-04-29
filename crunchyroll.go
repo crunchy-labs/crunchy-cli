@@ -70,6 +70,10 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	}
 	defer sessResp.Body.Close()
 
+	if sessResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to start session: %s", sessResp.Status)
+	}
+
 	var data map[string]interface{}
 	body, _ := io.ReadAll(sessResp.Body)
 	json.Unmarshal(body, &data)
@@ -109,6 +113,11 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to start session: %s", resp.Status)
+	}
+
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
 	if _, ok := jsonBody["message"]; ok {
 		return nil, errors.New("invalid session id")

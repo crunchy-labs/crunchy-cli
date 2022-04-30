@@ -58,7 +58,7 @@ func init() {
 }
 
 func Execute() {
-	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 	defer func() {
 		if r := recover(); r != nil {
 			if out.IsDev() {

@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go"
-	"github.com/ByteDream/crunchyroll-go/utils"
+	"github.com/ByteDream/crunchyroll-go/v2"
+	"github.com/ByteDream/crunchyroll-go/v2/utils"
 	"net/http"
 	"net/url"
 	"os"

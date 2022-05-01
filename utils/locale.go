@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/ByteDream/crunchyroll-go"
+	"github.com/ByteDream/crunchyroll-go/v2"
 )
 
 // AllLocales is an array of all available locales.

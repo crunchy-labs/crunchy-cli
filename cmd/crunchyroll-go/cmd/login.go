@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go"
+	"github.com/ByteDream/crunchyroll-go/v2"
 	"github.com/spf13/cobra"
 	"os"
 	"os/user"

@@ -205,7 +205,7 @@ These flags you can use across every sub-command
 Download the library via `go get`
 
 ```shell
-$ go get github.com/ByteDream/crunchyroll-go
+$ go get github.com/ByteDream/crunchyroll-go/v2
 ```
 
 The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go).

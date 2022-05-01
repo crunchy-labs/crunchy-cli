@@ -70,9 +70,15 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	}
 	defer sessResp.Body.Close()
 
+	if sessResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to start session for credentials login: %s", sessResp.Status)
+	}
+
 	var data map[string]interface{}
 	body, _ := io.ReadAll(sessResp.Body)
-	json.Unmarshal(body, &data)
+	if err = json.Unmarshal(body, &data); err != nil {
+		return nil, fmt.Errorf("failed to parse start session with credentials response: %w", err)
+	}
 
 	sessionID := data["data"].(map[string]interface{})["session_id"].(string)
 
@@ -81,7 +87,15 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	authValues.Set("session_id", sessionID)
 	authValues.Set("account", user)
 	authValues.Set("password", password)
-	client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
+	loginResp, err := client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer loginResp.Body.Close()
+
+	if loginResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to auth with credentials: %s", loginResp.Status)
+	}
 
 	return LoginWithSessionID(sessionID, locale, client)
 }
@@ -109,7 +123,14 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
+	}
 	if _, ok := jsonBody["message"]; ok {
 		return nil, errors.New("invalid session id")
 	}
@@ -161,7 +182,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'token' response: %w", err)
+	}
 	crunchy.Config.TokenType = jsonBody["token_type"].(string)
 	crunchy.Config.AccessToken = jsonBody["access_token"].(string)
 
@@ -172,7 +195,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'index' response: %w", err)
+	}
 	cms := jsonBody["cms"].(map[string]interface{})
 
 	crunchy.Config.Policy = cms["policy"].(string)
@@ -186,7 +211,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
+	}
 
 	crunchy.Config.AccountID = jsonBody["account_id"].(string)
 	crunchy.Config.ExternalID = jsonBody["external_id"].(string)
@@ -198,7 +225,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
+	}
 
 	crunchy.Config.MaturityRating = jsonBody["maturity_rating"].(string)
 
@@ -215,6 +244,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 
 	resp, err := c.Client.Do(req)
 	if err == nil {
+		defer resp.Body.Close()
 		bodyAsBytes, _ := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -265,7 +295,9 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 	defer resp.Body.Close()
 
 	var jsonBody map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'search' response: %w", err)
+	}
 
 	for _, item := range jsonBody["items"].([]interface{}) {
 		item := item.(map[string]interface{})

@@ -199,8 +199,8 @@ func (d Downloader) mergeSegmentsFFmpeg(files []string) error {
 		}
 	}
 	if f, ok := d.Writer.(*os.File); !ok || f.Name() != tmpfile {
-		file, err := os.Open(tmpfile)
-		if err != nil {
+		var file *os.File
+		if file, err = os.Open(tmpfile); err != nil {
 			return err
 		}
 		defer file.Close()

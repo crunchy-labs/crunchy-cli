@@ -208,7 +208,7 @@ Download the library via `go get`
 $ go get github.com/ByteDream/crunchyroll-go/v2
 ```
 
-The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go).
+The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go/v2).
 
 Examples how to use the library and some features of it are described in the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Library).
 

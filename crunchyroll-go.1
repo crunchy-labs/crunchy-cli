@@ -162,23 +162,23 @@ $ crunchyroll-go login user@example.com 12345678
 
 Download a episode normally. Your system locale will be used for the video's audio.
 .br
-$ crunchyroll-go download https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+$ crunchyroll-go download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with 720p and name it to 'darling.mp4'. Note that you need \fBffmpeg\fR to save files which do not have '.ts' as file extension.
 .br
-$ crunchyroll-go download -o "darling.mp4" -r 720p https://www.crunchyroll.com/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+$ crunchyroll-go download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with japanese audio and american subtitles.
 .br
-$ crunchyroll-go download -a ja-JP -s en-US https://www.crunchyroll.com/darling-in-the-franxx[E3-E5]
+$ crunchyroll-go download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
 
 Stores the episode in a .mkv file.
 .br
-$ crunchyroll-go archive https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx/episode-1-alone-and-lonesome-759575
+$ crunchyroll-go archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
 .br
-$ crunchyroll-go archive -c "ditf.tar.gz" https://www.crunchyroll.com/darling-in-the-franxx/darling-in-the-franxx[E1-E2]
+$ crunchyroll-go archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
 
 .SH BUGS
 If you notice any bug or want an enhancement, feel free to create a new issue or pull request in the GitHub repository.

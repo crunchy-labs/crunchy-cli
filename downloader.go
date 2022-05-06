@@ -36,7 +36,7 @@ func NewDownloader(context context.Context, writer io.Writer, goroutines int, on
 
 // Downloader is used to download Format's
 type Downloader struct {
-	// The output is all written to Writer
+	// The output is all written to Writer.
 	Writer io.Writer
 
 	// TempDir is the directory where the temporary segment files should be stored.
@@ -59,7 +59,7 @@ type Downloader struct {
 	// cmd/crunchyroll-go/cmd/download.go for an example.
 	Context context.Context
 
-	// Goroutines is the number of goroutines to download segments with
+	// Goroutines is the number of goroutines to download segments with.
 	Goroutines int
 
 	// A method to call when a segment was downloaded.
@@ -82,7 +82,7 @@ type Downloader struct {
 	FFmpegOpts []string
 }
 
-// download's the given format.
+// download downloads the given format.
 func (d Downloader) download(format *Format) error {
 	if err := format.InitVideo(); err != nil {
 		return err

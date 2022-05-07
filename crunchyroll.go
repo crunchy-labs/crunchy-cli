@@ -248,21 +248,14 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 		bodyAsBytes, _ := io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, &AccessError{
-				URL:  endpoint,
-				Body: bodyAsBytes,
-			}
+			return nil, fmt.Errorf("invalid access token")
 		} else {
 			var errStruct struct {
 				Message string `json:"message"`
 			}
 			json.NewDecoder(bytes.NewBuffer(bodyAsBytes)).Decode(&errStruct)
 			if errStruct.Message != "" {
-				return nil, &AccessError{
-					URL:     endpoint,
-					Body:    bodyAsBytes,
-					Message: errStruct.Message,
-				}
+				return nil, fmt.Errorf(errStruct.Message)
 			}
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(bodyAsBytes))

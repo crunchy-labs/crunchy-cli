@@ -33,9 +33,13 @@ var urlFilter = regexp.MustCompile(`(S(\d+))?(E(\d+))?((-)(S(\d+))?(E(\d+))?)?(,
 func systemLocale(verbose bool) crunchyroll.LOCALE {
 	if runtime.GOOS != "windows" {
 		if lang, ok := os.LookupEnv("LANG"); ok {
-			prefix := strings.Split(lang, "_")[0]
-			suffix := strings.Split(strings.Split(lang, ".")[0], "_")[1]
-			l := crunchyroll.LOCALE(fmt.Sprintf("%s-%s", prefix, suffix))
+			var l crunchyroll.LOCALE
+			if preSuffix := strings.Split(strings.Split(lang, ".")[0], "_"); len(preSuffix) == 1 {
+				l = crunchyroll.LOCALE(preSuffix[0])
+			} else {
+				prefix := strings.Split(lang, "_")[0]
+				l = crunchyroll.LOCALE(fmt.Sprintf("%s-%s", prefix, preSuffix[1]))
+			}
 			if !utils.ValidateLocale(l) {
 				if verbose {
 					out.Err("%s is not a supported locale, using %s as fallback", l, crunchyroll.US)

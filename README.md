@@ -1,4 +1,4 @@
-<p align="center"><strong>Version 2 is out 🥳, see all the <a href="https://github.com/ByteDream/crunchyroll-go/releases/tag/v2.0.0">changes.</a></strong></p>
+<p align="center"><strong>Version 2 is out 🥳, see all the <a href="https://github.com/ByteDream/crunchyroll-go/releases/tag/v2.0.0">changes</a></strong>.</p>
 
 # crunchyroll-go
 
@@ -192,7 +192,7 @@ The following flags can be (optional) passed to modify the [archive](#archive) p
 
 ### Global flags
 
-These flags you can use across every sub-command
+These flags you can use across every sub-command:
 
 | Flag | Description                                          |
 |------|------------------------------------------------------|

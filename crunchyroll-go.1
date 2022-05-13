@@ -13,6 +13,8 @@ crunchyroll-go login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] 
 crunchyroll-go download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
 .br
 crunchyroll-go archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+.br
+crunchyroll-go update [\fB-i\fR \fIINSTALL\fR]
 
 .SH DESCRIPTION
 .TP
@@ -140,6 +142,13 @@ The video resolution. Can either be specified via the pixels (e.g. 1920x1080), t
 
 \fB-g, --goroutines GOROUTINES\fR
 Sets the number of parallel downloads for the segments the final video is made of. Default is the number of cores the computer has.
+
+.SH UPDATE COMMAND
+Checks if a newer version is available.
+.TP
+
+\fB-i, --install INSTALL\fR
+If given, the command tries to update the executable with the newer version (if a newer is available).
 
 .SH URL OPTIONS
 If you want to download only specific episode of a series, you could either pass every single episode url to the downloader (which is fine for 1 - 3 episodes) or use filtering.

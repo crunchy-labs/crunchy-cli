@@ -2,7 +2,6 @@ package crunchyroll
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/grafov/m3u8"
 	"regexp"
@@ -83,7 +82,7 @@ func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream,
 
 	if len(jsonBody) == 0 {
 		// this may get thrown when the crunchyroll account has just a normal account and not one with premium
-		return nil, errors.New("no stream available")
+		return nil, fmt.Errorf("no stream available")
 	}
 
 	audioLocale := jsonBody["audio_locale"].(string)

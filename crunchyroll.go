@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -131,15 +130,15 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
 		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
 	}
-	if _, ok := jsonBody["message"]; ok {
-		return nil, errors.New("invalid session id")
+	if isError, ok := jsonBody["error"]; ok && isError.(bool) {
+		return nil, fmt.Errorf("invalid session id (%s): %s", jsonBody["message"].(string), jsonBody["code"])
 	}
 	data := jsonBody["data"].(map[string]interface{})
 
 	crunchy.Config.CountryCode = data["country_code"].(string)
 	user := data["user"]
 	if user == nil {
-		return nil, errors.New("invalid session id, user is not logged in")
+		return nil, fmt.Errorf("invalid session id, user is not logged in")
 	}
 	if user.(map[string]interface{})["premium"] == "" {
 		crunchy.Config.Premium = false
@@ -346,7 +345,7 @@ func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
 	} else if len(m) > 0 {
 		return m[0], nil
 	}
-	return nil, errors.New("no series or movie could be found")
+	return nil, fmt.Errorf("no series or movie could be found")
 }
 
 // FindEpisodeByName finds an episode by its crunchyroll series name and episode title.

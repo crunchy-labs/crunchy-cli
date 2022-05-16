@@ -80,8 +80,12 @@ func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream,
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
 
 	if len(jsonBody) == 0 {
-		// this may get thrown when the crunchyroll account has just a normal account and not one with premium
-		return nil, errors.New("no stream available")
+		// this may get thrown when the crunchyroll account is just a normal account and not one with premium
+		if !crunchy.Config.Premium {
+			return nil, fmt.Errorf("no stream available, this might be the result of using a non-premium account")
+		} else {
+			return nil, errors.New("no stream available")
+		}
 	}
 
 	audioLocale := jsonBody["audio_locale"].(string)

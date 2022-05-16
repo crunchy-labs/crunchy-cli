@@ -37,7 +37,7 @@ type Season struct {
 
 	AvailabilityNotes string `json:"availability_notes"`
 
-	// the locales are always empty, idk why this may change in the future
+	// the locales are always empty, idk why, this may change in the future
 	AudioLocales    []LOCALE
 	SubtitleLocales []LOCALE
 }
@@ -71,6 +71,7 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 
 // AudioLocale returns the audio locale of the season.
 func (s *Season) AudioLocale() (LOCALE, error) {
+	// TODO: Add a function like Episode.Available to prevent this from returning an unwanted error when the account is non-premium
 	episodes, err := s.Episodes()
 	if err != nil {
 		return "", err

@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -141,57 +140,53 @@ func freeFileName(filename string) (string, bool) {
 func loadCrunchy() {
 	out.SetProgress("Logging in")
 
-	files := []string{filepath.Join(os.TempDir(), ".crunchy")}
-
-	if runtime.GOOS != "windows" {
-		usr, _ := user.Current()
-		files = append(files, filepath.Join(usr.HomeDir, ".config/crunchy"))
-	}
-
-	var err error
-	for _, file := range files {
-		if _, err = os.Stat(file); os.IsNotExist(err) {
-			err = nil
-			continue
-		}
-		var body []byte
-		if body, err = os.ReadFile(file); err != nil {
-			out.StopProgress("Failed to read login information: %v", err)
-			os.Exit(1)
-		} else if body == nil {
-			continue
-		}
-
-		split := strings.SplitN(string(body), "\n", 2)
-		if len(split) == 1 || split[1] == "" {
-			if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err == nil {
-				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+	if configDir, err := os.UserConfigDir(); err == nil {
+		persistentFilePath := filepath.Join(configDir, "crunchyroll-go", "crunchy")
+		if _, statErr := os.Stat(persistentFilePath); statErr == nil {
+			body, err := os.ReadFile(persistentFilePath)
+			if err != nil {
+				out.StopProgress("Failed to read login information: %v", err)
+				os.Exit(1)
 			}
-		} else {
-			if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
-				continue
-			}
-			out.Debug("Logged in with username '%s' and password '%s'. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0], split[1])
-			if file != filepath.Join(os.TempDir(), ".crunchy") {
-				// the session id is written to a temp file to reduce the amount of re-logging in.
-				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
-				if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600); err != nil {
-					out.StopProgress("Failed to write session id to temp file")
+			split := strings.SplitN(string(body), "\n", 2)
+			if len(split) == 1 || split[1] == "" {
+				split[0] = url.QueryEscape(split[0])
+				if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err != nil {
+					out.StopProgress(err.Error())
 					os.Exit(1)
 				}
-				out.Debug("Wrote session id to temp file")
+				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+			} else {
+				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
+					out.StopProgress(err.Error())
+					os.Exit(1)
+				}
+				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.SessionID)
+				// the session id is written to a temp file to reduce the amount of re-logging in.
+				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
+				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600)
 			}
+			return
+		}
+	}
+
+	tmpFilePath := filepath.Join(os.TempDir(), ".crunchy")
+	if _, statErr := os.Stat(tmpFilePath); !os.IsNotExist(statErr) {
+		body, err := os.ReadFile(tmpFilePath)
+		if err != nil {
+			out.StopProgress("Failed to read login information: %v", err)
+			os.Exit(1)
+		}
+		if crunchy, err = crunchyroll.LoginWithSessionID(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
+			out.StopProgress(err.Error())
+			os.Exit(1)
 		}
 
-		out.StopProgress("Logged in")
+		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
 		return
 	}
-	if err != nil {
-		out.StopProgress(err.Error())
-	} else {
-		out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
-	}
 
+	out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])
 	os.Exit(1)
 }
 

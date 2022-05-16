@@ -5,9 +5,7 @@ import (
 	"github.com/ByteDream/crunchyroll-go/v2"
 	"github.com/spf13/cobra"
 	"os"
-	"os/user"
 	"path/filepath"
-	"runtime"
 )
 
 var (
@@ -21,11 +19,11 @@ var loginCmd = &cobra.Command{
 	Short: "Login to crunchyroll",
 	Args:  cobra.RangeArgs(1, 2),
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if loginSessionIDFlag {
-			loginSessionID(args[0])
+			return loginSessionID(args[0])
 		} else {
-			loginCredentials(args[0], args[1])
+			return loginCredentials(args[0], args[1])
 		}
 	},
 }
@@ -46,12 +44,31 @@ func init() {
 
 func loginCredentials(user, password string) error {
 	out.Debug("Logging in via credentials")
-	if _, err := crunchyroll.LoginWithCredentials(user, password, systemLocale(false), client); err != nil {
-		out.Err(err.Error())
-		os.Exit(1)
+	c, err := crunchyroll.LoginWithCredentials(user, password, systemLocale(false), client)
+	if err != nil {
+		return err
 	}
 
-	return os.WriteFile(loginStorePath(), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600)
+	if loginPersistentFlag {
+		if configDir, err := os.UserConfigDir(); err != nil {
+			return fmt.Errorf("could not save credentials persistent: %w", err)
+		} else {
+			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600); err != nil {
+				return err
+			}
+			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+		}
+	}
+	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.SessionID), 0600); err != nil {
+		return err
+	}
+
+	if !loginPersistentFlag {
+		out.Info("Due to security reasons, you have to login again on the next reboot")
+	}
+
+	return nil
 }
 
 func loginSessionID(sessionID string) error {
@@ -61,21 +78,25 @@ func loginSessionID(sessionID string) error {
 		os.Exit(1)
 	}
 
-	return os.WriteFile(loginStorePath(), []byte(sessionID), 0600)
-}
-
-func loginStorePath() string {
-	path := filepath.Join(os.TempDir(), ".crunchy")
+	var err error
 	if loginPersistentFlag {
-		if runtime.GOOS != "windows" {
-			usr, _ := user.Current()
-			path = filepath.Join(usr.HomeDir, ".config/crunchy")
+		if configDir, err := os.UserConfigDir(); err != nil {
+			return fmt.Errorf("could not save credentials persistent: %w", err)
+		} else {
+			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(sessionID), 0600); err != nil {
+				return err
+			}
+			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 		}
+	}
+	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(sessionID), 0600); err != nil {
+		return err
+	}
 
-		out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", path)
-	} else if runtime.GOOS != "windows" {
+	if !loginPersistentFlag {
 		out.Info("Due to security reasons, you have to login again on the next reboot")
 	}
 
-	return path
+	return nil
 }

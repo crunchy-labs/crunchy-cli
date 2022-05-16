@@ -97,6 +97,13 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 
 	if loginResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to auth with credentials: %s", loginResp.Status)
+	} else {
+		var loginRespBody map[string]interface{}
+		json.NewDecoder(loginResp.Body).Decode(&loginRespBody)
+
+		if loginRespBody["error"].(bool) {
+			return nil, fmt.Errorf("an unexpected login error occoured: %s", loginRespBody["message"])
+		}
 	}
 
 	return LoginWithSessionID(sessionID, locale, client)

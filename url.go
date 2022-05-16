@@ -49,6 +49,11 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 		}
 
 		for _, episode := range episodes {
+			// if no episode streams are available, calling episode.AudioLocale
+			// will result in an unwanted error
+			if !episode.Available() {
+				continue
+			}
 			locale, err := episode.AudioLocale()
 			if err != nil {
 				return nil, err

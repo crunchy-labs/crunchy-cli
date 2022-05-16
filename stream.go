@@ -25,10 +25,8 @@ type Stream struct {
 
 // StreamsFromID returns a stream by its api id.
 func StreamsFromID(crunchy *Crunchyroll, id string) ([]*Stream, error) {
-	return fromVideoStreams(crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	return fromVideoStreams(crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -105,7 +103,7 @@ func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream,
 		var id string
 		var formatType FormatType
 		href := jsonBody["__links__"].(map[string]interface{})["resource"].(map[string]interface{})["href"].(string)
-		if match := regexp.MustCompile(`(?sm)^/cms/v2/\S+/crunchyroll/(\w+)/(\w+)$`).FindAllStringSubmatch(href, -1); len(match) > 0 {
+		if match := regexp.MustCompile(`(?sm)/(\w+)/(\w+)$`).FindAllStringSubmatch(href, -1); len(match) > 0 {
 			formatType = FormatType(match[0][1])
 			id = match[0][2]
 		}

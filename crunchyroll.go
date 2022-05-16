@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // LOCALE represents a locale / language.
@@ -33,7 +34,7 @@ const (
 type Crunchyroll struct {
 	// Client is the http.Client to perform all requests over.
 	Client *http.Client
-	// Context can be used to stop requests with Client and is context.Background by default.
+	// Context can be used to stop requests with Client.
 	Context context.Context
 	// Locale specifies in which language all results should be returned / requested.
 	Locale LOCALE
@@ -45,9 +46,10 @@ type Crunchyroll struct {
 		TokenType   string
 		AccessToken string
 
+		Bucket string
+
 		CountryCode    string
 		Premium        bool
-		Channel        string
 		Policy         string
 		Signature      string
 		KeyPairID      string
@@ -141,13 +143,7 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	if user == nil {
 		return nil, errors.New("invalid session id, user is not logged in")
 	}
-	if user.(map[string]interface{})["premium"] == "" {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	} else {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	}
+	crunchy.Config.Premium = user.(map[string]interface{})["premium"] != ""
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -200,6 +196,9 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	}
 	cms := jsonBody["cms"].(map[string]interface{})
 
+	// / is trimmed so that urls which require it must be in .../{bucket}/... like format.
+	// this just looks cleaner
+	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)

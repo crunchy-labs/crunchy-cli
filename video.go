@@ -69,10 +69,8 @@ type Movie struct {
 
 // MovieFromID returns a movie by its api id.
 func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
-	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/movies/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -102,10 +100,8 @@ func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
 		return m.children, nil
 	}
 
-	resp, err := m.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		m.crunchy.Config.CountryCode,
-		m.crunchy.Config.MaturityRating,
-		m.crunchy.Config.Channel,
+	resp, err := m.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		m.crunchy.Config.Bucket,
 		m.ID,
 		m.crunchy.Locale,
 		m.crunchy.Config.Signature,
@@ -165,10 +161,8 @@ type Series struct {
 
 // SeriesFromID returns a series by its api id.
 func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
-	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/movies?movie_listing_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -198,10 +192,8 @@ func (s *Series) Seasons() (seasons []*Season, err error) {
 		return s.children, nil
 	}
 
-	resp, err := s.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/seasons?series_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		s.crunchy.Config.CountryCode,
-		s.crunchy.Config.MaturityRating,
-		s.crunchy.Config.Channel,
+	resp, err := s.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/seasons?series_id=%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		s.crunchy.Config.Bucket,
 		s.ID,
 		s.crunchy.Locale,
 		s.crunchy.Config.Signature,

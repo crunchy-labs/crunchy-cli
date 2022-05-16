@@ -77,10 +77,8 @@ type Episode struct {
 
 // EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
-	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -194,10 +192,8 @@ func (e *Episode) Streams() ([]*Stream, error) {
 		return e.children, nil
 	}
 
-	streams, err := fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		e.crunchy.Config.CountryCode,
-		e.crunchy.Config.MaturityRating,
-		e.crunchy.Config.Channel,
+	streams, err := fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		e.crunchy.Config.Bucket,
 		e.StreamID,
 		e.crunchy.Locale,
 		e.crunchy.Config.Signature,

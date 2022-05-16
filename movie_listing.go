@@ -40,10 +40,8 @@ type MovieListing struct {
 
 // MovieListingFromID returns a movie listing by its api id.
 func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) {
-	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/movie_listing/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/movie_listing/%s&locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -69,10 +67,8 @@ func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) 
 
 // AudioLocale is same as Episode.AudioLocale.
 func (ml *MovieListing) AudioLocale() (LOCALE, error) {
-	resp, err := ml.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		ml.crunchy.Config.CountryCode,
-		ml.crunchy.Config.MaturityRating,
-		ml.crunchy.Config.Channel,
+	resp, err := ml.crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		ml.crunchy.Config.Bucket,
 		ml.ID,
 		ml.crunchy.Locale,
 		ml.crunchy.Config.Signature,
@@ -90,10 +86,8 @@ func (ml *MovieListing) AudioLocale() (LOCALE, error) {
 
 // Streams returns all streams which are available for the movie listing.
 func (ml *MovieListing) Streams() ([]*Stream, error) {
-	return fromVideoStreams(ml.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		ml.crunchy.Config.CountryCode,
-		ml.crunchy.Config.MaturityRating,
-		ml.crunchy.Config.Channel,
+	return fromVideoStreams(ml.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		ml.crunchy.Config.Bucket,
 		ml.ID,
 		ml.crunchy.Locale,
 		ml.crunchy.Config.Signature,

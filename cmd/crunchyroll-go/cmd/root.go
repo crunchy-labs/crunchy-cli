@@ -27,7 +27,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "crunchyroll",
+	Use:     "crunchyroll-go",
 	Version: Version,
 	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
 

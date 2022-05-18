@@ -86,7 +86,7 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 
 	if len(eps) == 0 {
 		if notAvailableContinue {
-			return nil, fmt.Errorf("could not find any matching episode which is accessable with an non-premium account")
+			return nil, fmt.Errorf("could not find any matching episode which is accessable with a non-premium account")
 		} else {
 			return nil, fmt.Errorf("could not find any matching episode")
 		}

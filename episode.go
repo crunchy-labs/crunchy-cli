@@ -112,8 +112,8 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 // Every episode in a season (should) have the same audio locale,
 // so if you want to get the audio locale of a season, just call
 // this method on the first episode of the season.
-// Will fail if no streams are available, thus use Available to
-// prevent any misleading errors.
+// Will fail if no streams are available, thus use Episode.Available
+// to prevent any misleading errors.
 func (e *Episode) AudioLocale() (LOCALE, error) {
 	streams, err := e.Streams()
 	if err != nil {

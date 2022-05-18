@@ -70,13 +70,23 @@ func SeasonFromID(crunchy *Crunchyroll, id string) (*Season, error) {
 }
 
 // AudioLocale returns the audio locale of the season.
+// Will fail if no streams are available, thus use Season.Available
+// to prevent any misleading errors.
 func (s *Season) AudioLocale() (LOCALE, error) {
-	// TODO: Add a function like Episode.Available to prevent this from returning an unwanted error when the account is non-premium
 	episodes, err := s.Episodes()
 	if err != nil {
 		return "", err
 	}
 	return episodes[0].AudioLocale()
+}
+
+// Available returns if downloadable streams for this season are available.
+func (s *Season) Available() (bool, error) {
+	episodes, err := s.Episodes()
+	if err != nil {
+		return false, err
+	}
+	return episodes[0].Available(), nil
 }
 
 // Episodes returns all episodes which are available for the season.

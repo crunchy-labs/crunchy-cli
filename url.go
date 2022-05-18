@@ -21,6 +21,7 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 		}
 		for _, season := range seasons {
 			if audio != nil {
+
 				locale, err := season.AudioLocale()
 				if err != nil {
 					return nil, err

@@ -166,6 +166,7 @@ func loadCrunchy() {
 				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
 				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600)
 			}
+			out.StopProgress("Logged in")
 			return
 		}
 	}
@@ -183,6 +184,8 @@ func loadCrunchy() {
 		}
 
 		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
+
+		out.StopProgress("Logged in")
 		return
 	}
 

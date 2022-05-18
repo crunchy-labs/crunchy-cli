@@ -63,10 +63,12 @@ func update() error {
 		return fmt.Errorf("internal version (%s) is not parsable", Version)
 	}
 
+	out.Info("Installed version is %s", Version)
+
 	var hasUpdate bool
 	for i := 0; i < 3; i++ {
 		if latestRelease[i] < internalVersion[i] {
-			out.Info("Local version (%s) is newer than version in latest release (%s)", Version, releaseVersion)
+			out.Info("Local version is newer than version in latest release (%s)", releaseVersion)
 			return nil
 		} else if latestRelease[i] > internalVersion[i] {
 			hasUpdate = true
@@ -78,7 +80,7 @@ func update() error {
 		return nil
 	}
 
-	out.Info("A new version is available (%s). Installed version is %s: https://github.com/ByteDream/crunchyroll-go/releases/tag/v%s", releaseVersion, Version, releaseVersion)
+	out.Info("A new version is available (%s): https://github.com/ByteDream/crunchyroll-go/releases/tag/v%s", releaseVersion, releaseVersion)
 
 	if updateInstallFlag {
 		if runtime.GOARCH != "amd64" {

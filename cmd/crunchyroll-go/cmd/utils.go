@@ -140,6 +140,23 @@ func freeFileName(filename string) (string, bool) {
 func loadCrunchy() {
 	out.SetProgress("Logging in")
 
+	tmpFilePath := filepath.Join(os.TempDir(), ".crunchy")
+	if _, statErr := os.Stat(tmpFilePath); !os.IsNotExist(statErr) {
+		body, err := os.ReadFile(tmpFilePath)
+		if err != nil {
+			out.StopProgress("Failed to read login information: %v", err)
+			os.Exit(1)
+		}
+		if crunchy, err = crunchyroll.LoginWithSessionID(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
+			out.Debug("Failed to login with temp session id: %w", err)
+		} else {
+			out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
+
+			out.StopProgress("Logged in")
+			return
+		}
+	}
+
 	if configDir, err := os.UserConfigDir(); err == nil {
 		persistentFilePath := filepath.Join(configDir, "crunchyroll-go", "crunchy")
 		if _, statErr := os.Stat(persistentFilePath); statErr == nil {
@@ -169,24 +186,6 @@ func loadCrunchy() {
 			out.StopProgress("Logged in")
 			return
 		}
-	}
-
-	tmpFilePath := filepath.Join(os.TempDir(), ".crunchy")
-	if _, statErr := os.Stat(tmpFilePath); !os.IsNotExist(statErr) {
-		body, err := os.ReadFile(tmpFilePath)
-		if err != nil {
-			out.StopProgress("Failed to read login information: %v", err)
-			os.Exit(1)
-		}
-		if crunchy, err = crunchyroll.LoginWithSessionID(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
-			out.StopProgress(err.Error())
-			os.Exit(1)
-		}
-
-		out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
-
-		out.StopProgress("Logged in")
-		return
 	}
 
 	out.StopProgress("To use this command, login first. Type `%s login -h` to get help", os.Args[0])

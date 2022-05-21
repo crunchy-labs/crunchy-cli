@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v2"
+	"github.com/ByteDream/crunchyroll-go/v3"
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"

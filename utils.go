@@ -2,6 +2,10 @@ package crunchyroll
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
+	"reflect"
+	"strings"
 )
 
 func decodeMapToStruct(m interface{}, s interface{}) error {
@@ -22,4 +26,48 @@ func regexGroups(parsed [][]string, subexpNames ...string) map[string]string {
 		}
 	}
 	return groups
+}
+
+func encodeStructToQueryValues(s interface{}) (string, error) {
+	values := make(url.Values)
+	v := reflect.ValueOf(s)
+
+	for i := 0; i < v.Type().NumField(); i++ {
+
+		// don't include parameters with default or without values in the query to avoid corruption of the API response.
+		if isEmptyValue(v.Field(i)) {
+			continue
+		}
+
+		key := v.Type().Field(i).Tag.Get("param")
+		var val string
+
+		if v.Field(i).Kind() == reflect.Slice {
+			var items []string
+
+			for _, i := range v.Field(i).Interface().([]string) {
+				items = append(items, i)
+			}
+
+			val = strings.Join(items, ",")
+		} else {
+			val = fmt.Sprint(v.Field(i).Interface())
+		}
+
+		values.Add(key, val)
+	}
+
+	return values.Encode(), nil
+}
+
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Uint:
+		return v.Uint() == 0
+	}
+	return false
 }

@@ -147,10 +147,10 @@ func loadCrunchy() {
 			out.StopProgress("Failed to read login information: %v", err)
 			os.Exit(1)
 		}
-		if crunchy, err = crunchyroll.LoginWithSessionID(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
-			out.Debug("Failed to login with temp session id: %w", err)
+		if crunchy, err = crunchyroll.LoginWithEtpRt(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
+			out.Debug("Failed to login with temp etp rt: %w", err)
 		} else {
-			out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
+			out.Debug("Logged in with etp rt %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
 
 			out.StopProgress("Logged in")
 			return
@@ -168,20 +168,20 @@ func loadCrunchy() {
 			split := strings.SplitN(string(body), "\n", 2)
 			if len(split) == 1 || split[1] == "" {
 				split[0] = url.QueryEscape(split[0])
-				if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err != nil {
+				if crunchy, err = crunchyroll.LoginWithEtpRt(split[0], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
 					os.Exit(1)
 				}
-				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+				out.Debug("Logged in with etp rt %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 			} else {
 				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
 					os.Exit(1)
 				}
-				out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.SessionID)
+				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.EtpRt)
 				// the session id is written to a temp file to reduce the amount of re-logging in.
 				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
-				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.SessionID), 0600)
+				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
 			}
 			out.StopProgress("Logged in")
 			return

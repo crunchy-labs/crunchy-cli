@@ -180,6 +180,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	crunchy.Config.TokenType = loginResp.TokenType
 	crunchy.Config.AccessToken = loginResp.AccessToken
 	crunchy.Config.AccountID = loginResp.AccountID
+	crunchy.Config.CountryCode = loginResp.Country
 
 	var jsonBody map[string]any
 

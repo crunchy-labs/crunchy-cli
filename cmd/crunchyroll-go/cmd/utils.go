@@ -179,7 +179,7 @@ func loadCrunchy() {
 					os.Exit(1)
 				}
 				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.EtpRt)
-				// the session id is written to a temp file to reduce the amount of re-logging in.
+				// the etp rt is written to a temp file to reduce the amount of re-logging in.
 				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
 				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
 			}

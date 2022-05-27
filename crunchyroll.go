@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // LOCALE represents a locale / language.
@@ -143,17 +144,6 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	data := jsonBody["data"].(map[string]interface{})
 
 	crunchy.Config.CountryCode = data["country_code"].(string)
-	user := data["user"]
-	if user == nil {
-		return nil, fmt.Errorf("invalid session id, user is not logged in")
-	}
-	if user.(map[string]interface{})["premium"] == "" {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	} else {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	}
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -206,6 +196,13 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	}
 	cms := jsonBody["cms"].(map[string]interface{})
 
+	if strings.Contains(cms["bucket"].(string), "crunchyroll") {
+		crunchy.Config.Premium = true
+		crunchy.Config.Channel = "crunchyroll"
+	} else {
+		crunchy.Config.Premium = false
+		crunchy.Config.Channel = "-"
+	}
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)

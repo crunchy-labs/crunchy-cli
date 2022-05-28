@@ -30,21 +30,21 @@ const (
 	AR        = "ar-SA"
 )
 
-// SortOrder represents a sort order.
-type SortOrder string
-
-const (
-	POPULARITY   SortOrder = "popularity"
-	NEWLYADDED             = "newly_added"
-	ALPHABETICAL           = "alphabetical"
-)
-
 // MediaType represents a media type.
 type MediaType string
 
 const (
 	SERIES       MediaType = "series"
 	MOVIELISTING           = "movie_listing"
+)
+
+// SortType represents a sort type.
+type SortType string
+
+const (
+	POPULARITY   SortType = "popularity"
+	NEWLYADDED            = "newly_added"
+	ALPHABETICAL          = "alphabetical"
 )
 
 type Crunchyroll struct {
@@ -79,25 +79,25 @@ type Crunchyroll struct {
 
 // BrowseOptions represents options for browsing the crunchyroll catalog.
 type BrowseOptions struct {
-	// Categories specifies the categories of the results.
+	// Categories specifies the categories of the entries.
 	Categories []string `param:"categories"`
 
-	// IsDubbed specifies whether the results should be dubbed.
+	// IsDubbed specifies whether the entries should be dubbed.
 	IsDubbed bool `param:"is_dubbed"`
 
-	// IsSubbed specifies whether the results should be subbed.
+	// IsSubbed specifies whether the entries should be subbed.
 	IsSubbed bool `param:"is_subbed"`
 
-	// SimulcastID specifies a particular simulcast season in which the results have been aired.
-	SimulcastID string `param:"season_tag"`
+	// Simulcast specifies a particular simulcast season by id in which the entries have been aired.
+	Simulcast string `param:"season_tag"`
 
-	// SortBy specifies how the results should be sorted.
-	SortBy SortOrder `param:"sort_by"`
+	// Sort specifies how the entries should be sorted.
+	Sort SortType `param:"sort_by"`
 
-	// Start specifies the index from which the results should be returned.
+	// Start specifies the index from which the entries should be returned.
 	Start uint `param:"start"`
 
-	// Type specifies the media type of the results.
+	// Type specifies the media type of the entries.
 	Type MediaType `param:"type"`
 }
 
@@ -672,7 +672,7 @@ func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err 
 	return s, m, nil
 }
 
-// UpNext returns the episodes that are up next based on your account within the given limit.
+// UpNext returns the episodes that are up next based on the currently logged in account within the given limit.
 func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 	upNextAccountEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/up_next_account?n=%d&locale=%s",
 		c.Config.AccountID, limit, c.Locale)
@@ -703,7 +703,7 @@ func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 	return e, nil
 }
 
-// SimilarTo returns similar series and movies according to crunchyroll to the one specified by id within the given limits.
+// SimilarTo returns similar series and movies according to crunchyroll to the one specified by id within the given limit.
 func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie, err error) {
 	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
 		c.Config.AccountID, id, limit, c.Locale)
@@ -747,7 +747,7 @@ func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie,
 	return s, m, nil
 }
 
-// WatchHistory returns the history of watched episodes based on your account from the given page with the given size.
+// WatchHistory returns the history of watched episodes based on the currently logged in account from the given page with the given size.
 func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, err error) {
 	watchHistoryEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/watch-history/%s?page=%d&page_size=%d&locale=%s",
 		c.Config.AccountID, page, size, c.Locale)
@@ -783,4 +783,36 @@ func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, e
 	}
 
 	return e, nil
+}
+
+// Account returns information about the currently logged in crunchyroll account.
+func (c *Crunchyroll) Account() (*Account, error) {
+	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
+	}
+
+	resp, err = c.request("https://beta.crunchyroll.com/accounts/v1/me/profile")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
+	}
+
+	account := &Account{}
+
+	if err := decodeMapToStruct(jsonBody, account); err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }

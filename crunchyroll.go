@@ -628,7 +628,7 @@ func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*News, l []*New
 	return t, l, nil
 }
 
-// Recommendations returns series and movie recommendations from crunchyroll based on your account within the given limit.
+// Recommendations returns series and movie recommendations from crunchyroll based on the currently logged in account within the given limit.
 func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err error) {
 	recommendationsEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/recommendations?n=%d&locale=%s",
 		c.Config.AccountID, limit, c.Locale)

@@ -591,7 +591,7 @@ func (c *Crunchyroll) Simulcasts() (s []*Simulcast, err error) {
 }
 
 // News returns the top and latest news from crunchyroll for the current locale within the given limits.
-func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*TopNews, l []*LatestNews, err error) {
+func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*News, l []*News, err error) {
 	newsFeedEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/news_feed?top_news_n=%d&latest_news_n=%d&locale=%s",
 		topLimit, latestLimit, c.Locale)
 	resp, err := c.request(newsFeedEndpoint)
@@ -607,7 +607,7 @@ func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*TopNews, l []*
 
 	topNews := jsonBody["top_news"].(map[string]interface{})
 	for _, item := range topNews["items"].([]interface{}) {
-		topNews := &TopNews{}
+		topNews := &News{}
 		if err := decodeMapToStruct(item, topNews); err != nil {
 			return nil, nil, err
 		}
@@ -617,7 +617,7 @@ func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*TopNews, l []*
 
 	latestNews := jsonBody["latest_news"].(map[string]interface{})
 	for _, item := range latestNews["items"].([]interface{}) {
-		latestNews := &LatestNews{}
+		latestNews := &News{}
 		if err := decodeMapToStruct(item, latestNews); err != nil {
 			return nil, nil, err
 		}
@@ -672,7 +672,7 @@ func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err 
 	return s, m, nil
 }
 
-// UpNext returns the next episodes that you can continue watching based on your account within the given limit.
+// UpNext returns the episodes that are up next based on your account within the given limit.
 func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 	upNextAccountEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/up_next_account?n=%d&locale=%s",
 		c.Config.AccountID, limit, c.Locale)
@@ -703,7 +703,7 @@ func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 	return e, nil
 }
 
-// SimilarTo returns similar series and movies to the one specified by id within the given limits.
+// SimilarTo returns similar series and movies according to crunchyroll to the one specified by id within the given limits.
 func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie, err error) {
 	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
 		c.Config.AccountID, id, limit, c.Locale)
@@ -745,4 +745,42 @@ func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie,
 	}
 
 	return s, m, nil
+}
+
+// WatchHistory returns the history of watched episodes based on your account from the given page with the given size.
+func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, err error) {
+	watchHistoryEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/watch-history/%s?page=%d&page_size=%d&locale=%s",
+		c.Config.AccountID, page, size, c.Locale)
+	resp, err := c.request(watchHistoryEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'watch-history' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		panel := item.(map[string]interface{})["panel"]
+
+		episode := &Episode{
+			crunchy: c,
+		}
+		if err := decodeMapToStruct(panel, episode); err != nil {
+			return nil, err
+		}
+
+		historyEpisode := &HistoryEpisode{
+			Episode: episode,
+		}
+		if err := decodeMapToStruct(item, historyEpisode); err != nil {
+			return nil, err
+		}
+
+		e = append(e, historyEpisode)
+	}
+
+	return e, nil
 }

@@ -75,6 +75,18 @@ type Episode struct {
 	StreamID string
 }
 
+// HistoryEpisode contains additional information about an episode if the account has watched or started to watch the episode.
+type HistoryEpisode struct {
+	*Episode
+
+	ID           string    `json:"id"`
+	DatePlayed   string    `json:"date_played"`
+	ParentID     string    `json:"parent_id"`
+	ParentType   MediaType `json:"parent_type"`
+	Playhead     uint      `json:"playhead"`
+	FullyWatched bool      `json:"fully_watched"`
+}
+
 // EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",

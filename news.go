@@ -9,11 +9,3 @@ type News struct {
 	PublishDate string `json:"publish_date"`
 	Description string `json:"description"`
 }
-
-type TopNews struct {
-	News
-}
-
-type LatestNews struct {
-	News
-}

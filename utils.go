@@ -35,8 +35,19 @@ func encodeStructToQueryValues(s interface{}) (string, error) {
 	for i := 0; i < v.Type().NumField(); i++ {
 
 		// don't include parameters with default or without values in the query to avoid corruption of the API response.
-		if isEmptyValue(v.Field(i)) {
-			continue
+		switch v.Field(i).Kind() {
+		case reflect.Slice, reflect.String:
+			if v.Field(i).Len() == 0 {
+				continue
+			}
+		case reflect.Bool:
+			if !v.Field(i).Bool() {
+				continue
+			}
+		case reflect.Uint:
+			if v.Field(i).Uint() == 0 {
+				continue
+			}
 		}
 
 		key := v.Type().Field(i).Tag.Get("param")
@@ -58,16 +69,4 @@ func encodeStructToQueryValues(s interface{}) (string, error) {
 	}
 
 	return values.Encode(), nil
-}
-
-func isEmptyValue(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Slice, reflect.String:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Uint:
-		return v.Uint() == 0
-	}
-	return false
 }

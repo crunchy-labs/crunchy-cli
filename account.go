@@ -1,11 +1,13 @@
 package crunchyroll
 
+import "time"
+
 // Account contains information about a crunchyroll account.
 type Account struct {
-	AccountID     string `json:"account_id"`
-	ExternalID    string `json:"external_id"`
-	EmailVerified bool   `json:"email_verified"`
-	Created       string `json:"created"`
+	AccountID     string    `json:"account_id"`
+	ExternalID    string    `json:"external_id"`
+	EmailVerified bool      `json:"email_verified"`
+	Created       time.Time `json:"created"`
 
 	Avatar                           string `json:"avatar"`
 	CrBetaOptIn                      bool   `json:"cr_beta_opt_in"`

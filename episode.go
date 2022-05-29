@@ -79,8 +79,7 @@ type Episode struct {
 type HistoryEpisode struct {
 	*Episode
 
-	ID           string    `json:"id"`
-	DatePlayed   string    `json:"date_played"`
+	DatePlayed   time.Time `json:"date_played"`
 	ParentID     string    `json:"parent_id"`
 	ParentType   MediaType `json:"parent_type"`
 	Playhead     uint      `json:"playhead"`

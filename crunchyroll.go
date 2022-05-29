@@ -793,8 +793,9 @@ func (c *Crunchyroll) Account() (*Account, error) {
 	}
 	defer resp.Body.Close()
 
-	var jsonBody map[string]interface{}
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+	account := &Account{}
+
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
 		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
 	}
 
@@ -804,14 +805,8 @@ func (c *Crunchyroll) Account() (*Account, error) {
 	}
 	defer resp.Body.Close()
 
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
 		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
-	}
-
-	account := &Account{}
-
-	if err := decodeMapToStruct(jsonBody, account); err != nil {
-		return nil, err
 	}
 
 	return account, nil

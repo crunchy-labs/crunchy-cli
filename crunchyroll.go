@@ -241,7 +241,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	}
 	defer resp.Body.Close()
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
-	
+
 	cms := jsonBody["cms"].(map[string]any)
 	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
 	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
@@ -259,7 +259,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 		crunchy.Config.Premium = false
 		crunchy.Config.Channel = "-"
 	}
-  
+
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)
@@ -594,7 +594,7 @@ func (c *Crunchyroll) Categories(includeSubcategories bool) (ca []*Category, err
 // Simulcasts returns all available simulcast seasons for the current locale.
 func (c *Crunchyroll) Simulcasts() (s []*Simulcast, err error) {
 	seasonListEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/season_list?locale=%s", c.Locale)
-	resp, err := c.request(seasonListEndpoint)
+	resp, err := c.request(seasonListEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +659,7 @@ func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*News, l []*New
 func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err error) {
 	recommendationsEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/recommendations?n=%d&locale=%s",
 		c.Config.AccountID, limit, c.Locale)
-	resp, err := c.request(recommendationsEndpoint)
+	resp, err := c.request(recommendationsEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -703,7 +703,7 @@ func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err 
 func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 	upNextAccountEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/up_next_account?n=%d&locale=%s",
 		c.Config.AccountID, limit, c.Locale)
-	resp, err := c.request(upNextAccountEndpoint)
+	resp, err := c.request(upNextAccountEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -734,7 +734,7 @@ func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
 func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie, err error) {
 	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
 		c.Config.AccountID, id, limit, c.Locale)
-	resp, err := c.request(similarToEndpoint)
+	resp, err := c.request(similarToEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -778,7 +778,7 @@ func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie,
 func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, err error) {
 	watchHistoryEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/watch-history/%s?page=%d&page_size=%d&locale=%s",
 		c.Config.AccountID, page, size, c.Locale)
-	resp, err := c.request(watchHistoryEndpoint)
+	resp, err := c.request(watchHistoryEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -814,7 +814,7 @@ func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, e
 
 // Account returns information about the currently logged in crunchyroll account.
 func (c *Crunchyroll) Account() (*Account, error) {
-	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me")
+	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -826,7 +826,7 @@ func (c *Crunchyroll) Account() (*Account, error) {
 		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
 	}
 
-	resp, err = c.request("https://beta.crunchyroll.com/accounts/v1/me/profile")
+	resp, err = c.request("https://beta.crunchyroll.com/accounts/v1/me/profile", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

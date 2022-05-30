@@ -3,6 +3,7 @@ package crunchyroll
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 )
 
@@ -94,7 +95,7 @@ func (s *Season) Episodes() (episodes []*Episode, err error) {
 		s.crunchy.Locale,
 		s.crunchy.Config.Signature,
 		s.crunchy.Config.Policy,
-		s.crunchy.Config.KeyPairID))
+		s.crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

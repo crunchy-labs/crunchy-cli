@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v2"
-	"github.com/ByteDream/crunchyroll-go/v2/utils"
+	"github.com/ByteDream/crunchyroll-go/v3"
+	"github.com/ByteDream/crunchyroll-go/v3/utils"
 	"github.com/grafov/m3u8"
 	"github.com/spf13/cobra"
 	"math"

@@ -568,7 +568,7 @@ func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m 
 func (c *Crunchyroll) Categories(includeSubcategories bool) (ca []*Category, err error) {
 	tenantCategoriesEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/tenant_categories?include_subcategories=%t&locale=%s",
 		includeSubcategories, c.Locale)
-	resp, err := c.request(tenantCategoriesEndpoin, http.MethodGet)
+	resp, err := c.request(tenantCategoriesEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

@@ -169,15 +169,13 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
 	}
 
+	var jsonBody map[string]any
 	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
 		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
 	}
 	if isError, ok := jsonBody["error"]; ok && isError.(bool) {
 		return nil, fmt.Errorf("invalid session id (%s): %s", jsonBody["message"].(string), jsonBody["code"])
 	}
-	data := jsonBody["data"].(map[string]interface{})
-
-	crunchy.Config.CountryCode = data["country_code"].(string)
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -243,6 +241,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	}
 	defer resp.Body.Close()
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	
 	cms := jsonBody["cms"].(map[string]any)
 	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
 	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
@@ -261,7 +260,6 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 		crunchy.Config.Channel = "-"
 	}
   
-  cms := jsonBody["cms"].(map[string]interface{})
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)
@@ -526,7 +524,7 @@ func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m 
 
 	browseEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/browse?%s&n=%d&locale=%s",
 		query, limit, c.Locale)
-	resp, err := c.request(browseEndpoint)
+	resp, err := c.request(browseEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -570,7 +568,7 @@ func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m 
 func (c *Crunchyroll) Categories(includeSubcategories bool) (ca []*Category, err error) {
 	tenantCategoriesEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/tenant_categories?include_subcategories=%t&locale=%s",
 		includeSubcategories, c.Locale)
-	resp, err := c.request(tenantCategoriesEndpoint)
+	resp, err := c.request(tenantCategoriesEndpoin, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +621,7 @@ func (c *Crunchyroll) Simulcasts() (s []*Simulcast, err error) {
 func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*News, l []*News, err error) {
 	newsFeedEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/news_feed?top_news_n=%d&latest_news_n=%d&locale=%s",
 		topLimit, latestLimit, c.Locale)
-	resp, err := c.request(newsFeedEndpoint)
+	resp, err := c.request(newsFeedEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, nil, err
 	}

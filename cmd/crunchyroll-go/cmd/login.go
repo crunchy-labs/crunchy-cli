@@ -12,6 +12,7 @@ var (
 	loginPersistentFlag bool
 
 	loginSessionIDFlag bool
+	loginEtpRtFlag     bool
 )
 
 var loginCmd = &cobra.Command{
@@ -22,6 +23,8 @@ var loginCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if loginSessionIDFlag {
 			return loginSessionID(args[0])
+		} else if loginEtpRtFlag {
+			return loginEtpRt(args[0])
 		} else {
 			return loginCredentials(args[0], args[1])
 		}
@@ -38,6 +41,10 @@ func init() {
 		"session-id",
 		false,
 		"Use a session id to login instead of username and password")
+	loginCmd.Flags().BoolVar(&loginEtpRtFlag,
+		"etp-rt",
+		false,
+		"Use a etp rt cookie to login instead of username and password")
 
 	rootCmd.AddCommand(loginCmd)
 }
@@ -60,7 +67,7 @@ func loginCredentials(user, password string) error {
 			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 		}
 	}
-	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.SessionID), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
 		return err
 	}
 
@@ -73,7 +80,38 @@ func loginCredentials(user, password string) error {
 
 func loginSessionID(sessionID string) error {
 	out.Debug("Logging in via session id")
-	if _, err := crunchyroll.LoginWithSessionID(sessionID, systemLocale(false), client); err != nil {
+	var c *crunchyroll.Crunchyroll
+	var err error
+	if c, err = crunchyroll.LoginWithSessionID(sessionID, systemLocale(false), client); err != nil {
+		out.Err(err.Error())
+		os.Exit(1)
+	}
+
+	if loginPersistentFlag {
+		if configDir, err := os.UserConfigDir(); err != nil {
+			return fmt.Errorf("could not save credentials persistent: %w", err)
+		} else {
+			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(c.EtpRt), 0600); err != nil {
+				return err
+			}
+			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+		}
+	}
+	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
+		return err
+	}
+
+	if !loginPersistentFlag {
+		out.Info("Due to security reasons, you have to login again on the next reboot")
+	}
+
+	return nil
+}
+
+func loginEtpRt(etpRt string) error {
+	out.Debug("Logging in via etp rt")
+	if _, err := crunchyroll.LoginWithEtpRt(etpRt, systemLocale(false), client); err != nil {
 		out.Err(err.Error())
 		os.Exit(1)
 	}
@@ -84,13 +122,13 @@ func loginSessionID(sessionID string) error {
 			return fmt.Errorf("could not save credentials persistent: %w", err)
 		} else {
 			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
-			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(sessionID), 0600); err != nil {
+			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(etpRt), 0600); err != nil {
 				return err
 			}
 			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 		}
 	}
-	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(sessionID), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(etpRt), 0600); err != nil {
 		return err
 	}
 

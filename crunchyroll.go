@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // LOCALE represents a locale / language.
@@ -36,13 +37,16 @@ type Crunchyroll struct {
 	Context context.Context
 	// Locale specifies in which language all results should be returned / requested.
 	Locale LOCALE
-	// SessionID is the crunchyroll session id which was used for authentication.
-	SessionID string
+	// EtpRt is the crunchyroll beta equivalent to a session id (prior SessionID field in
+	// this struct in v2 and below).
+	EtpRt string
 
 	// Config stores parameters which are needed by some api calls.
 	Config struct {
 		TokenType   string
 		AccessToken string
+
+		Bucket string
 
 		CountryCode    string
 		Premium        bool
@@ -59,101 +63,38 @@ type Crunchyroll struct {
 	cache bool
 }
 
-// LoginWithCredentials logs in via crunchyroll username or email and password.
-func LoginWithCredentials(user string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
-	sessionIDEndpoint := fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?version=1.0&access_token=%s&device_type=%s&device_id=%s",
-		"LNDJgOit5yaRIWN", "com.crunchyroll.windows.desktop", "Az2srGnChW65fuxYz2Xxl1GcZQgtGgI")
-	sessResp, err := client.Get(sessionIDEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	defer sessResp.Body.Close()
-
-	if sessResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to start session for credentials login: %s", sessResp.Status)
-	}
-
-	var data map[string]interface{}
-	body, _ := io.ReadAll(sessResp.Body)
-	if err = json.Unmarshal(body, &data); err != nil {
-		return nil, fmt.Errorf("failed to parse start session with credentials response: %w", err)
-	}
-
-	sessionID := data["data"].(map[string]interface{})["session_id"].(string)
-
-	loginEndpoint := "https://api.crunchyroll.com/login.0.json"
-	authValues := url.Values{}
-	authValues.Set("session_id", sessionID)
-	authValues.Set("account", user)
-	authValues.Set("password", password)
-	loginResp, err := client.Post(loginEndpoint, "application/x-www-form-urlencoded", bytes.NewBufferString(authValues.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	defer loginResp.Body.Close()
-
-	if loginResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to auth with credentials: %s", loginResp.Status)
-	} else {
-		var loginRespBody map[string]interface{}
-		json.NewDecoder(loginResp.Body).Decode(&loginRespBody)
-
-		if loginRespBody["error"].(bool) {
-			return nil, fmt.Errorf("an unexpected login error occoured: %s", loginRespBody["message"])
-		}
-	}
-
-	return LoginWithSessionID(sessionID, locale, client)
+type loginResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+	Scope       string `json:"scope"`
+	Country     string `json:"country"`
+	AccountID   string `json:"account_id"`
 }
 
-// LoginWithSessionID logs in via a crunchyroll session id.
-// Session ids are automatically generated as a cookie when visiting https://www.crunchyroll.com.
-func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
-	crunchy := &Crunchyroll{
-		Client:    client,
-		Context:   context.Background(),
-		Locale:    locale,
-		SessionID: sessionID,
-		cache:     true,
-	}
-	var endpoint string
-	var err error
-	var resp *http.Response
-	var jsonBody map[string]interface{}
+// LoginWithCredentials logs in via crunchyroll username or email and password.
+func LoginWithCredentials(user string, password string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+	endpoint := "https://beta-api.crunchyroll.com/auth/v1/token"
+	values := url.Values{}
+	values.Set("username", user)
+	values.Set("password", password)
+	values.Set("grant_type", "password")
 
-	// start session
-	endpoint = fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?session_id=%s",
-		sessionID)
-	resp, err = client.Get(endpoint)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBufferString(values.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := request(req, client)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
-	}
-
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
-	}
-	if isError, ok := jsonBody["error"]; ok && isError.(bool) {
-		return nil, fmt.Errorf("invalid session id (%s): %s", jsonBody["message"].(string), jsonBody["code"])
-	}
-	data := jsonBody["data"].(map[string]interface{})
-
-	crunchy.Config.CountryCode = data["country_code"].(string)
-	user := data["user"]
-	if user == nil {
-		return nil, fmt.Errorf("invalid session id, user is not logged in")
-	}
-	if user.(map[string]interface{})["premium"] == "" {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	} else {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	}
+	var loginResp loginResponse
+	json.NewDecoder(resp.Body).Decode(&loginResp)
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -163,81 +104,163 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 		}
 	}
 
-	// token
-	endpoint = "https://beta-api.crunchyroll.com/auth/v1/token"
+	return postLogin(loginResp, etpRt, locale, client)
+}
+
+// LoginWithSessionID logs in via a crunchyroll session id.
+// Session ids are automatically generated as a cookie when visiting https://www.crunchyroll.com.
+//
+// Deprecated: Login via session id caused some trouble in the past (e.g. #15 or #30) which resulted in
+// login not working. Use LoginWithEtpRt instead. EtpRt practically the crunchyroll beta equivalent to
+// a session id.
+// The method will stay in the library until session id login is removed completely or login with it
+// does not work for a longer period of time.
+func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+	endpoint := fmt.Sprintf("https://api.crunchyroll.com/start_session.0.json?session_id=%s",
+		sessionID)
+	resp, err := client.Get(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]any
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
+	var etpRt string
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "etp_rt" {
+			etpRt = cookie.Value
+			break
+		}
+	}
+
+	return LoginWithEtpRt(etpRt, locale, client)
+}
+
+// LoginWithEtpRt logs in via the crunchyroll etp rt cookie. This cookie is the crunchyroll beta
+// equivalent to the classic session id.
+// The etp_rt cookie is automatically set when visiting https://beta.crunchyroll.com. Note that you
+// need a crunchyroll account to access it.
+func LoginWithEtpRt(etpRt string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+	endpoint := "https://beta-api.crunchyroll.com/auth/v1/token"
 	grantType := url.Values{}
 	grantType.Set("grant_type", "etp_rt_cookie")
 
-	authRequest, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBufferString(grantType.Encode()))
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBufferString(grantType.Encode()))
 	if err != nil {
 		return nil, err
 	}
-	authRequest.Header.Add("Authorization", "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
-	authRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	authRequest.AddCookie(&http.Cookie{
-		Name:  "session_id",
-		Value: sessionID,
-	})
-	authRequest.AddCookie(&http.Cookie{
+	req.Header.Add("Authorization", "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{
 		Name:  "etp_rt",
 		Value: etpRt,
 	})
+	resp, err := request(req, client)
+	if err != nil {
+		return nil, err
+	}
 
-	resp, err = client.Do(authRequest)
+	var loginResp loginResponse
+	json.NewDecoder(resp.Body).Decode(&loginResp)
+
+	return postLogin(loginResp, etpRt, locale, client)
+}
+
+func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *http.Client) (*Crunchyroll, error) {
+	crunchy := &Crunchyroll{
+		Client:  client,
+		Context: context.Background(),
+		Locale:  locale,
+		EtpRt:   etpRt,
+		cache:   true,
+	}
+
+	crunchy.Config.TokenType = loginResp.TokenType
+	crunchy.Config.AccessToken = loginResp.AccessToken
+	crunchy.Config.AccountID = loginResp.AccountID
+	crunchy.Config.CountryCode = loginResp.Country
+
+	var jsonBody map[string]any
+
+	endpoint := "https://beta-api.crunchyroll.com/index/v2"
+	resp, err := crunchy.request(endpoint)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("failed to parse 'token' response: %w", err)
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	cms := jsonBody["cms"].(map[string]any)
+	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
+	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
+		crunchy.Config.Premium = true
+		crunchy.Config.Channel = "crunchyroll"
+	} else {
+		crunchy.Config.Premium = false
+		crunchy.Config.Channel = "-"
 	}
-	crunchy.Config.TokenType = jsonBody["token_type"].(string)
-	crunchy.Config.AccessToken = jsonBody["access_token"].(string)
-
-	// index
-	endpoint = "https://beta-api.crunchyroll.com/index/v2"
-	resp, err = crunchy.request(endpoint)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("failed to parse 'index' response: %w", err)
-	}
-	cms := jsonBody["cms"].(map[string]interface{})
-
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)
 
-	// me
 	endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me"
 	resp, err = crunchy.request(endpoint)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
-	}
-
-	crunchy.Config.AccountID = jsonBody["account_id"].(string)
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
 	crunchy.Config.ExternalID = jsonBody["external_id"].(string)
 
-	//profile
 	endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me/profile"
 	resp, err = crunchy.request(endpoint)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
-	}
-
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
 	crunchy.Config.MaturityRating = jsonBody["maturity_rating"].(string)
 
 	return crunchy, nil
+}
+
+func request(req *http.Request, client *http.Client) (*http.Response, error) {
+	resp, err := client.Do(req)
+	if err == nil {
+		var buf bytes.Buffer
+		io.Copy(&buf, resp.Body)
+		defer resp.Body.Close()
+		defer func() {
+			resp.Body = io.NopCloser(&buf)
+		}()
+
+		if buf.Len() != 0 {
+			var errMap map[string]any
+
+			if err = json.Unmarshal(buf.Bytes(), &errMap); err != nil {
+				return nil, fmt.Errorf("invalid json response: %w", err)
+			}
+
+			if val, ok := errMap["error"]; ok {
+				if errorAsString, ok := val.(string); ok {
+					if code, ok := errMap["code"].(string); ok {
+						return nil, fmt.Errorf("error for endpoint %s (%d): %s - %s", req.URL.String(), resp.StatusCode, errorAsString, code)
+					}
+					return nil, fmt.Errorf("error for endpoint %s (%d): %s", req.URL.String(), resp.StatusCode, errorAsString)
+				} else if errorAsBool, ok := val.(bool); ok && errorAsBool {
+					if msg, ok := errMap["message"].(string); ok {
+						return nil, fmt.Errorf("error for endpoint %s (%d): %s", req.URL.String(), resp.StatusCode, msg)
+					}
+				}
+			}
+		}
+
+		if resp.StatusCode >= 400 {
+			return nil, fmt.Errorf("error for endpoint %s: %s", req.URL.String(), resp.Status)
+		}
+	}
+	return resp, err
 }
 
 // request is a base function which handles api requests.
@@ -248,25 +271,7 @@ func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
 	}
 	req.Header.Add("Authorization", fmt.Sprintf("%s %s", c.Config.TokenType, c.Config.AccessToken))
 
-	resp, err := c.Client.Do(req)
-	if err == nil {
-		defer resp.Body.Close()
-		bodyAsBytes, _ := io.ReadAll(resp.Body)
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, fmt.Errorf("invalid access token")
-		} else {
-			var errStruct struct {
-				Message string `json:"message"`
-			}
-			json.NewDecoder(bytes.NewBuffer(bodyAsBytes)).Decode(&errStruct)
-			if errStruct.Message != "" {
-				return nil, fmt.Errorf(errStruct.Message)
-			}
-		}
-		resp.Body = io.NopCloser(bytes.NewBuffer(bodyAsBytes))
-	}
-	return resp, err
+	return request(req, c.Client)
 }
 
 // IsCaching returns if data gets cached or not.

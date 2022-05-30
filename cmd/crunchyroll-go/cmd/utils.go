@@ -148,7 +148,7 @@ func loadCrunchy() {
 			os.Exit(1)
 		}
 		if crunchy, err = crunchyroll.LoginWithEtpRt(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
-			out.Debug("Failed to login with temp etp rt cookie: %w", err)
+			out.Debug("Failed to login with temp etp rt cookie: %v", err)
 		} else {
 			out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
 

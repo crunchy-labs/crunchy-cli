@@ -30,6 +30,23 @@ const (
 	AR        = "ar-SA"
 )
 
+// MediaType represents a media type.
+type MediaType string
+
+const (
+	SERIES       MediaType = "series"
+	MOVIELISTING           = "movie_listing"
+)
+
+// SortType represents a sort type.
+type SortType string
+
+const (
+	POPULARITY   SortType = "popularity"
+	NEWLYADDED            = "newly_added"
+	ALPHABETICAL          = "alphabetical"
+)
+
 type Crunchyroll struct {
 	// Client is the http.Client to perform all requests over.
 	Client *http.Client
@@ -61,6 +78,30 @@ type Crunchyroll struct {
 
 	// If cache is true, internal caching is enabled.
 	cache bool
+}
+
+// BrowseOptions represents options for browsing the crunchyroll catalog.
+type BrowseOptions struct {
+	// Categories specifies the categories of the entries.
+	Categories []string `param:"categories"`
+
+	// IsDubbed specifies whether the entries should be dubbed.
+	IsDubbed bool `param:"is_dubbed"`
+
+	// IsSubbed specifies whether the entries should be subbed.
+	IsSubbed bool `param:"is_subbed"`
+
+	// Simulcast specifies a particular simulcast season by id in which the entries have been aired.
+	Simulcast string `param:"season_tag"`
+
+	// Sort specifies how the entries should be sorted.
+	Sort SortType `param:"sort_by"`
+
+	// Start specifies the index from which the entries should be returned.
+	Start uint `param:"start"`
+
+	// Type specifies the media type of the entries.
+	Type MediaType `param:"type"`
 }
 
 type loginResponse struct {
@@ -124,8 +165,17 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to start session: %s", resp.Status)
+	}
+
 	var jsonBody map[string]any
-	json.NewDecoder(resp.Body).Decode(&jsonBody)
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
+	}
+	if isError, ok := jsonBody["error"]; ok && isError.(bool) {
+		return nil, fmt.Errorf("invalid session id (%s): %s", jsonBody["message"].(string), jsonBody["code"])
+	}
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -191,6 +241,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	}
 	defer resp.Body.Close()
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
 	cms := jsonBody["cms"].(map[string]any)
 	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
 	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
@@ -200,6 +251,15 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 		crunchy.Config.Premium = false
 		crunchy.Config.Channel = "-"
 	}
+
+	if strings.Contains(cms["bucket"].(string), "crunchyroll") {
+		crunchy.Config.Premium = true
+		crunchy.Config.Channel = "crunchyroll"
+	} else {
+		crunchy.Config.Premium = false
+		crunchy.Config.Channel = "-"
+	}
+
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)
@@ -453,4 +513,328 @@ func ParseBetaEpisodeURL(url string) (episodeId string, ok bool) {
 		ok = true
 	}
 	return
+}
+
+// Browse browses the crunchyroll catalog filtered by the specified options and returns all found series and movies within the given limit.
+func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m []*Movie, err error) {
+	query, err := encodeStructToQueryValues(options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	browseEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/browse?%s&n=%d&locale=%s",
+		query, limit, c.Locale)
+	resp, err := c.request(browseEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'browse' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		switch item.(map[string]interface{})["type"] {
+		case "series":
+			series := &Series{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, series); err != nil {
+				return nil, nil, err
+			}
+			if err := decodeMapToStruct(item.(map[string]interface{})["series_metadata"].(map[string]interface{}), series); err != nil {
+				return nil, nil, err
+			}
+
+			s = append(s, series)
+		case "movie_listing":
+			movie := &Movie{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, movie); err != nil {
+				return nil, nil, err
+			}
+
+			m = append(m, movie)
+		}
+	}
+
+	return s, m, nil
+}
+
+// Categories returns all available categories and possible subcategories.
+func (c *Crunchyroll) Categories(includeSubcategories bool) (ca []*Category, err error) {
+	tenantCategoriesEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/tenant_categories?include_subcategories=%t&locale=%s",
+		includeSubcategories, c.Locale)
+	resp, err := c.request(tenantCategoriesEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'tenant_categories' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		category := &Category{}
+		if err := decodeMapToStruct(item, category); err != nil {
+			return nil, err
+		}
+
+		ca = append(ca, category)
+	}
+
+	return ca, nil
+}
+
+// Simulcasts returns all available simulcast seasons for the current locale.
+func (c *Crunchyroll) Simulcasts() (s []*Simulcast, err error) {
+	seasonListEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/season_list?locale=%s", c.Locale)
+	resp, err := c.request(seasonListEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'season_list' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		simulcast := &Simulcast{}
+		if err := decodeMapToStruct(item, simulcast); err != nil {
+			return nil, err
+		}
+
+		s = append(s, simulcast)
+	}
+
+	return s, nil
+}
+
+// News returns the top and latest news from crunchyroll for the current locale within the given limits.
+func (c *Crunchyroll) News(topLimit uint, latestLimit uint) (t []*News, l []*News, err error) {
+	newsFeedEndpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/news_feed?top_news_n=%d&latest_news_n=%d&locale=%s",
+		topLimit, latestLimit, c.Locale)
+	resp, err := c.request(newsFeedEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'news_feed' response: %w", err)
+	}
+
+	topNews := jsonBody["top_news"].(map[string]interface{})
+	for _, item := range topNews["items"].([]interface{}) {
+		topNews := &News{}
+		if err := decodeMapToStruct(item, topNews); err != nil {
+			return nil, nil, err
+		}
+
+		t = append(t, topNews)
+	}
+
+	latestNews := jsonBody["latest_news"].(map[string]interface{})
+	for _, item := range latestNews["items"].([]interface{}) {
+		latestNews := &News{}
+		if err := decodeMapToStruct(item, latestNews); err != nil {
+			return nil, nil, err
+		}
+
+		l = append(l, latestNews)
+	}
+
+	return t, l, nil
+}
+
+// Recommendations returns series and movie recommendations from crunchyroll based on the currently logged in account within the given limit.
+func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err error) {
+	recommendationsEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/recommendations?n=%d&locale=%s",
+		c.Config.AccountID, limit, c.Locale)
+	resp, err := c.request(recommendationsEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'recommendations' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		switch item.(map[string]interface{})["type"] {
+		case "series":
+			series := &Series{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, series); err != nil {
+				return nil, nil, err
+			}
+			if err := decodeMapToStruct(item.(map[string]interface{})["series_metadata"].(map[string]interface{}), series); err != nil {
+				return nil, nil, err
+			}
+
+			s = append(s, series)
+		case "movie_listing":
+			movie := &Movie{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, movie); err != nil {
+				return nil, nil, err
+			}
+
+			m = append(m, movie)
+		}
+	}
+
+	return s, m, nil
+}
+
+// UpNext returns the episodes that are up next based on the currently logged in account within the given limit.
+func (c *Crunchyroll) UpNext(limit uint) (e []*Episode, err error) {
+	upNextAccountEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/up_next_account?n=%d&locale=%s",
+		c.Config.AccountID, limit, c.Locale)
+	resp, err := c.request(upNextAccountEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'up_next_account' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		panel := item.(map[string]interface{})["panel"]
+
+		episode := &Episode{
+			crunchy: c,
+		}
+		if err := decodeMapToStruct(panel, episode); err != nil {
+			return nil, err
+		}
+
+		e = append(e, episode)
+	}
+
+	return e, nil
+}
+
+// SimilarTo returns similar series and movies according to crunchyroll to the one specified by id within the given limit.
+func (c *Crunchyroll) SimilarTo(id string, limit uint) (s []*Series, m []*Movie, err error) {
+	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
+		c.Config.AccountID, id, limit, c.Locale)
+	resp, err := c.request(similarToEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'similar_to' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		switch item.(map[string]interface{})["type"] {
+		case "series":
+			series := &Series{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, series); err != nil {
+				return nil, nil, err
+			}
+			if err := decodeMapToStruct(item.(map[string]interface{})["series_metadata"].(map[string]interface{}), series); err != nil {
+				return nil, nil, err
+			}
+
+			s = append(s, series)
+		case "movie_listing":
+			movie := &Movie{
+				crunchy: c,
+			}
+			if err := decodeMapToStruct(item, movie); err != nil {
+				return nil, nil, err
+			}
+
+			m = append(m, movie)
+		}
+	}
+
+	return s, m, nil
+}
+
+// WatchHistory returns the history of watched episodes based on the currently logged in account from the given page with the given size.
+func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, err error) {
+	watchHistoryEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/watch-history/%s?page=%d&page_size=%d&locale=%s",
+		c.Config.AccountID, page, size, c.Locale)
+	resp, err := c.request(watchHistoryEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, fmt.Errorf("failed to parse 'watch-history' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		panel := item.(map[string]interface{})["panel"]
+
+		episode := &Episode{
+			crunchy: c,
+		}
+		if err := decodeMapToStruct(panel, episode); err != nil {
+			return nil, err
+		}
+
+		historyEpisode := &HistoryEpisode{
+			Episode: episode,
+		}
+		if err := decodeMapToStruct(item, historyEpisode); err != nil {
+			return nil, err
+		}
+
+		e = append(e, historyEpisode)
+	}
+
+	return e, nil
+}
+
+// Account returns information about the currently logged in crunchyroll account.
+func (c *Crunchyroll) Account() (*Account, error) {
+	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me", http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	account := &Account{}
+
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
+		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
+	}
+
+	resp, err = c.request("https://beta.crunchyroll.com/accounts/v1/me/profile", http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
+		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
+	}
+
+	return account, nil
 }

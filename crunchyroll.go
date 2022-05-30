@@ -185,7 +185,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	var jsonBody map[string]any
 
 	endpoint := "https://beta-api.crunchyroll.com/index/v2"
-	resp, err := crunchy.request(endpoint)
+	resp, err := crunchy.request(endpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)
 
 	endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me"
-	resp, err = crunchy.request(endpoint)
+	resp, err = crunchy.request(endpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	crunchy.Config.ExternalID = jsonBody["external_id"].(string)
 
 	endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me/profile"
-	resp, err = crunchy.request(endpoint)
+	resp, err = crunchy.request(endpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +264,8 @@ func request(req *http.Request, client *http.Client) (*http.Response, error) {
 }
 
 // request is a base function which handles api requests.
-func (c *Crunchyroll) request(endpoint string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+func (c *Crunchyroll) request(endpoint string, method string) (*http.Response, error) {
+	req, err := http.NewRequest(method, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (c *Crunchyroll) SetCaching(caching bool) {
 func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie, err error) {
 	searchEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/search?q=%s&n=%d&type=&locale=%s",
 		query, limit, c.Locale)
-	resp, err := c.request(searchEndpoint)
+	resp, err := c.request(searchEndpoint, http.MethodGet)
 	if err != nil {
 		return nil, nil, err
 	}

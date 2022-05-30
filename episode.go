@@ -3,6 +3,7 @@ package crunchyroll
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -85,7 +86,7 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 		crunchy.Locale,
 		crunchy.Config.Signature,
 		crunchy.Config.Policy,
-		crunchy.Config.KeyPairID))
+		crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

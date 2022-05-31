@@ -43,7 +43,7 @@ func init() {
 	loginCmd.Flags().BoolVar(&loginEncryptFlag,
 		"encrypt",
 		false,
-		"Encrypt the given credentials (won't do anything if --session-id is given)")
+		"Encrypt the given credentials (won't do anything if --session-id is given or --persistent is not given)")
 
 	loginCmd.Flags().BoolVar(&loginSessionIDFlag,
 		"session-id",

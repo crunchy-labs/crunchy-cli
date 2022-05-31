@@ -124,7 +124,8 @@ func loginCredentials(user, password string) error {
 				return err
 			}
 			if !loginEncryptFlag {
-				out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+				out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s). "+
+					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 			}
 		}
 	}

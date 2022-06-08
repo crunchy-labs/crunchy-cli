@@ -67,10 +67,6 @@ func loginCredentials(user, password string) error {
 		return err
 	}
 
-	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.SessionID), 0600); err != nil {
-		return err
-	}
-
 	if loginPersistentFlag {
 		if configDir, err := os.UserConfigDir(); err != nil {
 			return fmt.Errorf("could not save credentials persistent: %w", err)
@@ -135,7 +131,8 @@ func loginCredentials(user, password string) error {
 					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 			}
 		}
-		
+	}
+
 	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
 		return err
 	}

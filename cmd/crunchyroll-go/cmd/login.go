@@ -135,13 +135,10 @@ func loginCredentials(user, password string) error {
 					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
 			}
 		}
-	}
-<<<<<<< v3/feature/encrypted-credentials
-=======
+		
 	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
 		return err
 	}
->>>>>>> next/v3
 
 	if !loginPersistentFlag {
 		out.Info("Due to security reasons, you have to login again on the next reboot")

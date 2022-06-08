@@ -170,7 +170,6 @@ func loadCrunchy() {
 			}
 			split := strings.SplitN(string(body), "\n", 2)
 			if len(split) == 1 || split[1] == "" {
-<<<<<<< v3/feature/encrypted-credentials
 				if strings.HasPrefix(split[0], "aes:") {
 					encrypted := body[4:]
 
@@ -214,7 +213,6 @@ func loadCrunchy() {
 			}
 
 			if len(split) == 2 {
-=======
 				split[0] = url.QueryEscape(split[0])
 				if crunchy, err = crunchyroll.LoginWithEtpRt(split[0], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
@@ -222,7 +220,6 @@ func loadCrunchy() {
 				}
 				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 			} else {
->>>>>>> next/v3
 				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
 					os.Exit(1)

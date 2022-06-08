@@ -3,6 +3,7 @@ package crunchyroll
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 type video struct {
@@ -77,7 +78,7 @@ func MovieFromID(crunchy *Crunchyroll, id string) (*Movie, error) {
 		crunchy.Locale,
 		crunchy.Config.Signature,
 		crunchy.Config.Policy,
-		crunchy.Config.KeyPairID))
+		crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (m *Movie) MovieListing() (movieListings []*MovieListing, err error) {
 		m.crunchy.Locale,
 		m.crunchy.Config.Signature,
 		m.crunchy.Config.Policy,
-		m.crunchy.Config.KeyPairID))
+		m.crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +174,7 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 		crunchy.Locale,
 		crunchy.Config.Signature,
 		crunchy.Config.Policy,
-		crunchy.Config.KeyPairID))
+		crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +207,7 @@ func (s *Series) Seasons() (seasons []*Season, err error) {
 		s.crunchy.Locale,
 		s.crunchy.Config.Signature,
 		s.crunchy.Config.Policy,
-		s.crunchy.Config.KeyPairID))
+		s.crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

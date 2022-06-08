@@ -1,5 +1,3 @@
-<p align="center"><strong>Version 2 is out 🥳, see all the <a href="https://github.com/ByteDream/crunchyroll-go/releases/tag/v2.0.0">changes</a></strong>.</p>
-
 # crunchyroll-go
 
 A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](https://www.crunchyroll.com) api. To use it, you need a crunchyroll premium account to for full (api) access.
@@ -205,10 +203,10 @@ These flags you can use across every sub-command:
 Download the library via `go get`
 
 ```shell
-$ go get github.com/ByteDream/crunchyroll-go/v2
+$ go get github.com/ByteDream/crunchyroll-go/v3
 ```
 
-The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go/v2).
+The documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/ByteDream/crunchyroll-go/v3).
 
 Examples how to use the library and some features of it are described in the [wiki](https://github.com/ByteDream/crunchyroll-go/wiki/Library).
 

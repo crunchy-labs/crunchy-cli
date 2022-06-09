@@ -150,7 +150,7 @@ func loadCrunchy() {
 			out.StopProgress("Failed to read login information: %v", err)
 			os.Exit(1)
 		}
-		if crunchy, err = crunchyroll.LoginWithEtpRt(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
+		if crunchy, err = crunchyroll.LoginWithEtpRt(string(body), systemLocale(true), client); err != nil {
 			out.Debug("Failed to login with temp etp rt cookie: %v", err)
 		} else {
 			out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
@@ -202,33 +202,26 @@ func loadCrunchy() {
 						os.Exit(1)
 					}
 					split = strings.SplitN(string(b), "\n", 2)
-				} else {
-					split[0] = url.QueryEscape(split[0])
-					if crunchy, err = crunchyroll.LoginWithSessionID(split[0], systemLocale(true), client); err != nil {
-						out.StopProgress(err.Error())
-						os.Exit(1)
-					}
-					out.Debug("Logged in with session id %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 				}
 			}
 
 			if len(split) == 2 {
-				split[0] = url.QueryEscape(split[0])
+				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
+					out.StopProgress(err.Error())
+					os.Exit(1)
+				}
+				out.Debug("Logged in with credentials")
+			} else {
 				if crunchy, err = crunchyroll.LoginWithEtpRt(split[0], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
 					os.Exit(1)
 				}
 				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
-			} else {
-				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
-					out.StopProgress(err.Error())
-					os.Exit(1)
-				}
-				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.EtpRt)
-				// the etp rt is written to a temp file to reduce the amount of re-logging in.
-				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
-				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
 			}
+
+			// the etp rt is written to a temp file to reduce the amount of re-logging in.
+			// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
+			os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
 
 			out.StopProgress("Logged in")
 			return

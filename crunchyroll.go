@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -110,6 +111,9 @@ type loginResponse struct {
 	Scope       string `json:"scope"`
 	Country     string `json:"country"`
 	AccountID   string `json:"account_id"`
+
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
 }
 
 // LoginWithCredentials logs in via crunchyroll username or email and password.
@@ -133,16 +137,13 @@ func LoginWithCredentials(user string, password string, locale LOCALE, client *h
 	}
 	defer resp.Body.Close()
 
-	if loginResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to auth with credentials: %s", loginResp.Status)
-	} else {
-		var loginRespBody map[string]interface{}
-		json.NewDecoder(loginResp.Body).Decode(&loginRespBody)
-
-		if loginRespBody["error"].(bool) {
-			return nil, fmt.Errorf("an unexpected login error occoured: %s", loginRespBody["message"])
-    }
-  }
+	var loginResp loginResponse
+	json.NewDecoder(resp.Body).Decode(&loginResp)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to auth with credentials: %s", resp.Status)
+	} else if loginResp.Error {
+		return nil, fmt.Errorf("an unexpected login error occoured: %s", loginResp.Message)
+	}
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -180,18 +181,16 @@ func LoginWithSessionID(sessionID string, locale LOCALE, client *http.Client) (*
 	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
 		return nil, fmt.Errorf("failed to parse start session with session id response: %w", err)
 	}
-  
+
 	if isError, ok := jsonBody["error"]; ok && isError.(bool) {
 		return nil, fmt.Errorf("invalid session id (%s): %s", jsonBody["message"].(string), jsonBody["code"])
 	}
 	data := jsonBody["data"].(map[string]interface{})
 
-	crunchy.Config.CountryCode = data["country_code"].(string)
 	user := data["user"]
 	if user == nil {
 		return nil, errors.New("invalid session id, user is not logged in")
 	}
-	crunchy.Config.Premium = user.(map[string]interface{})["premium"] != ""
 
 	var etpRt string
 	for _, cookie := range resp.Cookies() {
@@ -260,21 +259,7 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 
 	cms := jsonBody["cms"].(map[string]any)
 	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
-	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	} else {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	}
-
-	if strings.Contains(cms["bucket"].(string), "crunchyroll") {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	} else {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	}
+	crunchy.Config.Premium = strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll")
 
 	// / is trimmed so that urls which require it must be in .../{bucket}/... like format.
 	// this just looks cleaner

@@ -84,7 +84,7 @@ func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream,
 		if !crunchy.Config.Premium {
 			return nil, fmt.Errorf("no stream available, this might be the result of using a non-premium account")
 		} else {
-			return nil, errors.New("no stream available")
+			return nil, fmt.Errorf("no stream available")
 		}
 	}
 

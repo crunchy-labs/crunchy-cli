@@ -132,8 +132,10 @@ func download(urls []string) error {
 		episodes, err := downloadExtractEpisodes(url)
 		if err != nil {
 			out.StopProgress("Failed to parse url %d", i+1)
-			out.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-				"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information")
+			if crunchy.Config.Premium {
+				out.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
+					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information")
+			}
 			return err
 		}
 		out.StopProgress("Parsed url %d", i+1)

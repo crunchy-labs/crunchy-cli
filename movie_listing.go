@@ -3,6 +3,7 @@ package crunchyroll
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 // MovieListing contains information about something which is called
@@ -46,7 +47,7 @@ func MovieListingFromID(crunchy *Crunchyroll, id string) (*MovieListing, error) 
 		crunchy.Locale,
 		crunchy.Config.Signature,
 		crunchy.Config.Policy,
-		crunchy.Config.KeyPairID))
+		crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func (ml *MovieListing) AudioLocale() (LOCALE, error) {
 		ml.crunchy.Locale,
 		ml.crunchy.Config.Signature,
 		ml.crunchy.Config.Policy,
-		ml.crunchy.Config.KeyPairID))
+		ml.crunchy.Config.KeyPairID), http.MethodGet)
 	if err != nil {
 		return "", err
 	}

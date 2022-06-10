@@ -2,9 +2,9 @@ package crunchyroll
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/grafov/m3u8"
+	"net/http"
 	"regexp"
 )
 
@@ -71,7 +71,7 @@ func (s *Stream) Formats() ([]*Format, error) {
 
 // fromVideoStreams returns all streams which are accessible via the endpoint.
 func fromVideoStreams(crunchy *Crunchyroll, endpoint string) (streams []*Stream, err error) {
-	resp, err := crunchy.request(endpoint)
+	resp, err := crunchy.request(endpoint, http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

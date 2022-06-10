@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ByteDream/crunchyroll-go/v2/cmd/crunchyroll-go/cmd"
+	"github.com/ByteDream/crunchyroll-go/v3/cmd/crunchyroll-go/cmd"
 )
 
 func main() {

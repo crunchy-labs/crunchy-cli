@@ -3,10 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v2"
-	"github.com/ByteDream/crunchyroll-go/v2/utils"
+	"github.com/ByteDream/crunchyroll-go/v3"
+	"github.com/ByteDream/crunchyroll-go/v3/utils"
 	"github.com/grafov/m3u8"
 	"github.com/spf13/cobra"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -53,9 +54,12 @@ var downloadCmd = &cobra.Command{
 		out.Debug("Locales: audio: %s / subtitle: %s", downloadAudioFlag, downloadSubtitleFlag)
 
 		switch downloadResolutionFlag {
-		case "1080p", "720p", "480p", "360p", "240p":
+		case "1080p", "720p", "480p", "360p":
 			intRes, _ := strconv.ParseFloat(strings.TrimSuffix(downloadResolutionFlag, "p"), 84)
-			downloadResolutionFlag = fmt.Sprintf("%dx%s", int(intRes*(16/9)), strings.TrimSuffix(downloadResolutionFlag, "p"))
+			downloadResolutionFlag = fmt.Sprintf("%.0fx%s", math.Ceil(intRes*(float64(16)/float64(9))), strings.TrimSuffix(downloadResolutionFlag, "p"))
+		case "240p":
+			// 240p would round up to 427x240 if used in the case statement above, so it has to be handled separately
+			downloadResolutionFlag = "428x240"
 		case "1920x1080", "1280x720", "640x480", "480x360", "428x240", "best", "worst":
 		default:
 			return fmt.Errorf("'%s' is not a valid resolution", downloadResolutionFlag)

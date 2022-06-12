@@ -36,6 +36,8 @@ A [Go](https://golang.org) library & cli for the undocumented [crunchyroll](http
   <a href="#-license">License ⚖</a>
 </p>
 
+_There is currently a [poll](https://github.com/ByteDream/crunchyroll-go/issues/39) going on how to name the CLI in the next version. Please have a moment and participate to it._
+
 # 🖥️ CLI
 
 ## ✨ Features

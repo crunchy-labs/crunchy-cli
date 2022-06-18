@@ -314,25 +314,25 @@ func request(req *http.Request, client *http.Client) (*http.Response, error) {
 			var errMap map[string]any
 
 			if err = json.Unmarshal(buf.Bytes(), &errMap); err != nil {
-				return nil, fmt.Errorf("invalid json response: %w", err)
+				return nil, &RequestError{Response: resp, Message: fmt.Sprintf("invalid json response: %w", err)}
 			}
 
 			if val, ok := errMap["error"]; ok {
 				if errorAsString, ok := val.(string); ok {
 					if code, ok := errMap["code"].(string); ok {
-						return nil, fmt.Errorf("error for endpoint %s (%d): %s - %s", req.URL.String(), resp.StatusCode, errorAsString, code)
+						return nil, &RequestError{Response: resp, Message: fmt.Sprintf("%s - %s", errorAsString, code)}
 					}
-					return nil, fmt.Errorf("error for endpoint %s (%d): %s", req.URL.String(), resp.StatusCode, errorAsString)
+					return nil, &RequestError{Response: resp, Message: errorAsString}
 				} else if errorAsBool, ok := val.(bool); ok && errorAsBool {
 					if msg, ok := errMap["message"].(string); ok {
-						return nil, fmt.Errorf("error for endpoint %s (%d): %s", req.URL.String(), resp.StatusCode, msg)
+						return nil, &RequestError{Response: resp, Message: msg}
 					}
 				}
 			}
 		}
 
 		if resp.StatusCode >= 400 {
-			return nil, fmt.Errorf("error for endpoint %s: %s", req.URL.String(), resp.Status)
+			return nil, &RequestError{Response: resp, Message: resp.Status}
 		}
 	}
 	return resp, err

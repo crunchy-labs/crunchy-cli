@@ -184,10 +184,10 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 }
 
 // AddToWatchlist adds the current episode to the watchlist.
-// There is currently a bug, or as I like to say in context of the crunchyroll api, feature,
-// that only series and not individual episode can be added to the watchlist. Even though
-// I somehow got an episode to my watchlist on the crunchyroll website, it never worked with the
-// api here. So this function actually adds the whole series to the watchlist.
+// Will return an RequestError with the response status code of 409 if the series was already on the watchlist before.
+// There is currently a bug, or as I like to say in context of the crunchyroll api, feature, that only series and not
+// individual episode can be added to the watchlist. Even though I somehow got an episode to my watchlist on the
+// crunchyroll website, it never worked with the api here. So this function actually adds the whole series to the watchlist.
 func (e *Episode) AddToWatchlist() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", e.crunchy.Config.AccountID, e.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"content_id": e.SeriesID})
@@ -201,6 +201,7 @@ func (e *Episode) AddToWatchlist() error {
 }
 
 // RemoveFromWatchlist removes the current episode from the watchlist.
+// Will return an RequestError with the response status code of 404 if the series was not on the watchlist before.
 func (e *Episode) RemoveFromWatchlist() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", e.crunchy.Config.AccountID, e.SeriesID, e.crunchy.Locale)
 	_, err := e.crunchy.request(endpoint, http.MethodDelete)

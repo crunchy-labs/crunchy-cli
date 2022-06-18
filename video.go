@@ -195,6 +195,7 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 }
 
 // AddToWatchlist adds the current episode to the watchlist.
+// Will return an RequestError with the response status code of 409 if the series was already on the watchlist before.
 func (s *Series) AddToWatchlist() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", s.crunchy.Config.AccountID, s.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"content_id": s.ID})
@@ -208,6 +209,7 @@ func (s *Series) AddToWatchlist() error {
 }
 
 // RemoveFromWatchlist removes the current episode from the watchlist.
+// Will return an RequestError with the response status code of 404 if the series was not on the watchlist before.
 func (s *Series) RemoveFromWatchlist() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", s.crunchy.Config.AccountID, s.ID, s.crunchy.Locale)
 	_, err := s.crunchy.request(endpoint, http.MethodDelete)

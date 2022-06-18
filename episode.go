@@ -100,18 +100,6 @@ const (
 	WATCHLISTENTRYSERIES  = "series"
 )
 
-// WatchlistEntry contains information about an entry on the watchlist.
-type WatchlistEntry struct {
-	Panel Panel `json:"panel"`
-
-	New            bool `json:"new"`
-	NewContent     bool `json:"new_content"`
-	IsFavorite     bool `json:"is_favorite"`
-	NeverWatched   bool `json:"never_watched"`
-	CompleteStatus bool `json:"complete_status"`
-	Playahead      uint `json:"playahead"`
-}
-
 // EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",

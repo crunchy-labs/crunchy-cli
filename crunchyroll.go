@@ -893,6 +893,25 @@ func (c *Crunchyroll) Watchlist(options WatchlistOptions, limit uint) ([]*Watchl
 	return watchlistEntries, nil
 }
 
+func (c *Crunchyroll) CrunchyLists() (*CrunchyLists, error) {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", c.Config.AccountID, c.Locale)
+	resp, err := c.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	crunchyLists := &CrunchyLists{
+		crunchy: c,
+	}
+	json.NewDecoder(resp.Body).Decode(crunchyLists)
+	for _, item := range crunchyLists.Items {
+		item.crunchy = c
+	}
+
+	return crunchyLists, nil
+}
+
 // Account returns information about the currently logged in crunchyroll account.
 func (c *Crunchyroll) Account() (*Account, error) {
 	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me", http.MethodGet)

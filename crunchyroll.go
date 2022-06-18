@@ -38,13 +38,28 @@ const (
 	MOVIELISTING           = "movie_listing"
 )
 
-// SortType represents a sort type.
-type SortType string
+// BrowseSortType represents a sort type to sort Crunchyroll.Browse items after.
+type BrowseSortType string
 
 const (
-	POPULARITY   SortType = "popularity"
-	NEWLYADDED            = "newly_added"
-	ALPHABETICAL          = "alphabetical"
+	BROWSESORTPOPULARITY   BrowseSortType = "popularity"
+	BROWSESORTNEWLYADDED                  = "newly_added"
+	BROWSESORTALPHABETICAL                = "alphabetical"
+)
+
+// WatchlistLanguageType represents a filter type to filter Crunchyroll.WatchList entries after.
+type WatchlistLanguageType int
+
+const (
+	WATCHLISTLANGUAGESUBBED WatchlistLanguageType = iota + 1
+	WATCHLISTLANGUAGEDUBBED
+)
+
+type WatchlistContentType string
+
+const (
+	WATCHLISTCONTENTSERIES WatchlistContentType = "series"
+	WATCHLISTCONTENTMOVIES                      = "movie_listing"
 )
 
 type Crunchyroll struct {
@@ -95,7 +110,7 @@ type BrowseOptions struct {
 	Simulcast string `param:"season_tag"`
 
 	// Sort specifies how the entries should be sorted.
-	Sort SortType `param:"sort_by"`
+	Sort BrowseSortType `param:"sort_by"`
 
 	// Start specifies the index from which the entries should be returned.
 	Start uint `param:"start"`
@@ -329,6 +344,10 @@ func (c *Crunchyroll) request(endpoint string, method string) (*http.Response, e
 	if err != nil {
 		return nil, err
 	}
+	return c.requestFull(req)
+}
+
+func (c *Crunchyroll) requestFull(req *http.Request) (*http.Response, error) {
 	req.Header.Add("Authorization", fmt.Sprintf("%s %s", c.Config.TokenType, c.Config.AccessToken))
 
 	return request(req, c.Client)
@@ -810,6 +829,68 @@ func (c *Crunchyroll) WatchHistory(page uint, size uint) (e []*HistoryEpisode, e
 	}
 
 	return e, nil
+}
+
+type WatchlistOptions struct {
+	// OrderAsc specified whether the results should be order ascending or descending.
+	OrderAsc bool
+
+	// OnlyFavorites specifies whether only episodes which are marked as favorite should be returned.
+	OnlyFavorites bool
+
+	// LanguageType specifies whether returning episodes should be only subbed or dubbed.
+	LanguageType WatchlistLanguageType
+
+	// ContentType specified whether returning videos should only be series episodes or movies.
+	// But tbh all movies I've searched on crunchy were flagged as series too, so this
+	// parameter is kinda useless.
+	ContentType WatchlistContentType
+}
+
+func (c *Crunchyroll) Watchlist(options WatchlistOptions, limit uint) ([]*WatchlistEntry, error) {
+	values := url.Values{}
+	if options.OrderAsc {
+		values.Set("order", "asc")
+	} else {
+		values.Set("order", "desc")
+	}
+	if options.OnlyFavorites {
+		values.Set("only_favorites", "true")
+	}
+	switch options.LanguageType {
+	case WATCHLISTLANGUAGESUBBED:
+		values.Set("is_subbed", "true")
+	case WATCHLISTLANGUAGEDUBBED:
+		values.Set("is_dubbed", "true")
+	}
+	values.Set("n", strconv.Itoa(int(limit)))
+	values.Set("locale", string(c.Locale))
+
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/%s/watchlist?%s", c.Config.AccountID, values.Encode())
+	resp, err := c.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
+	var watchlistEntries []*WatchlistEntry
+	if err := decodeMapToStruct(jsonBody["items"], &watchlistEntries); err != nil {
+		return nil, err
+	}
+
+	for _, entry := range watchlistEntries {
+		switch entry.Panel.Type {
+		case WATCHLISTENTRYEPISODE:
+			entry.Panel.EpisodeMetadata.crunchy = c
+		case WATCHLISTENTRYSERIES:
+			entry.Panel.SeriesMetadata.crunchy = c
+		}
+	}
+
+	return watchlistEntries, nil
 }
 
 // Account returns information about the currently logged in crunchyroll account.

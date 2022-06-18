@@ -1,6 +1,7 @@
 package crunchyroll
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -191,6 +192,26 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 	}
 
 	return series, nil
+}
+
+// AddToWatchlist adds the current episode to the watchlist.
+func (s *Series) AddToWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", s.crunchy.Config.AccountID, s.crunchy.Locale)
+	body, _ := json.Marshal(map[string]string{"content_id": s.ID})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	_, err = s.crunchy.requestFull(req)
+	return err
+}
+
+// RemoveFromWatchlist removes the current episode from the watchlist.
+func (s *Series) RemoveFromWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", s.crunchy.Config.AccountID, s.ID, s.crunchy.Locale)
+	_, err := s.crunchy.request(endpoint, http.MethodDelete)
+	return err
 }
 
 // Seasons returns all seasons of a series.

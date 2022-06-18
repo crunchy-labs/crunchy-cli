@@ -1,6 +1,7 @@
 package crunchyroll
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,11 +40,14 @@ type Episode struct {
 	NextEpisodeID    string `json:"next_episode_id"`
 	NextEpisodeTitle string `json:"next_episode_title"`
 
-	HDFlag        bool `json:"hd_flag"`
-	IsMature      bool `json:"is_mature"`
-	MatureBlocked bool `json:"mature_blocked"`
+	HDFlag          bool     `json:"hd_flag"`
+	MaturityRatings []string `json:"maturity_ratings"`
+	IsMature        bool     `json:"is_mature"`
+	MatureBlocked   bool     `json:"mature_blocked"`
 
-	EpisodeAirDate time.Time `json:"episode_air_date"`
+	EpisodeAirDate       time.Time `json:"episode_air_date"`
+	FreeAvailableDate    time.Time `json:"free_available_date"`
+	PremiumAvailableDate time.Time `json:"premium_available_date"`
 
 	IsSubbed       bool     `json:"is_subbed"`
 	IsDubbed       bool     `json:"is_dubbed"`
@@ -52,8 +56,9 @@ type Episode struct {
 	SeoDescription string   `json:"seo_description"`
 	SeasonTags     []string `json:"season_tags"`
 
-	AvailableOffline bool   `json:"available_offline"`
-	Slug             string `json:"slug"`
+	AvailableOffline bool      `json:"available_offline"`
+	MediaType        MediaType `json:"media_type"`
+	Slug             string    `json:"slug"`
 
 	Images struct {
 		Thumbnail [][]struct {
@@ -85,6 +90,62 @@ type HistoryEpisode struct {
 	ParentType   MediaType `json:"parent_type"`
 	Playhead     uint      `json:"playhead"`
 	FullyWatched bool      `json:"fully_watched"`
+}
+
+// WatchlistEntryType specifies which type a watchlist entry has.
+type WatchlistEntryType string
+
+const (
+	WATCHLISTENTRYEPISODE = "episode"
+	WATCHLISTENTRYSERIES  = "series"
+)
+
+// WatchlistEntry contains information about an entry on the watchlist.
+type WatchlistEntry struct {
+	Panel struct {
+		Title            string `json:"title"`
+		PromoTitle       string `json:"promo_title"`
+		Slug             string `json:"slug"`
+		Playback         string `json:"playback"`
+		PromoDescription string `json:"promo_description"`
+		Images           struct {
+			Thumbnail [][]struct {
+				Height int    `json:"height"`
+				Source string `json:"source"`
+				Type   string `json:"type"`
+				Width  int    `json:"width"`
+			} `json:"thumbnail"`
+			PosterTall [][]struct {
+				Width  int    `json:"width"`
+				Height int    `json:"height"`
+				Type   string `json:"type"`
+				Source string `json:"source"`
+			} `json:"poster_tall"`
+			PosterWide [][]struct {
+				Width  int    `json:"width"`
+				Height int    `json:"height"`
+				Type   string `json:"type"`
+				Source string `json:"source"`
+			} `json:"poster_wide"`
+		} `json:"images"`
+		ID          string             `json:"id"`
+		Description string             `json:"description"`
+		ChannelID   string             `json:"channel_id"`
+		Type        WatchlistEntryType `json:"type"`
+		ExternalID  string             `json:"external_id"`
+		SlugTitle   string             `json:"slug_title"`
+		// not null if Type is WATCHLISTENTRYEPISODE
+		EpisodeMetadata *Episode `json:"episode_metadata"`
+		// not null if Type is WATCHLISTENTRYSERIES
+		SeriesMetadata *Series `json:"series_metadata"`
+	}
+
+	New            bool `json:"new"`
+	NewContent     bool `json:"new_content"`
+	IsFavorite     bool `json:"is_favorite"`
+	NeverWatched   bool `json:"never_watched"`
+	CompleteStatus bool `json:"complete_status"`
+	Playahead      uint `json:"playahead"`
 }
 
 // EpisodeFromID returns an episode by its api id.
@@ -120,6 +181,30 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 	}
 
 	return episode, nil
+}
+
+// AddToWatchlist adds the current episode to the watchlist.
+// There is currently a bug, or as I like to say in context of the crunchyroll api, feature,
+// that only series and not individual episode can be added to the watchlist. Even though
+// I somehow got an episode to my watchlist on the crunchyroll website, it never worked with the
+// api here. So this function actually adds the whole series to the watchlist.
+func (e *Episode) AddToWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", e.crunchy.Config.AccountID, e.crunchy.Locale)
+	body, _ := json.Marshal(map[string]string{"content_id": e.SeriesID})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	_, err = e.crunchy.requestFull(req)
+	return err
+}
+
+// RemoveFromWatchlist removes the current episode from the watchlist.
+func (e *Episode) RemoveFromWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", e.crunchy.Config.AccountID, e.SeriesID, e.crunchy.Locale)
+	_, err := e.crunchy.request(endpoint, http.MethodDelete)
+	return err
 }
 
 // AudioLocale returns the audio locale of the episode.

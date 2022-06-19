@@ -167,6 +167,86 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 	return streams[0].AudioLocale, nil
 }
 
+// Comment creates a new comment under the episode.
+func (e *Episode) Comment(message string, spoiler bool) (*Comment, error) {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments?locale=%s", e.ID, e.crunchy.Locale)
+	var flags []string
+	if spoiler {
+		flags = append(flags, "spoiler")
+	}
+	body, _ := json.Marshal(map[string]any{"locale": string(e.crunchy.Locale), "flags": flags, "message": message})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := e.crunchy.requestFull(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	c := &Comment{
+		crunchy:   e.crunchy,
+		EpisodeID: e.ID,
+	}
+	if err = json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// CommentsOrderType represents a sort type to sort Episode.Comments after.
+type CommentsOrderType string
+
+const (
+	CommentsOrderAsc  CommentsOrderType = "asc"
+	CommentsOrderDesc                   = "desc"
+)
+
+type CommentsSortType string
+
+const (
+	CommentsSortPopular CommentsSortType = "popular"
+	CommentsSortDate                     = "date"
+)
+
+type CommentsOptions struct {
+	// Order specified the order how the comments should be returned.
+	Order CommentsOrderType `json:"order"`
+
+	// Sort specified after which key the comments should be sorted.
+	Sort CommentsSortType `json:"sort"`
+}
+
+// Comments returns comments under the given episode.
+func (e *Episode) Comments(options CommentsOptions, page uint, size uint) (c []*Comment, err error) {
+	options, err = structDefaults(CommentsOptions{Order: CommentsOrderDesc, Sort: CommentsSortPopular}, options)
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments?page=%d&page_size=%d&order=%s&sort=%s&locale=%s", e.ID, page, size, options.Order, options.Sort, e.crunchy.Locale)
+	resp, err := e.crunchy.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]any
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
+	if err = decodeMapToStruct(jsonBody["items"].([]any), &c); err != nil {
+		return nil, err
+	}
+	for _, comment := range c {
+		comment.crunchy = e.crunchy
+		comment.EpisodeID = e.ID
+	}
+
+	return
+}
+
 // GetFormat returns the format which matches the given resolution and subtitle locale.
 func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*Format, error) {
 	streams, err := e.Streams()

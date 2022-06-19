@@ -331,7 +331,11 @@ func request(req *http.Request, client *http.Client) (*http.Response, error) {
 			} else if _, ok := errMap["code"]; ok {
 				if errContext, ok := errMap["context"]; ok {
 					errField := errContext.([]any)[0].(map[string]any)
-					return nil, &RequestError{Response: resp, Message: fmt.Sprintf("%s - %s", errField["code"].(string), errField["field"].(string))}
+					var code string
+					if code, ok = errField["message"].(string); !ok {
+						code = errField["code"].(string)
+					}
+					return nil, &RequestError{Response: resp, Message: fmt.Sprintf("%s - %s", code, errField["field"].(string))}
 				}
 			}
 		}

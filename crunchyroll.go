@@ -329,13 +329,15 @@ func request(req *http.Request, client *http.Client) (*http.Response, error) {
 					}
 				}
 			} else if _, ok := errMap["code"]; ok {
-				if errContext, ok := errMap["context"]; ok {
-					errField := errContext.([]any)[0].(map[string]any)
+				if errContext, ok := errMap["context"].([]any); ok && len(errContext) > 0 {
+					errField := errContext[0].(map[string]any)
 					var code string
 					if code, ok = errField["message"].(string); !ok {
 						code = errField["code"].(string)
 					}
 					return nil, &RequestError{Response: resp, Message: fmt.Sprintf("%s - %s", code, errField["field"].(string))}
+				} else if errMessage, ok := errMap["message"].(string); ok {
+					return nil, &RequestError{Response: resp, Message: errMessage}
 				}
 			}
 		}

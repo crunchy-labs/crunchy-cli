@@ -17,18 +17,8 @@ type video struct {
 	SlugTitle   string `json:"slug_title"`
 
 	Images struct {
-		PosterTall [][]struct {
-			Height int    `json:"height"`
-			Source string `json:"source"`
-			Type   string `json:"type"`
-			Width  int    `json:"width"`
-		} `json:"poster_tall"`
-		PosterWide [][]struct {
-			Height int    `json:"height"`
-			Source string `json:"source"`
-			Type   string `json:"type"`
-			Width  int    `json:"width"`
-		} `json:"poster_wide"`
+		PosterTall [][]Image `json:"poster_tall"`
+		PosterWide [][]Image `json:"poster_wide"`
 	} `json:"images"`
 }
 

@@ -1,5 +1,12 @@
 package crunchyroll
 
+type Image struct {
+	Height int    `json:"height"`
+	Source string `json:"source"`
+	Type   string `json:"type"`
+	Width  int    `json:"width"`
+}
+
 type Panel struct {
 	Title            string `json:"title"`
 	PromoTitle       string `json:"promo_title"`
@@ -7,24 +14,9 @@ type Panel struct {
 	Playback         string `json:"playback"`
 	PromoDescription string `json:"promo_description"`
 	Images           struct {
-		Thumbnail [][]struct {
-			Height int    `json:"height"`
-			Source string `json:"source"`
-			Type   string `json:"type"`
-			Width  int    `json:"width"`
-		} `json:"thumbnail"`
-		PosterTall [][]struct {
-			Width  int    `json:"width"`
-			Height int    `json:"height"`
-			Type   string `json:"type"`
-			Source string `json:"source"`
-		} `json:"poster_tall"`
-		PosterWide [][]struct {
-			Width  int    `json:"width"`
-			Height int    `json:"height"`
-			Type   string `json:"type"`
-			Source string `json:"source"`
-		} `json:"poster_wide"`
+		Thumbnail  [][]Image `json:"thumbnail"`
+		PosterTall [][]Image `json:"poster_tall"`
+		PosterWide [][]Image `json:"poster_wide"`
 	} `json:"images"`
 	ID          string             `json:"id"`
 	Description string             `json:"description"`

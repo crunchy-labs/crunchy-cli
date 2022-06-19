@@ -19,12 +19,7 @@ type MovieListing struct {
 	Description string `json:"description"`
 
 	Images struct {
-		Thumbnail [][]struct {
-			Width  int    `json:"width"`
-			Height int    `json:"height"`
-			Type   string `json:"type"`
-			Source string `json:"source"`
-		} `json:"thumbnail"`
+		Thumbnail [][]Image `json:"thumbnail"`
 	} `json:"images"`
 
 	DurationMS       int    `json:"duration_ms"`

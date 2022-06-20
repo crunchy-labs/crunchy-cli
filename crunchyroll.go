@@ -931,7 +931,9 @@ func (c *Crunchyroll) Account() (*Account, error) {
 	}
 	defer resp.Body.Close()
 
-	account := &Account{}
+	account := &Account{
+		crunchy: c,
+	}
 
 	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
 		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)

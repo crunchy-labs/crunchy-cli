@@ -34,32 +34,32 @@ const (
 type MediaType string
 
 const (
-	SERIES       MediaType = "series"
-	MOVIELISTING           = "movie_listing"
+	MediaTypeSeries MediaType = "series"
+	MediaTypeMovie            = "movie_listing"
 )
 
 // BrowseSortType represents a sort type to sort Crunchyroll.Browse items after.
 type BrowseSortType string
 
 const (
-	BROWSESORTPOPULARITY   BrowseSortType = "popularity"
-	BROWSESORTNEWLYADDED                  = "newly_added"
-	BROWSESORTALPHABETICAL                = "alphabetical"
+	BrowseSortPopularity   BrowseSortType = "popularity"
+	BrowseSortNewlyAdded                  = "newly_added"
+	BrowseSortAlphabetical                = "alphabetical"
 )
 
 // WatchlistLanguageType represents a filter type to filter Crunchyroll.WatchList entries after.
 type WatchlistLanguageType int
 
 const (
-	WATCHLISTLANGUAGESUBBED WatchlistLanguageType = iota + 1
-	WATCHLISTLANGUAGEDUBBED
+	WatchlistLanguageSubbed WatchlistLanguageType = iota + 1
+	WatchlistLanguageDubbed
 )
 
 type WatchlistContentType string
 
 const (
-	WATCHLISTCONTENTSERIES WatchlistContentType = "series"
-	WATCHLISTCONTENTMOVIES                      = "movie_listing"
+	WatchlistContentSeries WatchlistContentType = "series"
+	WatchlistContentMovies                      = "movie_listing"
 )
 
 type Crunchyroll struct {
@@ -869,9 +869,9 @@ func (c *Crunchyroll) Watchlist(options WatchlistOptions, limit uint) ([]*Watchl
 		values.Set("only_favorites", "true")
 	}
 	switch options.LanguageType {
-	case WATCHLISTLANGUAGESUBBED:
+	case WatchlistLanguageSubbed:
 		values.Set("is_subbed", "true")
-	case WATCHLISTLANGUAGEDUBBED:
+	case WatchlistLanguageDubbed:
 		values.Set("is_dubbed", "true")
 	}
 	values.Set("n", strconv.Itoa(int(limit)))
@@ -894,9 +894,9 @@ func (c *Crunchyroll) Watchlist(options WatchlistOptions, limit uint) ([]*Watchl
 
 	for _, entry := range watchlistEntries {
 		switch entry.Panel.Type {
-		case WATCHLISTENTRYEPISODE:
+		case WatchlistEntryEpisode:
 			entry.Panel.EpisodeMetadata.crunchy = c
-		case WATCHLISTENTRYSERIES:
+		case WatchlistEntrySeries:
 			entry.Panel.SeriesMetadata.crunchy = c
 		}
 	}

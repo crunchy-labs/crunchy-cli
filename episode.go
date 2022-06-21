@@ -91,8 +91,8 @@ type HistoryEpisode struct {
 type WatchlistEntryType string
 
 const (
-	WATCHLISTENTRYEPISODE = "episode"
-	WATCHLISTENTRYSERIES  = "series"
+	WatchlistEntryEpisode = "episode"
+	WatchlistEntrySeries  = "series"
 )
 
 // EpisodeFromID returns an episode by its api id.

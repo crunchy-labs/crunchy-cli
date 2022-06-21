@@ -206,6 +206,49 @@ func (s *Series) RemoveFromWatchlist() error {
 	return err
 }
 
+// Similar returns similar series and movies to the current series within the given limit.
+func (s *Series) Similar(limit uint) (ss []*Series, m []*Movie, err error) {
+	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
+		s.crunchy.Config.AccountID, s.ID, limit, s.crunchy.Locale)
+	resp, err := s.crunchy.request(similarToEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'similar_to' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		switch item.(map[string]interface{})["type"] {
+		case "series":
+			series := &Series{
+				crunchy: s.crunchy,
+			}
+			if err := decodeMapToStruct(item, series); err != nil {
+				return nil, nil, err
+			}
+			if err := decodeMapToStruct(item.(map[string]interface{})["series_metadata"].(map[string]interface{}), series); err != nil {
+				return nil, nil, err
+			}
+
+			ss = append(ss, series)
+		case "movie_listing":
+			movie := &Movie{
+				crunchy: s.crunchy,
+			}
+			if err := decodeMapToStruct(item, movie); err != nil {
+				return nil, nil, err
+			}
+
+			m = append(m, movie)
+		}
+	}
+	return
+}
+
 // Seasons returns all seasons of a series.
 func (s *Series) Seasons() (seasons []*Season, err error) {
 	if s.children != nil {

@@ -3,9 +3,39 @@ package crunchyroll
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
+
+// Account returns information about the currently logged in crunchyroll account.
+func (c *Crunchyroll) Account() (*Account, error) {
+	resp, err := c.request("https://beta.crunchyroll.com/accounts/v1/me", http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	account := &Account{
+		crunchy: c,
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
+		return nil, fmt.Errorf("failed to parse 'me' response: %w", err)
+	}
+
+	resp, err = c.request("https://beta.crunchyroll.com/accounts/v1/me/profile", http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err = json.NewDecoder(resp.Body).Decode(&account); err != nil {
+		return nil, fmt.Errorf("failed to parse 'profile' response: %w", err)
+	}
+
+	return account, nil
+}
 
 // Account contains information about a crunchyroll account.
 type Account struct {

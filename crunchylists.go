@@ -8,6 +8,25 @@ import (
 	"time"
 )
 
+func (c *Crunchyroll) CrunchyLists() (*CrunchyLists, error) {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", c.Config.AccountID, c.Locale)
+	resp, err := c.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	crunchyLists := &CrunchyLists{
+		crunchy: c,
+	}
+	json.NewDecoder(resp.Body).Decode(crunchyLists)
+	for _, item := range crunchyLists.Items {
+		item.crunchy = c
+	}
+
+	return crunchyLists, nil
+}
+
 type CrunchyLists struct {
 	crunchy *Crunchyroll
 

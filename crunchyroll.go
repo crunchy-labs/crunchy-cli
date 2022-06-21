@@ -36,39 +36,6 @@ const (
 	MediaTypeMovie            = "movie_listing"
 )
 
-type Crunchyroll struct {
-	// Client is the http.Client to perform all requests over.
-	Client *http.Client
-	// Context can be used to stop requests with Client and is context.Background by default.
-	Context context.Context
-	// Locale specifies in which language all results should be returned / requested.
-	Locale LOCALE
-	// EtpRt is the crunchyroll beta equivalent to a session id (prior SessionID field in
-	// this struct in v2 and below).
-	EtpRt string
-
-	// Config stores parameters which are needed by some api calls.
-	Config struct {
-		TokenType   string
-		AccessToken string
-
-		Bucket string
-
-		CountryCode    string
-		Premium        bool
-		Channel        string
-		Policy         string
-		Signature      string
-		KeyPairID      string
-		AccountID      string
-		ExternalID     string
-		MaturityRating string
-	}
-
-	// If cache is true, internal caching is enabled.
-	cache bool
-}
-
 type loginResponse struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int    `json:"expires_in"`
@@ -250,6 +217,69 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	return crunchy, nil
 }
 
+type Crunchyroll struct {
+	// Client is the http.Client to perform all requests over.
+	Client *http.Client
+	// Context can be used to stop requests with Client and is context.Background by default.
+	Context context.Context
+	// Locale specifies in which language all results should be returned / requested.
+	Locale LOCALE
+	// EtpRt is the crunchyroll beta equivalent to a session id (prior SessionID field in
+	// this struct in v2 and below).
+	EtpRt string
+
+	// Config stores parameters which are needed by some api calls.
+	Config struct {
+		TokenType   string
+		AccessToken string
+
+		Bucket string
+
+		CountryCode    string
+		Premium        bool
+		Channel        string
+		Policy         string
+		Signature      string
+		KeyPairID      string
+		AccountID      string
+		ExternalID     string
+		MaturityRating string
+	}
+
+	// If cache is true, internal caching is enabled.
+	cache bool
+}
+
+// IsCaching returns if data gets cached or not.
+// See SetCaching for more information.
+func (c *Crunchyroll) IsCaching() bool {
+	return c.cache
+}
+
+// SetCaching enables or disables internal caching of requests made.
+// Caching is enabled by default.
+// If it is disabled the already cached data still gets called.
+// The best way to prevent this is to create a complete new Crunchyroll struct.
+func (c *Crunchyroll) SetCaching(caching bool) {
+	c.cache = caching
+}
+
+// request is a base function which handles simple api requests.
+func (c *Crunchyroll) request(endpoint string, method string) (*http.Response, error) {
+	req, err := http.NewRequest(method, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.requestFull(req)
+}
+
+// requestFull is a base function which handles full user controlled api requests.
+func (c *Crunchyroll) requestFull(req *http.Request) (*http.Response, error) {
+	req.Header.Add("Authorization", fmt.Sprintf("%s %s", c.Config.TokenType, c.Config.AccessToken))
+
+	return request(req, c.Client)
+}
+
 func request(req *http.Request, client *http.Client) (*http.Response, error) {
 	resp, err := client.Do(req)
 	if err == nil {
@@ -297,33 +327,4 @@ func request(req *http.Request, client *http.Client) (*http.Response, error) {
 		}
 	}
 	return resp, err
-}
-
-// request is a base function which handles api requests.
-func (c *Crunchyroll) request(endpoint string, method string) (*http.Response, error) {
-	req, err := http.NewRequest(method, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	return c.requestFull(req)
-}
-
-func (c *Crunchyroll) requestFull(req *http.Request) (*http.Response, error) {
-	req.Header.Add("Authorization", fmt.Sprintf("%s %s", c.Config.TokenType, c.Config.AccessToken))
-
-	return request(req, c.Client)
-}
-
-// IsCaching returns if data gets cached or not.
-// See SetCaching for more information.
-func (c *Crunchyroll) IsCaching() bool {
-	return c.cache
-}
-
-// SetCaching enables or disables internal caching of requests made.
-// Caching is enabled by default.
-// If it is disabled the already cached data still gets called.
-// The best way to prevent this is to create a complete new Crunchyroll struct.
-func (c *Crunchyroll) SetCaching(caching bool) {
-	c.cache = caching
 }

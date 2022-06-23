@@ -217,9 +217,9 @@ func (c *Comment) Report() error {
 	return c.vote("inappropriate", "reported")
 }
 
-// UnreportComment removes the report request from the comment. Only works if the user
+// RemoveReport removes the report request from the comment. Only works if the user
 // has reported the comment.
-func (c *Comment) UnreportComment() error {
+func (c *Comment) RemoveReport() error {
 	return c.unVote("inappropriate", "reported")
 }
 

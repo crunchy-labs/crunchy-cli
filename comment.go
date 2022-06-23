@@ -233,6 +233,10 @@ func (c *Comment) FlagAsSpoiler() error {
 	return c.vote("spoiler", "spoiler")
 }
 
+func (c *Comment) IsFlaggedAsSpoiler() bool {
+	return c.markedAs("spoiler")
+}
+
 // UnflagAsSpoiler rewokes the request to the user (and / or crunchyroll?) to mark the
 // comment as spoiler. Only works if the user has flagged the comment as spoiler.
 func (c *Comment) UnflagAsSpoiler() error {

@@ -71,6 +71,16 @@ func (c *Comment) Delete() error {
 	return nil
 }
 
+// IsSpoiler returns if the comment is marked as spoiler or not.
+func (c *Comment) IsSpoiler() bool {
+	for _, flag := range c.Flags {
+		if flag == "spoiler" {
+			return true
+		}
+	}
+	return false
+}
+
 // MarkAsSpoiler marks the current comment as spoiler. Works only if the user has written the comment,
 // and it isn't already marked as spoiler.
 func (c *Comment) MarkAsSpoiler() error {

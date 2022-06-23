@@ -250,11 +250,11 @@ type Crunchyroll struct {
 	cache bool
 }
 
-// Logout logs the user out which invalidates the current session.
+// InvalidateSession logs the user out which invalidates the current session.
 // You have to call a login method again and create a new Crunchyroll instance
 // if you want to perform any further actions since this instance is not usable
 // anymore after calling this.
-func (c *Crunchyroll) Logout() error {
+func (c *Crunchyroll) InvalidateSession() error {
 	endpoint := "https://crunchyroll.com/logout"
 	_, err := c.request(endpoint, http.MethodGet)
 	return err

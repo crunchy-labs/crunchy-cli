@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (c *Crunchyroll) CrunchyLists() (*CrunchyLists, error) {
+func (c *Crunchyroll) Crunchylists() (*Crunchylists, error) {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", c.Config.AccountID, c.Locale)
 	resp, err := c.request(endpoint, http.MethodGet)
 	if err != nil {
@@ -16,27 +16,27 @@ func (c *Crunchyroll) CrunchyLists() (*CrunchyLists, error) {
 	}
 	defer resp.Body.Close()
 
-	crunchyLists := &CrunchyLists{
+	crunchylists := &Crunchylists{
 		crunchy: c,
 	}
-	json.NewDecoder(resp.Body).Decode(crunchyLists)
-	for _, item := range crunchyLists.Items {
+	json.NewDecoder(resp.Body).Decode(crunchylists)
+	for _, item := range crunchylists.Items {
 		item.crunchy = c
 	}
 
-	return crunchyLists, nil
+	return crunchylists, nil
 }
 
-type CrunchyLists struct {
+type Crunchylists struct {
 	crunchy *Crunchyroll
 
-	Items        []*CrunchyListPreview `json:"items"`
+	Items        []*CrunchylistPreview `json:"items"`
 	TotalPublic  int                   `json:"total_public"`
 	TotalPrivate int                   `json:"total_private"`
 	MaxPrivate   int                   `json:"max_private"`
 }
 
-func (cl *CrunchyLists) Create(name string) (*CrunchyList, error) {
+func (cl *Crunchylists) Create(name string) (*Crunchylist, error) {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", cl.crunchy.Config.AccountID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"title": name})
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
@@ -53,10 +53,10 @@ func (cl *CrunchyLists) Create(name string) (*CrunchyList, error) {
 	var jsonBody map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
 
-	return CrunchyListFromID(cl.crunchy, jsonBody["list_id"].(string))
+	return crunchylistFromID(cl.crunchy, jsonBody["list_id"].(string))
 }
 
-type CrunchyListPreview struct {
+type CrunchylistPreview struct {
 	crunchy *Crunchyroll
 
 	ListID     string    `json:"list_id"`
@@ -66,32 +66,11 @@ type CrunchyListPreview struct {
 	Title      string    `json:"title"`
 }
 
-func (clp *CrunchyListPreview) CrunchyList() (*CrunchyList, error) {
-	return CrunchyListFromID(clp.crunchy, clp.ListID)
+func (clp *CrunchylistPreview) Crunchylist() (*Crunchylist, error) {
+	return crunchylistFromID(clp.crunchy, clp.ListID)
 }
 
-func CrunchyListFromID(crunchy *Crunchyroll, id string) (*CrunchyList, error) {
-	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", crunchy.Config.AccountID, id, crunchy.Locale)
-	resp, err := crunchy.request(endpoint, http.MethodGet)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	crunchyList := &CrunchyList{
-		crunchy: crunchy,
-		ID:      id,
-	}
-	if err := json.NewDecoder(resp.Body).Decode(crunchyList); err != nil {
-		return nil, err
-	}
-	for _, item := range crunchyList.Items {
-		item.crunchy = crunchy
-	}
-	return crunchyList, nil
-}
-
-type CrunchyList struct {
+type Crunchylist struct {
 	crunchy *Crunchyroll
 
 	ID string `json:"id"`
@@ -101,14 +80,14 @@ type CrunchyList struct {
 	Title      string             `json:"title"`
 	IsPublic   bool               `json:"is_public"`
 	ModifiedAt time.Time          `json:"modified_at"`
-	Items      []*CrunchyListItem `json:"items"`
+	Items      []*CrunchylistItem `json:"items"`
 }
 
-func (cl *CrunchyList) AddSeries(series *Series) error {
+func (cl *Crunchylist) AddSeries(series *Series) error {
 	return cl.AddSeriesFromID(series.ID)
 }
 
-func (cl *CrunchyList) AddSeriesFromID(id string) error {
+func (cl *Crunchylist) AddSeriesFromID(id string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"content_id": id})
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
@@ -120,23 +99,23 @@ func (cl *CrunchyList) AddSeriesFromID(id string) error {
 	return err
 }
 
-func (cl *CrunchyList) RemoveSeries(series *Series) error {
+func (cl *Crunchylist) RemoveSeries(series *Series) error {
 	return cl.RemoveSeriesFromID(series.ID)
 }
 
-func (cl *CrunchyList) RemoveSeriesFromID(id string) error {
+func (cl *Crunchylist) RemoveSeriesFromID(id string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, id, cl.crunchy.Locale)
 	_, err := cl.crunchy.request(endpoint, http.MethodDelete)
 	return err
 }
 
-func (cl *CrunchyList) Delete() error {
+func (cl *Crunchylist) Delete() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	_, err := cl.crunchy.request(endpoint, http.MethodDelete)
 	return err
 }
 
-func (cl *CrunchyList) Rename(name string) error {
+func (cl *Crunchylist) Rename(name string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"title": name})
 	req, err := http.NewRequest(http.MethodPatch, endpoint, bytes.NewBuffer(body))
@@ -151,7 +130,28 @@ func (cl *CrunchyList) Rename(name string) error {
 	return err
 }
 
-type CrunchyListItem struct {
+func crunchylistFromID(crunchy *Crunchyroll, id string) (*Crunchylist, error) {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", crunchy.Config.AccountID, id, crunchy.Locale)
+	resp, err := crunchy.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	crunchyList := &Crunchylist{
+		crunchy: crunchy,
+		ID:      id,
+	}
+	if err := json.NewDecoder(resp.Body).Decode(crunchyList); err != nil {
+		return nil, err
+	}
+	for _, item := range crunchyList.Items {
+		item.crunchy = crunchy
+	}
+	return crunchyList, nil
+}
+
+type CrunchylistItem struct {
 	crunchy *Crunchyroll
 
 	ListID     string    `json:"list_id"`
@@ -160,7 +160,7 @@ type CrunchyListItem struct {
 	Panel      Panel     `json:"panel"`
 }
 
-func (cli *CrunchyListItem) Remove() error {
+func (cli *CrunchylistItem) Remove() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s/%s", cli.crunchy.Config.AccountID, cli.ListID, cli.ID)
 	_, err := cli.crunchy.request(endpoint, http.MethodDelete)
 	return err

@@ -217,6 +217,10 @@ func (c *Comment) Report() error {
 	return c.vote("inappropriate", "reported")
 }
 
+func (c *Comment) IsReported() bool {
+	return c.markedAs("reported")
+}
+
 // RemoveReport removes the report request from the comment. Only works if the user
 // has reported the comment.
 func (c *Comment) RemoveReport() error {

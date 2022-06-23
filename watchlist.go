@@ -16,18 +16,17 @@ const (
 	WatchlistLanguageDubbed
 )
 
-// WatchlistContentType represents a filter type to filter Crunchyroll.Watchlist entries if they're series or movies.
-type WatchlistContentType string
+type WatchlistOrderType string
 
 const (
-	WatchlistContentSeries WatchlistContentType = "series"
-	WatchlistContentMovies                      = "movie_listing"
+	WatchlistOrderAsc  = "asc"
+	WatchlistOrderDesc = "desc"
 )
 
 // WatchlistOptions represents options for receiving the user watchlist.
 type WatchlistOptions struct {
-	// OrderAsc specified whether the results should be order ascending or descending.
-	OrderAsc bool
+	// Order specified whether the results should be order ascending or descending.
+	Order WatchlistOrderType
 
 	// OnlyFavorites specifies whether only episodes which are marked as favorite should be returned.
 	OnlyFavorites bool
@@ -38,17 +37,16 @@ type WatchlistOptions struct {
 	// ContentType specified whether returning videos should only be series episodes or movies.
 	// But tbh all movies I've searched on crunchy were flagged as series too, so this
 	// parameter is kinda useless.
-	ContentType WatchlistContentType
+	ContentType MediaType
 }
 
 // Watchlist returns the watchlist entries for the currently logged in user.
 func (c *Crunchyroll) Watchlist(options WatchlistOptions, limit uint) ([]*WatchlistEntry, error) {
 	values := url.Values{}
-	if options.OrderAsc {
-		values.Set("order", "asc")
-	} else {
-		values.Set("order", "desc")
+	if options.Order == "" {
+		options.Order = WatchlistOrderDesc
 	}
+	values.Set("order", string(options.Order))
 	if options.OnlyFavorites {
 		values.Set("only_favorites", "true")
 	}

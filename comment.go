@@ -86,7 +86,7 @@ func (c *Comment) IsSpoiler() bool {
 func (c *Comment) MarkAsSpoiler() error {
 	if !c.IsOwner {
 		return fmt.Errorf("cannot mark as spoiler, user is not the comment author")
-	} else if c.markedAs("spoiler") {
+	} else if c.votedAs("spoiler") {
 		return fmt.Errorf("comment is already marked as spoiler")
 	}
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments/%s/flags?locale=%s", c.EpisodeID, c.CommentID, c.crunchy.Locale)
@@ -112,7 +112,7 @@ func (c *Comment) MarkAsSpoiler() error {
 func (c *Comment) UnmarkAsSpoiler() error {
 	if !c.IsOwner {
 		return fmt.Errorf("cannot mark as spoiler, user is not the comment author")
-	} else if !c.markedAs("spoiler") {
+	} else if !c.votedAs("spoiler") {
 		return fmt.Errorf("comment is not marked as spoiler")
 	}
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments/%s/flags?locale=%s", c.EpisodeID, c.CommentID, c.crunchy.Locale)
@@ -145,7 +145,7 @@ func (c *Comment) Like() error {
 
 // Liked returns if the user has liked the comment.
 func (c *Comment) Liked() bool {
-	return c.markedAs("liked")
+	return c.votedAs("liked")
 }
 
 // RemoveLike removes the like from the comment. Works only if the user has liked it.
@@ -213,7 +213,7 @@ func (c *Comment) Report() error {
 }
 
 func (c *Comment) IsReported() bool {
-	return c.markedAs("reported")
+	return c.votedAs("reported")
 }
 
 // RemoveReport removes the report request from the comment. Only works if the user
@@ -229,7 +229,7 @@ func (c *Comment) FlagAsSpoiler() error {
 }
 
 func (c *Comment) IsFlaggedAsSpoiler() bool {
-	return c.markedAs("spoiler")
+	return c.votedAs("spoiler")
 }
 
 // UnflagAsSpoiler rewokes the request to the user (and / or crunchyroll?) to mark the
@@ -238,7 +238,7 @@ func (c *Comment) UnflagAsSpoiler() error {
 	return c.unVote("spoiler", "spoiler")
 }
 
-func (c *Comment) markedAs(voteType string) bool {
+func (c *Comment) votedAs(voteType string) bool {
 	for _, userVote := range c.UserVotes {
 		if userVote == voteType {
 			return true
@@ -248,7 +248,7 @@ func (c *Comment) markedAs(voteType string) bool {
 }
 
 func (c *Comment) vote(voteType, readableName string) error {
-	if c.markedAs(voteType) {
+	if c.votedAs(voteType) {
 		return fmt.Errorf("comment is already marked as %s", readableName)
 	}
 

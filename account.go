@@ -67,8 +67,8 @@ type Account struct {
 	Wallpaper *Wallpaper `json:"wallpaper"`
 }
 
-// UpdateEmailLanguage sets in which language emails should be received.
-func (a *Account) UpdateEmailLanguage(language LOCALE) error {
+// UpdatePreferredEmailLanguage sets in which language emails should be received.
+func (a *Account) UpdatePreferredEmailLanguage(language LOCALE) error {
 	err := a.updatePreferences("preferred_communication_language", string(language))
 	if err == nil {
 		a.PreferredCommunicationLanguage = language
@@ -76,8 +76,8 @@ func (a *Account) UpdateEmailLanguage(language LOCALE) error {
 	return err
 }
 
-// UpdateVideoSubtitleLanguage sets in which language default subtitles should be shown
-func (a *Account) UpdateVideoSubtitleLanguage(language LOCALE) error {
+// UpdatePreferredVideoSubtitleLanguage sets in which language default subtitles should be shown
+func (a *Account) UpdatePreferredVideoSubtitleLanguage(language LOCALE) error {
 	err := a.updatePreferences("preferred_content_subtitle_language", string(language))
 	if err == nil {
 		a.PreferredContentSubtitleLanguage = language

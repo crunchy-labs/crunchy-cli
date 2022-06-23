@@ -145,12 +145,7 @@ func (c *Comment) Like() error {
 
 // Liked returns if the user has liked the comment.
 func (c *Comment) Liked() bool {
-	for _, flag := range c.Flags {
-		if flag == "liked" {
-			return true
-		}
-	}
-	return false
+	return c.markedAs("liked")
 }
 
 // RemoveLike removes the like from the comment. Works only if the user has liked it.

@@ -223,7 +223,7 @@ func (s *Series) Similar(limit uint) (ss []*Series, m []*Movie, err error) {
 
 	for _, item := range jsonBody["items"].([]interface{}) {
 		switch item.(map[string]interface{})["type"] {
-		case "series":
+		case MediaTypeSeries:
 			series := &Series{
 				crunchy: s.crunchy,
 			}
@@ -235,7 +235,7 @@ func (s *Series) Similar(limit uint) (ss []*Series, m []*Movie, err error) {
 			}
 
 			ss = append(ss, series)
-		case "movie_listing":
+		case MediaTypeMovie:
 			movie := &Movie{
 				crunchy: s.crunchy,
 			}

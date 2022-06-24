@@ -61,7 +61,7 @@ func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m 
 
 	for _, item := range jsonBody["items"].([]interface{}) {
 		switch item.(map[string]interface{})["type"] {
-		case "series":
+		case MediaTypeSeries:
 			series := &Series{
 				crunchy: c,
 			}
@@ -73,7 +73,7 @@ func (c *Crunchyroll) Browse(options BrowseOptions, limit uint) (s []*Series, m 
 			}
 
 			s = append(s, series)
-		case "movie_listing":
+		case MediaTypeMovie:
 			movie := &Movie{
 				crunchy: c,
 			}
@@ -160,7 +160,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 		item := item.(map[string]interface{})
 		if item["total"].(float64) > 0 {
 			switch item["type"] {
-			case "series":
+			case MediaTypeSeries:
 				for _, series := range item["items"].([]interface{}) {
 					series2 := &Series{
 						crunchy: c,
@@ -174,7 +174,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 
 					s = append(s, series2)
 				}
-			case "movie_listing":
+			case MediaTypeMovie:
 				for _, movie := range item["items"].([]interface{}) {
 					movie2 := &Movie{
 						crunchy: c,

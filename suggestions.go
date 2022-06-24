@@ -23,7 +23,7 @@ func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err 
 
 	for _, item := range jsonBody["items"].([]interface{}) {
 		switch item.(map[string]interface{})["type"] {
-		case "series":
+		case MediaTypeSeries:
 			series := &Series{
 				crunchy: c,
 			}
@@ -35,7 +35,7 @@ func (c *Crunchyroll) Recommendations(limit uint) (s []*Series, m []*Movie, err 
 			}
 
 			s = append(s, series)
-		case "movie_listing":
+		case MediaTypeMovie:
 			movie := &Movie{
 				crunchy: c,
 			}

@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Crunchylists returns a struct to control crunchylists.
 func (c *Crunchyroll) Crunchylists() (*Crunchylists, error) {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", c.Config.AccountID, c.Locale)
 	resp, err := c.request(endpoint, http.MethodGet)
@@ -36,6 +37,7 @@ type Crunchylists struct {
 	MaxPrivate   int                   `json:"max_private"`
 }
 
+// Create creates a new crunchylist with the given name. Duplicate names for lists are allowed.
 func (cl *Crunchylists) Create(name string) (*Crunchylist, error) {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s?locale=%s", cl.crunchy.Config.AccountID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"title": name})
@@ -66,6 +68,7 @@ type CrunchylistPreview struct {
 	Title      string    `json:"title"`
 }
 
+// Crunchylist returns the belonging Crunchylist struct.
 func (clp *CrunchylistPreview) Crunchylist() (*Crunchylist, error) {
 	return crunchylistFromID(clp.crunchy, clp.ListID)
 }
@@ -83,10 +86,12 @@ type Crunchylist struct {
 	Items      []*CrunchylistItem `json:"items"`
 }
 
+// AddSeries adds a series.
 func (cl *Crunchylist) AddSeries(series *Series) error {
 	return cl.AddSeriesFromID(series.ID)
 }
 
+// AddSeriesFromID adds a series from its id
 func (cl *Crunchylist) AddSeriesFromID(id string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"content_id": id})
@@ -99,22 +104,26 @@ func (cl *Crunchylist) AddSeriesFromID(id string) error {
 	return err
 }
 
+// RemoveSeries removes a series
 func (cl *Crunchylist) RemoveSeries(series *Series) error {
 	return cl.RemoveSeriesFromID(series.ID)
 }
 
+// RemoveSeriesFromID removes a series by its id
 func (cl *Crunchylist) RemoveSeriesFromID(id string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, id, cl.crunchy.Locale)
 	_, err := cl.crunchy.request(endpoint, http.MethodDelete)
 	return err
 }
 
+// Delete deleted the current crunchylist.
 func (cl *Crunchylist) Delete() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	_, err := cl.crunchy.request(endpoint, http.MethodDelete)
 	return err
 }
 
+// Rename renames the current crunchylist.
 func (cl *Crunchylist) Rename(name string) error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s?locale=%s", cl.crunchy.Config.AccountID, cl.ID, cl.crunchy.Locale)
 	body, _ := json.Marshal(map[string]string{"title": name})
@@ -160,6 +169,7 @@ type CrunchylistItem struct {
 	Panel      Panel     `json:"panel"`
 }
 
+// Remove removes the current item from its crunchylist.
 func (cli *CrunchylistItem) Remove() error {
 	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/custom-lists/%s/%s/%s", cli.crunchy.Config.AccountID, cli.ListID, cli.ID)
 	_, err := cli.crunchy.request(endpoint, http.MethodDelete)

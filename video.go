@@ -1,6 +1,7 @@
 package crunchyroll
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,18 +17,8 @@ type video struct {
 	SlugTitle   string `json:"slug_title"`
 
 	Images struct {
-		PosterTall [][]struct {
-			Height int    `json:"height"`
-			Source string `json:"source"`
-			Type   string `json:"type"`
-			Width  int    `json:"width"`
-		} `json:"poster_tall"`
-		PosterWide [][]struct {
-			Height int    `json:"height"`
-			Source string `json:"source"`
-			Type   string `json:"type"`
-			Width  int    `json:"width"`
-		} `json:"poster_wide"`
+		PosterTall [][]Image `json:"poster_tall"`
+		PosterWide [][]Image `json:"poster_wide"`
 	} `json:"images"`
 }
 
@@ -185,6 +176,71 @@ func SeriesFromID(crunchy *Crunchyroll, id string) (*Series, error) {
 	}
 
 	return series, nil
+}
+
+// AddToWatchlist adds the current episode to the watchlist.
+// Will return an RequestError with the response status code of 409 if the series was already on the watchlist before.
+func (s *Series) AddToWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", s.crunchy.Config.AccountID, s.crunchy.Locale)
+	body, _ := json.Marshal(map[string]string{"content_id": s.ID})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	_, err = s.crunchy.requestFull(req)
+	return err
+}
+
+// RemoveFromWatchlist removes the current episode from the watchlist.
+// Will return an RequestError with the response status code of 404 if the series was not on the watchlist before.
+func (s *Series) RemoveFromWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", s.crunchy.Config.AccountID, s.ID, s.crunchy.Locale)
+	_, err := s.crunchy.request(endpoint, http.MethodDelete)
+	return err
+}
+
+// Similar returns similar series and movies to the current series within the given limit.
+func (s *Series) Similar(limit uint) (ss []*Series, m []*Movie, err error) {
+	similarToEndpoint := fmt.Sprintf("https://beta-api.crunchyroll.com/content/v1/%s/similar_to?guid=%s&n=%d&locale=%s",
+		s.crunchy.Config.AccountID, s.ID, limit, s.crunchy.Locale)
+	resp, err := s.crunchy.request(similarToEndpoint, http.MethodGet)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&jsonBody); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse 'similar_to' response: %w", err)
+	}
+
+	for _, item := range jsonBody["items"].([]interface{}) {
+		switch item.(map[string]interface{})["type"] {
+		case MediaTypeSeries:
+			series := &Series{
+				crunchy: s.crunchy,
+			}
+			if err := decodeMapToStruct(item, series); err != nil {
+				return nil, nil, err
+			}
+			if err := decodeMapToStruct(item.(map[string]interface{})["series_metadata"].(map[string]interface{}), series); err != nil {
+				return nil, nil, err
+			}
+
+			ss = append(ss, series)
+		case MediaTypeMovie:
+			movie := &Movie{
+				crunchy: s.crunchy,
+			}
+			if err := decodeMapToStruct(item, movie); err != nil {
+				return nil, nil, err
+			}
+
+			m = append(m, movie)
+		}
+	}
+	return
 }
 
 // Seasons returns all seasons of a series.

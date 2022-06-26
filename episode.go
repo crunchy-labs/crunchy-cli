@@ -1,6 +1,7 @@
 package crunchyroll
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,11 +40,14 @@ type Episode struct {
 	NextEpisodeID    string `json:"next_episode_id"`
 	NextEpisodeTitle string `json:"next_episode_title"`
 
-	HDFlag        bool `json:"hd_flag"`
-	IsMature      bool `json:"is_mature"`
-	MatureBlocked bool `json:"mature_blocked"`
+	HDFlag          bool     `json:"hd_flag"`
+	MaturityRatings []string `json:"maturity_ratings"`
+	IsMature        bool     `json:"is_mature"`
+	MatureBlocked   bool     `json:"mature_blocked"`
 
-	EpisodeAirDate time.Time `json:"episode_air_date"`
+	EpisodeAirDate       time.Time `json:"episode_air_date"`
+	FreeAvailableDate    time.Time `json:"free_available_date"`
+	PremiumAvailableDate time.Time `json:"premium_available_date"`
 
 	IsSubbed       bool     `json:"is_subbed"`
 	IsDubbed       bool     `json:"is_dubbed"`
@@ -52,16 +56,12 @@ type Episode struct {
 	SeoDescription string   `json:"seo_description"`
 	SeasonTags     []string `json:"season_tags"`
 
-	AvailableOffline bool   `json:"available_offline"`
-	Slug             string `json:"slug"`
+	AvailableOffline bool      `json:"available_offline"`
+	MediaType        MediaType `json:"media_type"`
+	Slug             string    `json:"slug"`
 
 	Images struct {
-		Thumbnail [][]struct {
-			Width  int    `json:"width"`
-			Height int    `json:"height"`
-			Type   string `json:"type"`
-			Source string `json:"source"`
-		} `json:"thumbnail"`
+		Thumbnail [][]Image `json:"thumbnail"`
 	} `json:"images"`
 
 	DurationMS    int    `json:"duration_ms"`
@@ -86,6 +86,14 @@ type HistoryEpisode struct {
 	Playhead     uint      `json:"playhead"`
 	FullyWatched bool      `json:"fully_watched"`
 }
+
+// WatchlistEntryType specifies which type a watchlist entry has.
+type WatchlistEntryType string
+
+const (
+	WatchlistEntryEpisode = "episode"
+	WatchlistEntrySeries  = "series"
+)
 
 // EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
@@ -120,6 +128,31 @@ func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
 	return episode, nil
 }
 
+// AddToWatchlist adds the current episode to the watchlist.
+// Will return an RequestError with the response status code of 409 if the series was already on the watchlist before.
+// There is currently a bug, or as I like to say in context of the crunchyroll api, feature, that only series and not
+// individual episode can be added to the watchlist. Even though I somehow got an episode to my watchlist on the
+// crunchyroll website, it never worked with the api here. So this function actually adds the whole series to the watchlist.
+func (e *Episode) AddToWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s?locale=%s", e.crunchy.Config.AccountID, e.crunchy.Locale)
+	body, _ := json.Marshal(map[string]string{"content_id": e.SeriesID})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	_, err = e.crunchy.requestFull(req)
+	return err
+}
+
+// RemoveFromWatchlist removes the current episode from the watchlist.
+// Will return an RequestError with the response status code of 404 if the series was not on the watchlist before.
+func (e *Episode) RemoveFromWatchlist() error {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/content/v1/watchlist/%s/%s?locale=%s", e.crunchy.Config.AccountID, e.SeriesID, e.crunchy.Locale)
+	_, err := e.crunchy.request(endpoint, http.MethodDelete)
+	return err
+}
+
 // AudioLocale returns the audio locale of the episode.
 // Every episode in a season (should) have the same audio locale,
 // so if you want to get the audio locale of a season, just call
@@ -132,6 +165,86 @@ func (e *Episode) AudioLocale() (LOCALE, error) {
 		return "", err
 	}
 	return streams[0].AudioLocale, nil
+}
+
+// Comment creates a new comment under the episode.
+func (e *Episode) Comment(message string, spoiler bool) (*Comment, error) {
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments?locale=%s", e.ID, e.crunchy.Locale)
+	var flags []string
+	if spoiler {
+		flags = append(flags, "spoiler")
+	}
+	body, _ := json.Marshal(map[string]any{"locale": string(e.crunchy.Locale), "flags": flags, "message": message})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := e.crunchy.requestFull(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	c := &Comment{
+		crunchy:   e.crunchy,
+		EpisodeID: e.ID,
+	}
+	if err = json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// CommentsOrderType represents a sort type to sort Episode.Comments after.
+type CommentsOrderType string
+
+const (
+	CommentsOrderAsc  CommentsOrderType = "asc"
+	CommentsOrderDesc                   = "desc"
+)
+
+type CommentsSortType string
+
+const (
+	CommentsSortPopular CommentsSortType = "popular"
+	CommentsSortDate                     = "date"
+)
+
+type CommentsOptions struct {
+	// Order specified the order how the comments should be returned.
+	Order CommentsOrderType `json:"order"`
+
+	// Sort specified after which key the comments should be sorted.
+	Sort CommentsSortType `json:"sort"`
+}
+
+// Comments returns comments under the given episode.
+func (e *Episode) Comments(options CommentsOptions, page uint, size uint) (c []*Comment, err error) {
+	options, err = structDefaults(CommentsOptions{Order: CommentsOrderDesc, Sort: CommentsSortPopular}, options)
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://beta.crunchyroll.com/talkbox/guestbooks/%s/comments?page=%d&page_size=%d&order=%s&sort=%s&locale=%s", e.ID, page, size, options.Order, options.Sort, e.crunchy.Locale)
+	resp, err := e.crunchy.request(endpoint, http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jsonBody map[string]any
+	json.NewDecoder(resp.Body).Decode(&jsonBody)
+
+	if err = decodeMapToStruct(jsonBody["items"].([]any), &c); err != nil {
+		return nil, err
+	}
+	for _, comment := range c {
+		comment.crunchy = e.crunchy
+		comment.EpisodeID = e.ID
+	}
+
+	return
 }
 
 // Available returns if downloadable streams for this episodes are available.

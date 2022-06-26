@@ -1,6 +1,7 @@
 package crunchyroll
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -69,4 +70,15 @@ func encodeStructToQueryValues(s interface{}) (string, error) {
 	}
 
 	return values.Encode(), nil
+}
+
+func structDefaults[T any](defaultStruct T, customStruct T) (T, error) {
+	rawDefaultStruct, err := json.Marshal(defaultStruct)
+	if err != nil {
+		return *new(T), err
+	}
+	if err = json.NewDecoder(bytes.NewBuffer(rawDefaultStruct)).Decode(&customStruct); err != nil {
+		return *new(T), err
+	}
+	return customStruct, nil
 }

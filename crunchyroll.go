@@ -175,23 +175,10 @@ func postLogin(loginResp loginResponse, etpRt string, locale LOCALE, client *htt
 	json.NewDecoder(resp.Body).Decode(&jsonBody)
 
 	cms := jsonBody["cms"].(map[string]any)
+	crunchy.Config.Premium = strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll")
+	// / is trimmed so that urls which require it must be in .../{bucket}/... like format.
+	// this just looks cleaner
 	crunchy.Config.Bucket = strings.TrimPrefix(cms["bucket"].(string), "/")
-	if strings.HasSuffix(crunchy.Config.Bucket, "crunchyroll") {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	} else {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	}
-
-	if strings.Contains(cms["bucket"].(string), "crunchyroll") {
-		crunchy.Config.Premium = true
-		crunchy.Config.Channel = "crunchyroll"
-	} else {
-		crunchy.Config.Premium = false
-		crunchy.Config.Channel = "-"
-	}
-
 	crunchy.Config.Policy = cms["policy"].(string)
 	crunchy.Config.Signature = cms["signature"].(string)
 	crunchy.Config.KeyPairID = cms["key_pair_id"].(string)

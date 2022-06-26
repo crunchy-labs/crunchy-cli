@@ -52,6 +52,9 @@ func SortEpisodesByAudio(episodes []*crunchyroll.Episode) (map[crunchyroll.LOCAL
 	var wg sync.WaitGroup
 	var lock sync.Mutex
 	for _, episode := range episodes {
+		if !episode.Available() {
+			continue
+		}
 		episode := episode
 		wg.Add(1)
 		go func() {

@@ -13,6 +13,7 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 	}
 
 	var eps []*Episode
+	var notAvailableContinue bool
 
 	if series != nil {
 		seasons, err := series.Seasons()
@@ -21,6 +22,13 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 		}
 		for _, season := range seasons {
 			if audio != nil {
+				if available, err := season.Available(); err != nil {
+					return nil, err
+				} else if !available {
+					notAvailableContinue = true
+					continue
+				}
+
 				locale, err := season.AudioLocale()
 				if err != nil {
 					return nil, err
@@ -49,6 +57,12 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 		}
 
 		for _, episode := range episodes {
+			// if no episode streams are available, calling episode.AudioLocale
+			// will result in an unwanted error
+			if !episode.Available() {
+				notAvailableContinue = true
+				continue
+			}
 			locale, err := episode.AudioLocale()
 			if err != nil {
 				return nil, err
@@ -71,7 +85,11 @@ func (c *Crunchyroll) ExtractEpisodesFromUrl(url string, audio ...LOCALE) ([]*Ep
 	}
 
 	if len(eps) == 0 {
-		return nil, fmt.Errorf("could not find any matching episode")
+		if notAvailableContinue {
+			return nil, fmt.Errorf("could not find any matching episode which is accessable with a non-premium account")
+		} else {
+			return nil, fmt.Errorf("could not find any matching episode")
+		}
 	}
 
 	return eps, nil

@@ -1,15 +1,22 @@
 package cmd
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"github.com/ByteDream/crunchyroll-go/v3"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"path/filepath"
 )
 
 var (
 	loginPersistentFlag bool
+	loginEncryptFlag    bool
 
 	loginSessionIDFlag bool
 	loginEtpRtFlag     bool
@@ -36,6 +43,10 @@ func init() {
 		"persistent",
 		false,
 		"If the given credential should be stored persistent")
+	loginCmd.Flags().BoolVar(&loginEncryptFlag,
+		"encrypt",
+		false,
+		"Encrypt the given credentials (won't do anything if --session-id is given or --persistent is not given)")
 
 	loginCmd.Flags().BoolVar(&loginSessionIDFlag,
 		"session-id",
@@ -60,13 +71,68 @@ func loginCredentials(user, password string) error {
 		if configDir, err := os.UserConfigDir(); err != nil {
 			return fmt.Errorf("could not save credentials persistent: %w", err)
 		} else {
+			var credentials []byte
+
+			if loginEncryptFlag {
+				var passwd []byte
+
+				for {
+					fmt.Print("Enter password: ")
+					passwd, err = readLineSilent()
+					if err != nil {
+						return err
+					}
+					fmt.Println()
+
+					fmt.Print("Enter password again: ")
+					repasswd, err := readLineSilent()
+					if err != nil {
+						return err
+					}
+					fmt.Println()
+
+					if !bytes.Equal(passwd, repasswd) {
+						fmt.Println("Passwords does not match, try again")
+						continue
+					}
+
+					hashedPassword := sha256.Sum256(passwd)
+					block, err := aes.NewCipher(hashedPassword[:])
+					if err != nil {
+						out.Err("Failed to create block: %w", err)
+						os.Exit(1)
+					}
+					gcm, err := cipher.NewGCM(block)
+					if err != nil {
+						out.Err("Failed to create gcm: %w", err)
+						os.Exit(1)
+					}
+					nonce := make([]byte, gcm.NonceSize())
+					if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+						out.Err("Failed to fill nonce: %w", err)
+						os.Exit(1)
+					}
+
+					b := gcm.Seal(nonce, nonce, []byte(fmt.Sprintf("%s\n%s", user, password)), nil)
+					credentials = append([]byte("aes:"), b...)
+
+					break
+				}
+			} else {
+				credentials = []byte(fmt.Sprintf("%s\n%s", user, password))
+			}
+
 			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
-			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(fmt.Sprintf("%s\n%s", user, password)), 0600); err != nil {
+			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), credentials, 0600); err != nil {
 				return err
 			}
-			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+			if !loginEncryptFlag {
+				out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s). "+
+					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+			}
 		}
 	}
+
 	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
 		return err
 	}

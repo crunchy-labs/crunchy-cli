@@ -97,10 +97,8 @@ const (
 
 // EpisodeFromID returns an episode by its api id.
 func EpisodeFromID(crunchy *Crunchyroll, id string) (*Episode, error) {
-	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		crunchy.Config.CountryCode,
-		crunchy.Config.MaturityRating,
-		crunchy.Config.Channel,
+	resp, err := crunchy.request(fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/episodes/%s?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		crunchy.Config.Bucket,
 		id,
 		crunchy.Locale,
 		crunchy.Config.Signature,
@@ -159,6 +157,8 @@ func (e *Episode) RemoveFromWatchlist() error {
 // Every episode in a season (should) have the same audio locale,
 // so if you want to get the audio locale of a season, just call
 // this method on the first episode of the season.
+// Will fail if no streams are available, thus use Episode.Available
+// to prevent any misleading errors.
 func (e *Episode) AudioLocale() (LOCALE, error) {
 	streams, err := e.Streams()
 	if err != nil {
@@ -247,6 +247,11 @@ func (e *Episode) Comments(options CommentsOptions, page uint, size uint) (c []*
 	return
 }
 
+// Available returns if downloadable streams for this episodes are available.
+func (e *Episode) Available() bool {
+	return e.crunchy.Config.Premium || !e.IsPremiumOnly
+}
+
 // GetFormat returns the format which matches the given resolution and subtitle locale.
 func (e *Episode) GetFormat(resolution string, subtitle LOCALE, hardsub bool) (*Format, error) {
 	streams, err := e.Streams()
@@ -319,10 +324,8 @@ func (e *Episode) Streams() ([]*Stream, error) {
 		return e.children, nil
 	}
 
-	streams, err := fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/%s/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
-		e.crunchy.Config.CountryCode,
-		e.crunchy.Config.MaturityRating,
-		e.crunchy.Config.Channel,
+	streams, err := fromVideoStreams(e.crunchy, fmt.Sprintf("https://beta-api.crunchyroll.com/cms/v2/%s/videos/%s/streams?locale=%s&Signature=%s&Policy=%s&Key-Pair-Id=%s",
+		e.crunchy.Config.Bucket,
 		e.StreamID,
 		e.crunchy.Locale,
 		e.crunchy.Config.Signature,

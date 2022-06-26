@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
 	"fmt"
 	"github.com/ByteDream/crunchyroll-go/v3"
 	"github.com/ByteDream/crunchyroll-go/v3/utils"
@@ -147,7 +150,7 @@ func loadCrunchy() {
 			out.StopProgress("Failed to read login information: %v", err)
 			os.Exit(1)
 		}
-		if crunchy, err = crunchyroll.LoginWithEtpRt(url.QueryEscape(string(body)), systemLocale(true), client); err != nil {
+		if crunchy, err = crunchyroll.LoginWithEtpRt(string(body), systemLocale(true), client); err != nil {
 			out.Debug("Failed to login with temp etp rt cookie: %v", err)
 		} else {
 			out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
@@ -167,22 +170,59 @@ func loadCrunchy() {
 			}
 			split := strings.SplitN(string(body), "\n", 2)
 			if len(split) == 1 || split[1] == "" {
-				split[0] = url.QueryEscape(split[0])
+				if strings.HasPrefix(split[0], "aes:") {
+					encrypted := body[4:]
+
+					out.StopProgress("Credentials are encrypted")
+					fmt.Print("Enter password to encrypt it: ")
+					passwd, err := readLineSilent()
+					fmt.Println()
+					if err != nil {
+						out.Err("Failed to read password; %w", err)
+						os.Exit(1)
+					}
+					out.SetProgress("Logging in")
+
+					hashedPassword := sha256.Sum256(passwd)
+					block, err := aes.NewCipher(hashedPassword[:])
+					if err != nil {
+						out.Err("Failed to create block: %w", err)
+						os.Exit(1)
+					}
+					gcm, err := cipher.NewGCM(block)
+					if err != nil {
+						out.Err("Failed to create gcm: %w", err)
+						os.Exit(1)
+					}
+					nonce, c := encrypted[:gcm.NonceSize()], encrypted[gcm.NonceSize():]
+
+					b, err := gcm.Open(nil, nonce, c, nil)
+					if err != nil {
+						out.StopProgress("Invalid password")
+						os.Exit(1)
+					}
+					split = strings.SplitN(string(b), "\n", 2)
+				}
+			}
+
+			if len(split) == 2 {
+				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
+					out.StopProgress(err.Error())
+					os.Exit(1)
+				}
+				out.Debug("Logged in with credentials")
+			} else {
 				if crunchy, err = crunchyroll.LoginWithEtpRt(split[0], systemLocale(true), client); err != nil {
 					out.StopProgress(err.Error())
 					os.Exit(1)
 				}
 				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
-			} else {
-				if crunchy, err = crunchyroll.LoginWithCredentials(split[0], split[1], systemLocale(true), client); err != nil {
-					out.StopProgress(err.Error())
-					os.Exit(1)
-				}
-				out.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", crunchy.EtpRt)
-				// the etp rt is written to a temp file to reduce the amount of re-logging in.
-				// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
-				os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
 			}
+
+			// the etp rt is written to a temp file to reduce the amount of re-logging in.
+			// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
+			os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600)
+
 			out.StopProgress("Logged in")
 			return
 		}

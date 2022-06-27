@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"crypto/aes"
@@ -161,7 +161,7 @@ func loadCrunchy() {
 	}
 
 	if configDir, err := os.UserConfigDir(); err == nil {
-		persistentFilePath := filepath.Join(configDir, "crunchyroll-go", "crunchy")
+		persistentFilePath := filepath.Join(configDir, "crunchy-cli", "crunchy")
 		if _, statErr := os.Stat(persistentFilePath); statErr == nil {
 			body, err := os.ReadFile(persistentFilePath)
 			if err != nil {

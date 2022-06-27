@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"context"
@@ -27,9 +27,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "crunchyroll-go",
+	Use:     "crunchy-cli",
 	Version: Version,
-	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
+	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchy-cli/wiki",
 
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -54,7 +54,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&proxyFlag, "proxy", "p", "", "Proxy to use")
 
-	rootCmd.PersistentFlags().StringVar(&useragentFlag, "useragent", fmt.Sprintf("crunchyroll-go/%s", Version), "Useragent to do all request with")
+	rootCmd.PersistentFlags().StringVar(&useragentFlag, "useragent", fmt.Sprintf("crunchy-cli/%s", Version), "Useragent to do all request with")
 }
 
 func Execute() {

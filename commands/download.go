@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"context"
@@ -134,7 +134,7 @@ func download(urls []string) error {
 			out.StopProgress("Failed to parse url %d", i+1)
 			if crunchy.Config.Premium {
 				out.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information")
+					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchy-cli/issues/22 for more information")
 			}
 			return err
 		}

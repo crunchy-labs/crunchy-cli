@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"bytes"
@@ -122,13 +122,13 @@ func loginCredentials(user, password string) error {
 				credentials = []byte(fmt.Sprintf("%s\n%s", user, password))
 			}
 
-			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
-			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), credentials, 0600); err != nil {
+			os.MkdirAll(filepath.Join(configDir, "crunchy-cli"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchy-cli", "crunchy"), credentials, 0600); err != nil {
 				return err
 			}
 			if !loginEncryptFlag {
 				out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s). "+
-					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+					"To encrypt it, use the `--encrypt` flag", filepath.Join(configDir, "crunchy-cli", "crunchy"))
 			}
 		}
 	}
@@ -157,11 +157,11 @@ func loginSessionID(sessionID string) error {
 		if configDir, err := os.UserConfigDir(); err != nil {
 			return fmt.Errorf("could not save credentials persistent: %w", err)
 		} else {
-			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
-			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(c.EtpRt), 0600); err != nil {
+			os.MkdirAll(filepath.Join(configDir, "crunchy-cli"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchy-cli", "crunchy"), []byte(c.EtpRt), 0600); err != nil {
 				return err
 			}
-			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchy-cli", "crunchy"))
 		}
 	}
 	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(c.EtpRt), 0600); err != nil {
@@ -187,11 +187,11 @@ func loginEtpRt(etpRt string) error {
 		if configDir, err := os.UserConfigDir(); err != nil {
 			return fmt.Errorf("could not save credentials persistent: %w", err)
 		} else {
-			os.MkdirAll(filepath.Join(configDir, "crunchyroll-go"), 0755)
-			if err = os.WriteFile(filepath.Join(configDir, "crunchyroll-go", "crunchy"), []byte(etpRt), 0600); err != nil {
+			os.MkdirAll(filepath.Join(configDir, "crunchy-cli"), 0755)
+			if err = os.WriteFile(filepath.Join(configDir, "crunchy-cli", "crunchy"), []byte(etpRt), 0600); err != nil {
 				return err
 			}
-			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchyroll-go", "crunchy"))
+			out.Info("The login information will be stored permanently UNENCRYPTED on your drive (%s)", filepath.Join(configDir, "crunchy-cli", "crunchy"))
 		}
 	}
 	if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(etpRt), 0600); err != nil {

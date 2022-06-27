@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"encoding/json"
@@ -38,7 +38,7 @@ func init() {
 func update() error {
 	var release map[string]interface{}
 
-	resp, err := client.Get("https://api.github.com/repos/ByteDream/crunchyroll-go/releases/latest")
+	resp, err := client.Get("https://api.github.com/repos/ByteDream/crunchy-cli/releases/latest")
 	if err != nil {
 		return err
 	}
@@ -80,20 +80,20 @@ func update() error {
 		return nil
 	}
 
-	out.Info("A new version is available (%s): https://github.com/ByteDream/crunchyroll-go/releases/tag/v%s", releaseVersion, releaseVersion)
+	out.Info("A new version is available (%s): https://github.com/ByteDream/crunchy-cli/releases/tag/v%s", releaseVersion, releaseVersion)
 
 	if updateInstallFlag {
 		if runtime.GOARCH != "amd64" {
 			return fmt.Errorf("invalid architecture found (%s), only amd64 is currently supported for automatic updating. "+
-				"You have to update manually (https://github.com/ByteDream/crunchyroll-go)", runtime.GOARCH)
+				"You have to update manually (https://github.com/ByteDream/crunchy-cli)", runtime.GOARCH)
 		}
 
 		var downloadFile string
 		switch runtime.GOOS {
 		case "linux":
-			yayCommand := exec.Command("pacman -Q crunchyroll-go")
+			yayCommand := exec.Command("pacman -Q crunchy-cli")
 			if yayCommand.Run() == nil && yayCommand.ProcessState.Success() {
-				out.Info("crunchyroll-go was probably installed via an Arch Linux AUR helper (like yay). Updating via this AUR helper is recommended")
+				out.Info("crunchy-cli was probably installed via an Arch Linux AUR helper (like yay). Updating via this AUR helper is recommended")
 				return nil
 			}
 			downloadFile = fmt.Sprintf("crunchy-v%s_linux", releaseVersion)
@@ -103,7 +103,7 @@ func update() error {
 			downloadFile = fmt.Sprintf("crunchy-v%s_windows.exe", releaseVersion)
 		default:
 			return fmt.Errorf("invalid operation system found (%s), only linux, windows and darwin / macos are currently supported. "+
-				"You have to update manually (https://github.com/ByteDream/crunchyroll-go)", runtime.GOOS)
+				"You have to update manually (https://github.com/ByteDream/crunchy-cli", runtime.GOOS)
 		}
 
 		out.SetProgress("Updating executable %s", os.Args[0])
@@ -119,7 +119,7 @@ func update() error {
 		}
 		defer executeFile.Close()
 
-		resp, err := client.Get(fmt.Sprintf("https://github.com/ByteDream/crunchyroll-go/releases/download/v%s/%s", releaseVersion, downloadFile))
+		resp, err := client.Get(fmt.Sprintf("https://github.com/ByteDream/crunchy-cli/releases/download/v%s/%s", releaseVersion, downloadFile))
 		if err != nil {
 			return err
 		}

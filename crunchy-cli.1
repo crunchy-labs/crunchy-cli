@@ -1,24 +1,24 @@
-.TH crunchyroll-go 1 "21 March 2022" "crunchyroll-go" "Crunchyroll Downloader"
+.TH crunchy-cli 1 "27 June 2022" "crunchy-cli" "Crunchyroll Cli Client"
 
 .SH NAME
-crunchyroll-go - A cli for downloading videos and entire series from crunchyroll.
+crunchy-cli - A cli for downloading videos and entire series from crunchyroll.
 
 .SH SYNOPSIS
-crunchyroll-go [\fB-h\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
+crunchy-cli [\fB-h\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
 .br
-crunchyroll-go help
+crunchy-cli help
 .br
-crunchyroll-go login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] [\fIusername\fR, \fIpassword\fR]
+crunchy-cli login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] [\fIusername\fR, \fIpassword\fR]
 .br
-crunchyroll-go download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+crunchy-cli download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
 .br
-crunchyroll-go archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+crunchy-cli archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
 .br
-crunchyroll-go update [\fB-i\fR \fIINSTALL\fR]
+crunchy-cli update [\fB-i\fR \fIINSTALL\fR]
 
 .SH DESCRIPTION
 .TP
-With \fBcrunchyroll-go\fR you can easily download video and series from crunchyroll.
+With \fBcrunchy-cli\fR you can easily download video and series from crunchyroll.
 .TP
 
 Note that you need an \fBcrunchyroll premium\fR account in order to use this tool!
@@ -167,27 +167,27 @@ The \fBS\fR, followed by the number indicates the season number, \fBE\fR, follow
 .SH EXAMPLES
 Login via crunchyroll account email and password.
 .br
-$ crunchyroll-go login user@example.com 12345678
+$ crunchy-cli login user@example.com 12345678
 
 Download a episode normally. Your system locale will be used for the video's audio.
 .br
-$ crunchyroll-go download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with 720p and name it to 'darling.mp4'. Note that you need \fBffmpeg\fR to save files which do not have '.ts' as file extension.
 .br
-$ crunchyroll-go download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with japanese audio and american subtitles.
 .br
-$ crunchyroll-go download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
+$ crunchy-cli download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
 
 Stores the episode in a .mkv file.
 .br
-$ crunchyroll-go archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
 .br
-$ crunchyroll-go archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
+$ crunchy-cli archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
 
 .SH BUGS
 If you notice any bug or want an enhancement, feel free to create a new issue or pull request in the GitHub repository.
@@ -195,22 +195,21 @@ If you notice any bug or want an enhancement, feel free to create a new issue or
 .SH AUTHOR
 ByteDream
 .br
-Source: https://github.com/ByteDream/crunchyroll-go
+Source: https://github.com/ByteDream/crunchy-cli
 
 .SH COPYRIGHT
 Copyright (C) 2022 ByteDream
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 

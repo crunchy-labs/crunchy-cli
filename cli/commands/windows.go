@@ -9,7 +9,7 @@ import (
 )
 
 // https://github.com/bgentry/speakeasy/blob/master/speakeasy_windows.go
-func readLineSilent() ([]byte, error) {
+func ReadLineSilent() ([]byte, error) {
 	var oldMode uint32
 
 	if err := syscall.GetConsoleMode(syscall.Stdin, &oldMode); err != nil {

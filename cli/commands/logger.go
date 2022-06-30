@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/ByteDream/crunchy-cli/utils"
 	"io"
 	"log"
 	"os"
@@ -35,19 +36,7 @@ type progress struct {
 	stop    bool
 }
 
-type logger struct {
-	DebugLog *log.Logger
-	InfoLog  *log.Logger
-	ErrLog   *log.Logger
-
-	devView bool
-
-	progress chan progress
-	done     chan interface{}
-	lock     sync.Mutex
-}
-
-func newLogger(debug, info, err bool) *logger {
+func NewLogger(debug, info, err bool) *Logger {
 	initPrefixBecauseWindowsSucksBallsHard()
 
 	debugLog, infoLog, errLog := log.New(io.Discard, prefix+" ", 0), log.New(io.Discard, prefix+" ", 0), log.New(io.Discard, prefix+" ", 0)
@@ -68,7 +57,7 @@ func newLogger(debug, info, err bool) *logger {
 		errLog = log.New(errLog.Writer(), "[err] ", 0)
 	}
 
-	return &logger{
+	return &Logger{
 		DebugLog: debugLog,
 		InfoLog:  infoLog,
 		ErrLog:   errLog,
@@ -77,38 +66,52 @@ func newLogger(debug, info, err bool) *logger {
 	}
 }
 
-func (l *logger) IsDev() bool {
+type Logger struct {
+	utils.Logger
+
+	DebugLog *log.Logger
+	InfoLog  *log.Logger
+	ErrLog   *log.Logger
+
+	devView bool
+
+	progress chan progress
+	done     chan interface{}
+	lock     sync.Mutex
+}
+
+func (l *Logger) IsDev() bool {
 	return l.devView
 }
 
-func (l *logger) IsQuiet() bool {
+func (l *Logger) IsQuiet() bool {
 	return l.DebugLog.Writer() == io.Discard && l.InfoLog.Writer() == io.Discard && l.ErrLog.Writer() == io.Discard
 }
 
-func (l *logger) Debug(format string, v ...interface{}) {
+func (l *Logger) Debug(format string, v ...interface{}) {
 	l.DebugLog.Printf(format, v...)
 }
 
-func (l *logger) Info(format string, v ...interface{}) {
+func (l *Logger) Info(format string, v ...interface{}) {
 	l.InfoLog.Printf(format, v...)
 }
 
-func (l *logger) Err(format string, v ...interface{}) {
+func (l *Logger) Warn(format string, v ...interface{}) {
+	l.Err(format, v...)
+}
+
+func (l *Logger) Err(format string, v ...interface{}) {
 	l.ErrLog.Printf(format, v...)
 }
 
-func (l *logger) Exit(format string, v ...interface{}) {
-	fmt.Fprintln(l.ErrLog.Writer(), fmt.Sprintf(format, v...))
-}
-
-func (l *logger) Empty() {
+func (l *Logger) Empty() {
 	if !l.devView && l.InfoLog.Writer() != io.Discard {
 		fmt.Println("")
 	}
 }
 
-func (l *logger) SetProgress(format string, v ...interface{}) {
-	if out.InfoLog.Writer() == io.Discard {
+func (l *Logger) SetProcess(format string, v ...interface{}) {
+	if l.InfoLog.Writer() == io.Discard {
 		return
 	} else if l.devView {
 		l.Debug(format, v...)
@@ -175,8 +178,8 @@ func (l *logger) SetProgress(format string, v ...interface{}) {
 	}()
 }
 
-func (l *logger) StopProgress(format string, v ...interface{}) {
-	if out.InfoLog.Writer() == io.Discard {
+func (l *Logger) StopProcess(format string, v ...interface{}) {
+	if l.InfoLog.Writer() == io.Discard {
 		return
 	} else if l.devView {
 		l.Debug(format, v...)

@@ -6,7 +6,7 @@ DESTDIR=
 PREFIX=/usr
 
 build:
-		go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/commands.Version=$(VERSION)'" -o $(BINARY_NAME) .
+		go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/utils.Version=$(VERSION)'" -o $(BINARY_NAME) .
 
 clean:
 		rm -f $(BINARY_NAME) $(VERSION_BINARY_NAME)_*
@@ -24,8 +24,8 @@ uninstall:
 		rm -f $(DESTDIR)$(PREFIX)/share/licenses/crunchy-cli/LICENSE
 
 release:
-		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/commands.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_linux .
-		CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/commands.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_windows.exe .
-		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/commands.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_darwin .
+		CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/utils.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_linux .
+		CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/utils.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_windows.exe .
+		CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/ByteDream/crunchy-cli/utils.Version=$(VERSION)'" -o $(VERSION_BINARY_NAME)_darwin .
 
 		strip $(VERSION_BINARY_NAME)_linux

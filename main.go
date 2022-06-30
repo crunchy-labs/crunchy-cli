@@ -1,7 +1,9 @@
 package main
 
-import "github.com/ByteDream/crunchy-cli/commands"
+import (
+	"github.com/ByteDream/crunchy-cli/cli"
+)
 
 func main() {
-	commands.Execute()
+	cli.Execute()
 }

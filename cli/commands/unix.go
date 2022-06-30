@@ -19,7 +19,7 @@ func init() {
 	}
 }
 
-func readLineSilent() ([]byte, error) {
+func ReadLineSilent() ([]byte, error) {
 	pid, err := setEcho(false)
 	if err != nil {
 		return nil, err

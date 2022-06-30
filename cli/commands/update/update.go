@@ -1,8 +1,9 @@
-package commands
+package update
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ByteDream/crunchy-cli/utils"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -15,7 +16,7 @@ var (
 	updateInstallFlag bool
 )
 
-var updateCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "update",
 	Short: "Check if updates are available",
 	Args:  cobra.MaximumNArgs(0),
@@ -26,19 +27,17 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.Flags().BoolVarP(&updateInstallFlag,
+	Cmd.Flags().BoolVarP(&updateInstallFlag,
 		"install",
 		"i",
 		false,
 		"If set and a new version is available, the new version gets installed")
-
-	rootCmd.AddCommand(updateCmd)
 }
 
 func update() error {
 	var release map[string]interface{}
 
-	resp, err := client.Get("https://api.github.com/repos/ByteDream/crunchy-cli/releases/latest")
+	resp, err := utils.Client.Get("https://api.github.com/repos/ByteDream/crunchy-cli/releases/latest")
 	if err != nil {
 		return err
 	}
@@ -48,8 +47,8 @@ func update() error {
 	}
 	releaseVersion := strings.TrimPrefix(release["tag_name"].(string), "v")
 
-	if Version == "development" {
-		out.Info("Development version, update service not available")
+	if utils.Version == "development" {
+		utils.Log.Info("Development version, update service not available")
 		return nil
 	}
 
@@ -58,17 +57,17 @@ func update() error {
 		return fmt.Errorf("latest tag name (%s) is not parsable", releaseVersion)
 	}
 
-	internalVersion := strings.SplitN(Version, ".", 4)
+	internalVersion := strings.SplitN(utils.Version, ".", 4)
 	if len(internalVersion) != 3 {
-		return fmt.Errorf("internal version (%s) is not parsable", Version)
+		return fmt.Errorf("internal version (%s) is not parsable", utils.Version)
 	}
 
-	out.Info("Installed version is %s", Version)
+	utils.Log.Info("Installed version is %s", utils.Version)
 
 	var hasUpdate bool
 	for i := 0; i < 3; i++ {
 		if latestRelease[i] < internalVersion[i] {
-			out.Info("Local version is newer than version in latest release (%s)", releaseVersion)
+			utils.Log.Info("Local version is newer than version in latest release (%s)", releaseVersion)
 			return nil
 		} else if latestRelease[i] > internalVersion[i] {
 			hasUpdate = true
@@ -76,11 +75,11 @@ func update() error {
 	}
 
 	if !hasUpdate {
-		out.Info("Version is up-to-date")
+		utils.Log.Info("Version is up-to-date")
 		return nil
 	}
 
-	out.Info("A new version is available (%s): https://github.com/ByteDream/crunchy-cli/releases/tag/v%s", releaseVersion, releaseVersion)
+	utils.Log.Info("A new version is available (%s): https://github.com/ByteDream/crunchy-cli/releases/tag/v%s", releaseVersion, releaseVersion)
 
 	if updateInstallFlag {
 		if runtime.GOARCH != "amd64" {
@@ -93,7 +92,7 @@ func update() error {
 		case "linux":
 			yayCommand := exec.Command("pacman -Q crunchy-cli")
 			if yayCommand.Run() == nil && yayCommand.ProcessState.Success() {
-				out.Info("crunchy-cli was probably installed via an Arch Linux AUR helper (like yay). Updating via this AUR helper is recommended")
+				utils.Log.Info("crunchy-cli was probably installed via an Arch Linux AUR helper (like yay). Updating via this AUR helper is recommended")
 				return nil
 			}
 			downloadFile = fmt.Sprintf("crunchy-v%s_linux", releaseVersion)
@@ -106,7 +105,7 @@ func update() error {
 				"You have to update manually (https://github.com/ByteDream/crunchy-cli", runtime.GOOS)
 		}
 
-		out.SetProgress("Updating executable %s", os.Args[0])
+		utils.Log.SetProcess("Updating executable %s", os.Args[0])
 
 		perms, err := os.Stat(os.Args[0])
 		if err != nil {
@@ -119,7 +118,7 @@ func update() error {
 		}
 		defer executeFile.Close()
 
-		resp, err := client.Get(fmt.Sprintf("https://github.com/ByteDream/crunchy-cli/releases/download/v%s/%s", releaseVersion, downloadFile))
+		resp, err := utils.Client.Get(fmt.Sprintf("https://github.com/ByteDream/crunchy-cli/releases/download/v%s/%s", releaseVersion, downloadFile))
 		if err != nil {
 			return err
 		}
@@ -129,7 +128,7 @@ func update() error {
 			return err
 		}
 
-		out.StopProgress("Updated executable %s", os.Args[0])
+		utils.Log.StopProcess("Updated executable %s", os.Args[0])
 	}
 
 	return nil

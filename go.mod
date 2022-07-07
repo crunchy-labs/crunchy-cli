@@ -1,4 +1,4 @@
-module github.com/ByteDream/crunchyroll-go/v2
+module github.com/crunchy-labs/crunchyroll-go/v2
 
 go 1.18
 

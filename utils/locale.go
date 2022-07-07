@@ -1,8 +1,6 @@
 package utils
 
-import (
-	"github.com/ByteDream/crunchyroll-go/v2"
-)
+import "github.com/crunchy-labs/crunchyroll-go/v2"
 
 // AllLocales is an array of all available locales.
 var AllLocales = []crunchyroll.LOCALE{

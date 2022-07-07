@@ -3,26 +3,26 @@
 A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account to for full (api) access.
 
 <p align="center">
-  <a href="https://github.com/ByteDream/crunchy-cli">
-    <img src="https://img.shields.io/github/languages/code-size/ByteDream/crunchy-cli?style=flat-square" alt="Code size">
+  <a href="https://github.com/crunchy-labs/crunchy-cli">
+    <img src="https://img.shields.io/github/languages/code-size/crunchy-labs/crunchy-cli?style=flat-square" alt="Code size">
   </a>
-  <a href="https://github.com/ByteDream/crunchy-cli/releases/latest">
-    <img src="https://img.shields.io/github/downloads/ByteDream/crunchy-cli/total?style=flat-square" alt="Download Badge">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/releases/latest">
+    <img src="https://img.shields.io/github/downloads/crunchy-labs/crunchy-cli/total?style=flat-square" alt="Download Badge">
   </a>
-  <a href="https://github.com/ByteDream/crunchy-cli/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/ByteDream/crunchy-cli?style=flat-square" alt="License">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/crunchy-labs/crunchy-cli?style=flat-square" alt="License">
   </a>
   <a href="https://golang.org">
-    <img src="https://img.shields.io/github/go-mod/go-version/ByteDream/crunchy-cli?style=flat-square" alt="Go version">
+    <img src="https://img.shields.io/github/go-mod/go-version/crunchy-labs/crunchy-cli?style=flat-square" alt="Go version">
   </a>
-  <a href="https://github.com/ByteDream/crunchy-cli/releases/latest">
-    <img src="https://img.shields.io/github/v/release/ByteDream/crunchy-cli?style=flat-square" alt="Release">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/releases/latest">
+    <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?style=flat-square" alt="Release">
   </a>
   <a href="https://discord.gg/gUWwekeNNg">
     <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
   </a>
-  <a href="https://github.com/ByteDream/crunchy-cli/actions/workflows/ci.yml">
-    <img src="https://github.com/ByteDream/crunchy-cli/workflows/CI/badge.svg?style=flat" alt="CI">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/ci.yml">
+    <img src="https://github.com/crunchy-labs/crunchy-cli/workflows/CI/badge.svg?style=flat" alt="CI">
   </a>
 </p>
 
@@ -35,7 +35,7 @@ A [go](https://golang.org) written cli client for [crunchyroll](https://www.crun
 </p>
 
 _This repo was former known as **crunchyroll-go** (which still exists but now contains only the library part) but got split up into two separate repositories to provide more flexibility.
-See [#39](https://github.com/ByteDream/crunchy-cli/issues/39) for more information._
+See [#39](https://github.com/crunchy-labs/crunchy-cli/issues/39) for more information._
 
 # 🖥️ CLI
 
@@ -47,10 +47,10 @@ See [#39](https://github.com/ByteDream/crunchy-cli/issues/39) for more informati
 
 ## 💾 Get the executable
 
-- 📥 Download the latest binaries [here](https://github.com/ByteDream/crunchy-cli/releases/latest) or get it from below:
-  - [Linux (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchy-cli/crunchy-{tag}_linux)
-  - [Windows (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchy-cli/crunchy-{tag}_windows.exe)
-  - [MacOS (x64)](https://smartrelease.bytedream.org/github/ByteDream/crunchy-cli/crunchy-{tag}_darwin)
+- 📥 Download the latest binaries [here](https://github.com/crunchy-labs/crunchy-cli/releases/latest) or get it from below:
+  - [Linux (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
+  - [Windows (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
+  - [MacOS (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```shell
   $ yay -S crunchyroll-go
@@ -65,24 +65,24 @@ See [#39](https://github.com/ByteDream/crunchy-cli/issues/39) for more informati
 
   </del>
   <i>Currently not working because the repo got renamed!</i>
-- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/ByteDream/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
+- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/crunchy-labs/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
   - use `make` (requires `go` to be installed):
   ```shell
-  $ git clone https://github.com/ByteDream/crunchy-cli
+  $ git clone https://github.com/crunchy-labs/crunchy-cli
   $ cd crunchy-cli
   $ make
   $ sudo make install # <- only if you want to install it on your system
   ```
   - use `go`:
   ```shell
-  $ git clone https://github.com/ByteDream/crunchy-cli
+  $ git clone https://github.com/crunchy-labs/crunchy-cli
   $ cd crunchy-cli
   $ go build -o crunchy .
   ```
 
 ## 📝 Examples
 
-_Before reading_: Because of the huge functionality not all cases can be covered in the README. Make sure to check the [wiki](https://github.com/ByteDream/crunchy-cli/wiki/Cli), further usages and options are described there.
+_Before reading_: Because of the huge functionality not all cases can be covered in the README. Make sure to check the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli), further usages and options are described there.
 
 ### Login
 
@@ -169,7 +169,7 @@ The following flags can be (optional) passed to modify the [archive](#archive) p
 | `-l`  | `--language`   | Audio locale which should be downloaded. Can be used multiple times.                                                                                                                                    |
 | `-d`  | `--directory`  | Directory to download the video(s) to.                                                                                                                                                                  |
 | `-o`  | `--output`     | Name of the output file.                                                                                                                                                                                |
-| `-m`  | `--merge`      | Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'. See the [wiki](https://github.com/ByteDream/crunchy-cli/wiki/Cli#archive) for more information.                  |
+| `-m`  | `--merge`      | Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'. See the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#archive) for more information.                  |
 | `-c`  | `--compress`   | If is set, all output will be compresses into an archive. This flag sets the name of the compressed output file and the file ending specifies the compression algorithm (gzip, tar, zip are supported). |
 | `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst.                                                                                                                          |
 | `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                                                                                                                                                |

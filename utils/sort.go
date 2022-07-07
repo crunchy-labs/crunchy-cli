@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/ByteDream/crunchyroll-go/v2"
+	"github.com/crunchy-labs/crunchyroll-go/v2"
 	"sort"
 	"strconv"
 	"strings"

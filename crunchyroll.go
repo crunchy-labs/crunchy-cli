@@ -337,7 +337,7 @@ func (c *Crunchyroll) Search(query string, limit uint) (s []*Series, m []*Movie,
 //
 // Deprecated: Use Search instead. The first result sometimes isn't the correct one
 // so this function is inaccurate in some cases.
-// See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information.
+// See https://github.com/crunchy-labs/crunchyroll-go/issues/22 for more information.
 func (c *Crunchyroll) FindVideoByName(seriesName string) (Video, error) {
 	s, m, err := c.Search(seriesName, 1)
 	if err != nil {

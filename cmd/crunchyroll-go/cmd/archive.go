@@ -8,8 +8,8 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v2"
-	"github.com/ByteDream/crunchyroll-go/v2/utils"
+	"github.com/crunchy-labs/crunchyroll-go/v2"
+	"github.com/crunchy-labs/crunchyroll-go/v2/utils"
 	"github.com/grafov/m3u8"
 	"github.com/spf13/cobra"
 	"io"
@@ -187,7 +187,7 @@ func archive(urls []string) error {
 		if err != nil {
 			out.StopProgress("Failed to parse url %d", i+1)
 			out.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-				"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchyroll-go/issues/22 for more information")
+				"try the corresponding crunchyroll beta url instead and try again. See https://github.com/crunchy-labs/crunchyroll-go/issues/22 for more information")
 			return err
 		}
 		out.StopProgress("Parsed url %d", i+1)

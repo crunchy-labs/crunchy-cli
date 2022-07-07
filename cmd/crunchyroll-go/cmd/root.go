@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v2"
+	"github.com/crunchy-labs/crunchyroll-go/v2"
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
@@ -29,7 +29,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:     "crunchyroll-go",
 	Version: Version,
-	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/ByteDream/crunchyroll-go/wiki",
+	Short:   "Download crunchyroll videos with ease. See the wiki for details about the cli and library: https://github.com/crunchy-labs/crunchyroll-go/wiki",
 
 	SilenceErrors: true,
 	SilenceUsage:  true,

@@ -19,7 +19,7 @@ A [go](https://golang.org) written cli client for [crunchyroll](https://www.crun
     <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?style=flat-square" alt="Release">
   </a>
   <a href="https://discord.gg/PXGPGpQxgk">
-    <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
+    <img src="https://img.shields.io/discord/994882878125121596?label=discord&style=flat-square" alt="Discord">
   </a>
   <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/ci.yml">
     <img src="https://github.com/crunchy-labs/crunchy-cli/workflows/CI/badge.svg?style=flat" alt="CI">

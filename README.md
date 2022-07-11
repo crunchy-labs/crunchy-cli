@@ -1,6 +1,6 @@
 # crunchy-cli
 
-A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account to for full (api) access.
+A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account for full (api) access.
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">

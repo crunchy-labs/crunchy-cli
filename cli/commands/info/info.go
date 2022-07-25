@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/ByteDream/crunchy-cli/cli/commands"
 	"github.com/ByteDream/crunchy-cli/utils"
-	crunchyUtils "github.com/ByteDream/crunchyroll-go/v3/utils"
+	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
 	"github.com/spf13/cobra"
 )
 

@@ -2,8 +2,8 @@ package utils
 
 import (
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v3"
-	"github.com/ByteDream/crunchyroll-go/v3/utils"
+	"github.com/crunchy-labs/crunchyroll-go/v3"
+	"github.com/crunchy-labs/crunchyroll-go/v3/utils"
 	"os"
 	"os/exec"
 	"runtime"

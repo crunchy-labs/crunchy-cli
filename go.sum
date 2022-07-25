@@ -1,8 +1,6 @@
-github.com/ByteDream/crunchyroll-go/v3 v3.0.0-20220627201246-98185d763c0c h1:jPabd/Zl/zdoSo8ZGtZLm43+42nIFHIJABvrvdMOYtY=
-github.com/ByteDream/crunchyroll-go/v3 v3.0.0-20220627201246-98185d763c0c/go.mod h1:L4M1sOPjJ4ui0YXFnpVUb4AzQIa+D/i/B0QG5iz9op4=
-github.com/ByteDream/crunchyroll-go/v3 v3.0.0-20220630135625-ed58b3fe8cc1 h1:hOL4xzDc6oCcrpf6GrrdUgvqwsQo6dI2zL4nA8rl9hg=
-github.com/ByteDream/crunchyroll-go/v3 v3.0.0-20220630135625-ed58b3fe8cc1/go.mod h1:L4M1sOPjJ4ui0YXFnpVUb4AzQIa+D/i/B0QG5iz9op4=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
+github.com/crunchy-labs/crunchyroll-go/v3 v3.0.0-20220724174415-375eaf9007bd h1:wxMjLwhvilxwTnYCOXmBPenMNymhC63m4aFzQ5C7ipQ=
+github.com/crunchy-labs/crunchyroll-go/v3 v3.0.0-20220724174415-375eaf9007bd/go.mod h1:SjTQD3IX7Z+MLsMSd2fP5ttsJ4KtpXY6r08bHLwrOLM=
 github.com/grafov/m3u8 v0.11.1 h1:igZ7EBIB2IAsPPazKwRKdbhxcoBKO3lO1UY57PZDeNA=
 github.com/grafov/m3u8 v0.11.1/go.mod h1:nqzOkfBiZJENr52zTVd/Dcl03yzphIMbJqkXGu+u080=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=

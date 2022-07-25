@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"github.com/ByteDream/crunchyroll-go/v3"
+	"github.com/crunchy-labs/crunchyroll-go/v3"
 	"io"
 	"os"
 	"path/filepath"

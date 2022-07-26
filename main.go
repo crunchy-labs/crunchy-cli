@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ByteDream/crunchy-cli/cli"
+	"github.com/crunchy-labs/crunchy-cli/cli"
 )
 
 func main() {

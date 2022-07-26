@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/ByteDream/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchy-cli/utils"
 	"io"
 	"os"
 	"path/filepath"

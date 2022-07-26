@@ -3,7 +3,7 @@ package update
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ByteDream/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchy-cli/utils"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -37,7 +37,7 @@ func init() {
 func update() error {
 	var release map[string]interface{}
 
-	resp, err := utils.Client.Get("https://api.github.com/repos/ByteDream/crunchy-cli/releases/latest")
+	resp, err := utils.Client.Get("https://api.github.com/repos/crunchy-labs/crunchy-cli/releases/latest")
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,12 @@ func update() error {
 		return nil
 	}
 
-	utils.Log.Info("A new version is available (%s): https://github.com/ByteDream/crunchy-cli/releases/tag/v%s", releaseVersion, releaseVersion)
+	utils.Log.Info("A new version is available (%s): https://github.com/crunchy-labs/crunchy-cli/releases/tag/v%s", releaseVersion, releaseVersion)
 
 	if updateInstallFlag {
 		if runtime.GOARCH != "amd64" {
 			return fmt.Errorf("invalid architecture found (%s), only amd64 is currently supported for automatic updating. "+
-				"You have to update manually (https://github.com/ByteDream/crunchy-cli)", runtime.GOARCH)
+				"You have to update manually (https://github.com/crunchy-labs/crunchy-cli)", runtime.GOARCH)
 		}
 
 		var downloadFile string
@@ -102,7 +102,7 @@ func update() error {
 			downloadFile = fmt.Sprintf("crunchy-v%s_windows.exe", releaseVersion)
 		default:
 			return fmt.Errorf("invalid operation system found (%s), only linux, windows and darwin / macos are currently supported. "+
-				"You have to update manually (https://github.com/ByteDream/crunchy-cli", runtime.GOOS)
+				"You have to update manually (https://github.com/crunchy-labs/crunchy-cli", runtime.GOOS)
 		}
 
 		utils.Log.SetProcess("Updating executable %s", os.Args[0])
@@ -118,7 +118,7 @@ func update() error {
 		}
 		defer executeFile.Close()
 
-		resp, err := utils.Client.Get(fmt.Sprintf("https://github.com/ByteDream/crunchy-cli/releases/download/v%s/%s", releaseVersion, downloadFile))
+		resp, err := utils.Client.Get(fmt.Sprintf("https://github.com/crunchy-labs/crunchy-cli/releases/download/v%s/%s", releaseVersion, downloadFile))
 		if err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-module github.com/ByteDream/crunchy-cli
+module github.com/crunchy-labs/crunchy-cli
 
 go 1.18
 

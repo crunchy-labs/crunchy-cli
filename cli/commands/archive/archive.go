@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/ByteDream/crunchy-cli/cli/commands"
-	"github.com/ByteDream/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchy-cli/cli/commands"
+	"github.com/crunchy-labs/crunchy-cli/utils"
 	"github.com/crunchy-labs/crunchyroll-go/v3"
 	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
 	"github.com/grafov/m3u8"
@@ -185,7 +185,7 @@ func archive(urls []string) error {
 			utils.Log.StopProcess("Failed to parse url %d", i+1)
 			if utils.Crunchy.Config.Premium {
 				utils.Log.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/ByteDream/crunchy-cli/issues/22 for more information")
+					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/crunchy-labs/crunchy-cli/issues/22 for more information")
 			}
 			return err
 		}

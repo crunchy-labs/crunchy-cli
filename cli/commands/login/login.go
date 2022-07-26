@@ -3,8 +3,8 @@ package login
 import (
 	"bytes"
 	"fmt"
-	"github.com/ByteDream/crunchy-cli/cli/commands"
-	"github.com/ByteDream/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchy-cli/cli/commands"
+	"github.com/crunchy-labs/crunchy-cli/utils"
 	"github.com/crunchy-labs/crunchyroll-go/v3"
 	"github.com/spf13/cobra"
 	"os"

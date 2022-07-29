@@ -28,13 +28,13 @@ func info() error {
 		return err
 	}
 
-	fmt.Println("Username:          ", account.Username)
-	fmt.Println("Email:             ", account.Email)
-	fmt.Println("Premium:           ", utils.Crunchy.Config.Premium)
-	fmt.Println("Interface language:", crunchyUtils.LocaleLanguage(account.PreferredCommunicationLanguage))
-	fmt.Println("Subtitle language: ", crunchyUtils.LocaleLanguage(account.PreferredContentSubtitleLanguage))
-	fmt.Println("Created:           ", account.Created)
-	fmt.Println("Account ID:        ", account.AccountID)
+	fmt.Println("Username:           ", account.Username)
+	fmt.Println("Email:              ", account.Email)
+	fmt.Println("Premium:            ", utils.Crunchy.Config.Premium)
+	fmt.Println("Interface language: ", crunchyUtils.LocaleLanguage(account.PreferredCommunicationLanguage))
+	fmt.Println("Subtitle language:  ", crunchyUtils.LocaleLanguage(account.PreferredContentSubtitleLanguage))
+	fmt.Println("Created:            ", account.Created)
+	fmt.Println("Account ID:         ", account.AccountID)
 
 	return nil
 }

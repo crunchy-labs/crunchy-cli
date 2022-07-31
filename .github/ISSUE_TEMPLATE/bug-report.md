@@ -10,14 +10,8 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**Bug target**
-Set a `x` between the square brackets if your bug occurred while using the CLI or the library
-
-- [ ] CLI (command line client)
-- [ ] Library
-
 **To Reproduce**
-Steps to reproduce the behavior:
+Steps / command to reproduce the behavior:
 ```
 $ crunchy ...
 ```

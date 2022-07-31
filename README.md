@@ -21,9 +21,6 @@ A [go](https://golang.org) written cli client for [crunchyroll](https://www.crun
   <a href="https://discord.gg/gUWwekeNNg">
     <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
   </a>
-  <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/ci.yml">
-    <img src="https://github.com/crunchy-labs/crunchy-cli/workflows/CI/badge.svg?style=flat" alt="CI">
-  </a>
 </p>
 
 <p align="center">

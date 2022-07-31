@@ -108,6 +108,7 @@ func loginCredentials(user, password string) error {
 
 func loginSessionID(sessionID string) error {
 	utils.Log.Debug("Logging in via session id")
+	utils.Log.Warn("Logging in with session id is deprecated and not very reliable. Consider choosing another option (if it fails)")
 	var c *crunchyroll.Crunchyroll
 	var err error
 	if c, err = crunchyroll.LoginWithSessionID(sessionID, utils.SystemLocale(false), utils.Client); err != nil {

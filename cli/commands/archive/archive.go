@@ -29,6 +29,7 @@ var (
 
 	archiveDirectoryFlag string
 	archiveOutputFlag    string
+	archiveTempDirFlag   string
 
 	archiveMergeFlag string
 
@@ -146,6 +147,10 @@ func init() {
 			"\t{fps} » Frame Rate of the video\n"+
 			"\t{audio} » Audio locale of the video\n"+
 			"\t{subtitle} » Subtitle locale of the video")
+	Cmd.Flags().StringVar(&archiveTempDirFlag,
+		"temp",
+		os.TempDir(),
+		"Directory to store temporary files in")
 
 	Cmd.Flags().StringVarP(&archiveMergeFlag,
 		"merge",
@@ -315,6 +320,8 @@ func archiveInfo(info utils.FormatInformation, writeCloser io.WriteCloser, filen
 		}
 		return nil
 	})
+	tmp, _ := os.MkdirTemp(archiveTempDirFlag, "crunchy_")
+	downloader.TempDir = tmp
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)

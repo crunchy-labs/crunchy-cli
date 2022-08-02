@@ -25,6 +25,7 @@ var (
 
 	downloadDirectoryFlag string
 	downloadOutputFlag    string
+	downloadTempDirFlag   string
 
 	downloadResolutionFlag string
 
@@ -111,6 +112,10 @@ func init() {
 			"\t{fps} » Frame Rate of the video\n"+
 			"\t{audio} » Audio locale of the video\n"+
 			"\t{subtitle} » Subtitle locale of the video")
+	Cmd.Flags().StringVar(&downloadTempDirFlag,
+		"temp",
+		os.TempDir(),
+		"Directory to store temporary files in")
 
 	Cmd.Flags().StringVarP(&downloadResolutionFlag,
 		"resolution",
@@ -230,6 +235,8 @@ func downloadInfo(info utils.FormatInformation, file *os.File) error {
 		}
 		return nil
 	})
+	tmp, _ := os.MkdirTemp(downloadTempDirFlag, "crunchy_")
+	downloader.TempDir = tmp
 	if utils.HasFFmpeg() {
 		downloader.FFmpegOpts = make([]string, 0)
 	}

@@ -14,8 +14,8 @@ var (
 	loginPersistentFlag bool
 	loginEncryptFlag    bool
 
-	loginSessionIDFlag bool
-	loginEtpRtFlag     bool
+	loginSessionIDFlag    bool
+	loginRefreshTokenFlag bool
 )
 
 var Cmd = &cobra.Command{
@@ -26,8 +26,8 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if loginSessionIDFlag {
 			return loginSessionID(args[0])
-		} else if loginEtpRtFlag {
-			return loginEtpRt(args[0])
+		} else if loginRefreshTokenFlag {
+			return loginRefreshToken(args[0])
 		} else {
 			return loginCredentials(args[0], args[1])
 		}
@@ -48,12 +48,12 @@ func init() {
 		"session-id",
 		false,
 		"Use a session id to login instead of username and password")
-	Cmd.Flags().BoolVar(&loginEtpRtFlag,
-		"etp-rt",
+	Cmd.Flags().BoolVar(&loginRefreshTokenFlag,
+		"refresh-token",
 		false,
-		"Use a etp rt cookie to login instead of username and password")
+		"Use a refresh token to login instead of username and password. Can be obtained by copying the `etp-rt` cookie from beta.crunchyroll.com")
 
-	Cmd.MarkFlagsMutuallyExclusive("session-id", "etp-rt")
+	Cmd.MarkFlagsMutuallyExclusive("session-id", "refresh-token")
 }
 
 func loginCredentials(user, password string) error {
@@ -132,11 +132,11 @@ func loginSessionID(sessionID string) error {
 	return nil
 }
 
-func loginEtpRt(etpRt string) error {
-	utils.Log.Debug("Logging in via etp rt")
+func loginRefreshToken(refreshToken string) error {
+	utils.Log.Debug("Logging in via refresh token")
 	var c *crunchyroll.Crunchyroll
 	var err error
-	if c, err = crunchyroll.LoginWithEtpRt(etpRt, utils.SystemLocale(false), utils.Client); err != nil {
+	if c, err = crunchyroll.LoginWithRefreshToken(refreshToken, utils.SystemLocale(false), utils.Client); err != nil {
 		utils.Log.Err(err.Error())
 		os.Exit(1)
 	}

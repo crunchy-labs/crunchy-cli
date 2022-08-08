@@ -15,7 +15,7 @@ import (
 
 func SaveSession(crunchy *crunchyroll.Crunchyroll) error {
 	file := filepath.Join(os.TempDir(), ".crunchy")
-	return os.WriteFile(file, []byte(crunchy.EtpRt), 0600)
+	return os.WriteFile(file, []byte(crunchy.RefreshToken), 0600)
 }
 
 func SaveCredentialsPersistent(user, password string, encryptionKey []byte) error {
@@ -62,7 +62,7 @@ func SaveSessionPersistent(crunchy *crunchyroll.Crunchyroll) error {
 	if err = os.MkdirAll(filepath.Join(configDir, "crunchy-cli"), 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(file, []byte(crunchy.EtpRt), 0600)
+	return os.WriteFile(file, []byte(crunchy.RefreshToken), 0600)
 }
 
 func IsTempSession() bool {
@@ -118,11 +118,11 @@ func loadTempSession(file string) (*crunchyroll.Crunchyroll, error) {
 		if err != nil {
 			return nil, err
 		}
-		crunchy, err := crunchyroll.LoginWithEtpRt(string(body), SystemLocale(true), Client)
+		crunchy, err := crunchyroll.LoginWithRefreshToken(string(body), SystemLocale(true), Client)
 		if err != nil {
-			Log.Debug("Failed to login with temp etp rt cookie: %v", err)
+			Log.Debug("Failed to login with temp refresh token: %v", err)
 		} else {
-			Log.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
+			Log.Debug("Logged in with refresh token %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", body)
 			return crunchy, nil
 		}
 	}
@@ -160,15 +160,15 @@ func loadPersistentSession(file string, encryptionKey []byte) (crunchy *crunchyr
 			}
 			Log.Debug("Logged in with credentials")
 		} else {
-			if crunchy, err = crunchyroll.LoginWithEtpRt(split[0], SystemLocale(true), Client); err != nil {
+			if crunchy, err = crunchyroll.LoginWithRefreshToken(split[0], SystemLocale(true), Client); err != nil {
 				return nil, err
 			}
-			Log.Debug("Logged in with etp rt cookie %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
+			Log.Debug("Logged in with refresh token %s. BLANK THIS LINE OUT IF YOU'RE ASKED TO POST THE DEBUG OUTPUT SOMEWHERE", split[0])
 		}
 
-		// the etp rt is written to a temp file to reduce the amount of re-logging in.
+		// the refresh token is written to a temp file to reduce the amount of re-logging in.
 		// it seems like that crunchyroll has also a little cooldown if a user logs in too often in a short time
-		if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.EtpRt), 0600); err != nil {
+		if err = os.WriteFile(filepath.Join(os.TempDir(), ".crunchy"), []byte(crunchy.RefreshToken), 0600); err != nil {
 			return nil, err
 		}
 	}

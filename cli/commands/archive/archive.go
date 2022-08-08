@@ -627,6 +627,12 @@ func archiveExtractEpisodes(url string) ([][]utils.FormatInformation, error) {
 		}
 	}
 
+	if _, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
+		return nil, fmt.Errorf("archiving episodes by url is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+	} else if _, _, _, _, ok := crunchyroll.ParseEpisodeURL(url); ok {
+		return nil, fmt.Errorf("archiving episodes by url is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+	}
+
 	episodes, err := utils.ExtractEpisodes(url, languagesAsLocale...)
 	if err != nil {
 		return nil, err

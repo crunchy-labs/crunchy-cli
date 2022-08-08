@@ -28,7 +28,6 @@ func ExtractEpisodes(url string, locales ...crunchyroll.LOCALE) ([][]*crunchyrol
 		url = url[:lastOpen]
 	}
 
-	final := make([][]*crunchyroll.Episode, len(locales))
 	episodes, err := Crunchy.ExtractEpisodesFromUrl(url, locales...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get episodes: %v", err)
@@ -82,12 +81,18 @@ func ExtractEpisodes(url string, locales ...crunchyroll.LOCALE) ([][]*crunchyrol
 		}
 	}
 
-	localeSorted, err := utils.SortEpisodesByAudio(episodes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get audio locale: %v", err)
-	}
-	for i, locale := range locales {
-		final[i] = append(final[i], localeSorted[locale]...)
+	var final [][]*crunchyroll.Episode
+	if len(locales) > 0 {
+		final = make([][]*crunchyroll.Episode, len(locales))
+		localeSorted, err := utils.SortEpisodesByAudio(episodes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get audio locale: %v", err)
+		}
+		for i, locale := range locales {
+			final[i] = append(final[i], localeSorted[locale]...)
+		}
+	} else {
+		final = [][]*crunchyroll.Episode{episodes}
 	}
 
 	return final, nil

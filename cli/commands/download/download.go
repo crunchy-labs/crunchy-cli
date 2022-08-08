@@ -14,11 +14,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 var (
+	downloadAudioFlag    string
 	downloadSubtitleFlag string
 
 	downloadDirectoryFlag string
@@ -47,10 +49,12 @@ var Cmd = &cobra.Command{
 			}
 		}
 
-		if downloadSubtitleFlag != "" && !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(downloadSubtitleFlag)) {
+		if downloadAudioFlag != "" && !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(downloadAudioFlag)) {
+			return fmt.Errorf("%s is not a valid audio locale. Choose from: %s", downloadAudioFlag, strings.Join(utils.LocalesAsStrings(), ", "))
+		} else if downloadSubtitleFlag != "" && !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(downloadSubtitleFlag)) {
 			return fmt.Errorf("%s is not a valid subtitle locale. Choose from: %s", downloadSubtitleFlag, strings.Join(utils.LocalesAsStrings(), ", "))
 		}
-		utils.Log.Debug("Subtitle locale: %s", downloadSubtitleFlag)
+		utils.Log.Debug("Locales: audio: %s / subtitle: %s", downloadAudioFlag, downloadSubtitleFlag)
 
 		switch downloadResolutionFlag {
 		case "1080p", "720p", "480p", "360p":
@@ -77,6 +81,10 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
+	Cmd.Flags().StringVarP(&downloadAudioFlag, "audio",
+		"a",
+		"",
+		"The locale of the audio. Available locales: "+strings.Join(utils.LocalesAsStrings(), ", "))
 	Cmd.Flags().StringVarP(&downloadSubtitleFlag,
 		"subtitle",
 		"s",
@@ -272,13 +280,69 @@ func downloadInfo(info utils.FormatInformation, file *os.File) error {
 }
 
 func downloadExtractEpisodes(url string) ([][]utils.FormatInformation, error) {
-	episodes, err := utils.ExtractEpisodes(url)
-	if err != nil {
-		return nil, err
+	var episodes [][]*crunchyroll.Episode
+	var final []*crunchyroll.Episode
+
+	if downloadAudioFlag != "" {
+		if _, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
+			return nil, fmt.Errorf("downloading episodes by url and specifying a language is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+		} else if _, _, _, _, ok := crunchyroll.ParseEpisodeURL(url); ok {
+			return nil, fmt.Errorf("downloading episodes by url and specifying a language is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+		}
+
+		var err error
+		episodes, err = utils.ExtractEpisodes(url, crunchyroll.JP, crunchyroll.LOCALE(downloadAudioFlag))
+		if err != nil {
+			return nil, err
+		}
+		japanese := episodes[0]
+		custom := episodes[1]
+
+		sort.Sort(crunchyUtils.EpisodesByNumber(japanese))
+		sort.Sort(crunchyUtils.EpisodesByNumber(custom))
+
+		var errMessages []string
+
+		if len(japanese) == 0 || len(japanese) == len(custom) {
+			final = custom
+		} else {
+			for _, jp := range japanese {
+				before := len(final)
+				for _, episode := range custom {
+					if jp.SeasonNumber == episode.SeasonNumber && jp.EpisodeNumber == episode.EpisodeNumber {
+						final = append(final, episode)
+					}
+				}
+				if before == len(final) {
+					errMessages = append(errMessages, fmt.Sprintf("%s has no %s audio, using %s as fallback", jp.Title, crunchyroll.LOCALE(downloadAudioFlag), crunchyroll.JP))
+					final = append(final, jp)
+				}
+			}
+		}
+
+		if len(errMessages) > 10 {
+			for _, msg := range errMessages[:10] {
+				utils.Log.SetProcess(msg)
+			}
+			utils.Log.SetProcess("... and %d more", len(errMessages)-10)
+		} else {
+			for _, msg := range errMessages {
+				utils.Log.SetProcess(msg)
+			}
+		}
+	} else {
+		var err error
+		episodes, err = utils.ExtractEpisodes(url)
+		if err != nil {
+			return nil, err
+		} else if len(episodes) == 0 {
+			return nil, fmt.Errorf("cannot find any episode")
+		}
+		final = episodes[0]
 	}
 
 	var infoFormat [][]utils.FormatInformation
-	for _, season := range crunchyUtils.SortEpisodesBySeason(episodes[0]) {
+	for _, season := range crunchyUtils.SortEpisodesBySeason(final) {
 		tmpFormatInformation := make([]utils.FormatInformation, 0)
 		for _, episode := range season {
 			format, err := episode.GetFormat(downloadResolutionFlag, crunchyroll.LOCALE(downloadSubtitleFlag), true)

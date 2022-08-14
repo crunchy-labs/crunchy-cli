@@ -60,7 +60,6 @@ See [#39](https://github.com/crunchy-labs/crunchy-cli/issues/39) for more inform
   $ scoop bucket add extras # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```
-  <i>Currently not working because the repo got renamed!</i>
 - 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/crunchy-labs/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
   - use `make` (requires `go` to be installed):
   ```shell

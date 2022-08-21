@@ -1,6 +1,6 @@
 # crunchy-cli
 
-A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account to for full (api) access.
+A [Go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account for full access & features.
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">
@@ -56,16 +56,11 @@ See #39 for more information._
   ```shell
   $ yay -S crunchyroll-go
   ```
-- <del>
-
-  On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
+- On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
   ```shell
   $ scoop bucket add extras # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```
-
-  </del>
-  <i>Currently not working because the repo got renamed!</i>
 - 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/crunchy-labs/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
   - use `make` (requires `go` to be installed):
   ```shell
@@ -174,26 +169,6 @@ The following flags can be (optional) passed to modify the [archive](#archive) p
 | `-c`  | `--compress`   | If is set, all output will be compresses into an archive. This flag sets the name of the compressed output file and the file ending specifies the compression algorithm (gzip, tar, zip are supported). |
 | `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst.                                                                                                                          |
 | `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                                                                                                                                                |
-
-### Help
-
-- General help
-  ```shell
-  $ crunchy help
-  ```
-- Login help
-  ```shell
-  $ crunchy help login
-  ```
-- Download help
-  ```shell
-  $ crunchy help download
-  ```
-
-- Archive help
-  ```shell
-  $ crunchy help archive
-  ```
 
 ### Global flags
 

@@ -14,7 +14,7 @@ jobs:
         go-version: 1.18
 
     - name: Build
-      run: go build -v cmd/crunchyroll-go/main.go
+      run: go build -v .
 
     - name: Test
-      run: go test -v cmd/crunchyroll-go/main.go
+      run: go test -v .

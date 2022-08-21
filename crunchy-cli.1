@@ -1,22 +1,24 @@
-.TH crunchyroll-go 1 "21 March 2022" "crunchyroll-go" "Crunchyroll Downloader"
+.TH crunchy-cli 1 "27 June 2022" "crunchy-cli" "Crunchyroll Cli Client"
 
 .SH NAME
-crunchyroll-go - A cli for downloading videos and entire series from crunchyroll.
+crunchy-cli - A cli for downloading videos and entire series from crunchyroll.
 
 .SH SYNOPSIS
-crunchyroll-go [\fB-h\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
+crunchy-cli [\fB-h\fR] [\fB-p\fR \fIPROXY\fR] [\fB-q\fR] [\fB-v\fR]
 .br
-crunchyroll-go help
+crunchy-cli help
 .br
-crunchyroll-go login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] [\fIusername\fR, \fIpassword\fR]
+crunchy-cli login [\fB--persistent\fR] [\fB--session-id\fR \fISESSION_ID\fR] [\fIusername\fR, \fIpassword\fR]
 .br
-crunchyroll-go download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+crunchy-cli download [\fB-a\fR \fIAUDIO\fR] [\fB-s\fR \fISUBTITLE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
 .br
-crunchyroll-go archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+crunchy-cli archive [\fB-l\fR \fILANGUAGE\fR] [\fB-d\fR \fIDIRECTORY\fR] [\fB-o\fR \fIOUTPUT\fR] [\fB-m\fR \fIMERGE BEHAVIOR\fR] [\fB-c\fR \fICOMPRESS\fR] [\fB-r\fR \fIRESOLUTION\fR] [\fB-g\fR \fIGOROUTINES\fR] \fIURLs...\fR
+.br
+crunchy-cli update [\fB-i\fR \fIINSTALL\fR]
 
 .SH DESCRIPTION
 .TP
-With \fBcrunchyroll-go\fR you can easily download video and series from crunchyroll.
+With \fBcrunchy-cli\fR you can easily download video and series from crunchyroll.
 .TP
 
 Note that you need an \fBcrunchyroll premium\fR account in order to use this tool!
@@ -59,7 +61,7 @@ NOTE: The credentials are stored in plain text and if you not use \fB--session-i
 Login via a session id (which can be extracted from a crunchyroll browser cookie) instead of using username and password.
 
 .SH DOWNLOAD COMMAND
-A command to simply download videos. The output file is stored as a \fI.ts\fR file. \fIffmpeg\fR has to be installed if you want to change the format the videos are stored in.
+A command to simply download videos. The output file is stored as a \fI.ts\fR file. \fIffmpeg\fR has to be installed if you want to change the Format the videos are stored in.
 .TP
 
 \fB-a, --audio AUDIO\fR
@@ -141,6 +143,13 @@ The video resolution. Can either be specified via the pixels (e.g. 1920x1080), t
 \fB-g, --goroutines GOROUTINES\fR
 Sets the number of parallel downloads for the segments the final video is made of. Default is the number of cores the computer has.
 
+.SH UPDATE COMMAND
+Checks if a newer version is available.
+.TP
+
+\fB-i, --install INSTALL\fR
+If given, the command tries to update the executable with the newer version (if a newer is available).
+
 .SH URL OPTIONS
 If you want to download only specific episode of a series, you could either pass every single episode url to the downloader (which is fine for 1 - 3 episodes) or use filtering.
 It works pretty simple, just put a specific pattern surrounded by square brackets at the end of the url from the anime you want to download. A season and / or episode as well as a range from where to where episodes should be downloaded can be specified.
@@ -158,50 +167,49 @@ The \fBS\fR, followed by the number indicates the season number, \fBE\fR, follow
 .SH EXAMPLES
 Login via crunchyroll account email and password.
 .br
-$ crunchyroll-go login user@example.com 12345678
+$ crunchy-cli login user@example.com 12345678
 
 Download a episode normally. Your system locale will be used for the video's audio.
 .br
-$ crunchyroll-go download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with 720p and name it to 'darling.mp4'. Note that you need \fBffmpeg\fR to save files which do not have '.ts' as file extension.
 .br
-$ crunchyroll-go download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with japanese audio and american subtitles.
 .br
-$ crunchyroll-go download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
+$ crunchy-cli download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
 
 Stores the episode in a .mkv file.
 .br
-$ crunchyroll-go archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
 .br
-$ crunchyroll-go archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
+$ crunchy-cli archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
 
 .SH BUGS
 If you notice any bug or want an enhancement, feel free to create a new issue or pull request in the GitHub repository.
 
 .SH AUTHOR
-Crunchy Labs
+Crunchy Labs Maintainers
 .br
-Source: https://github.com/crunchy-labs/crunchyroll-go
+Source: https://github.com/crunchy-labs/crunchy-cli
 
 .SH COPYRIGHT
-Copyright (C) 2022 Crunchy Labs
+Copyright (C) 2022 Crunchy Labs Maintainers
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 

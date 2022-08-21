@@ -1,6 +1,6 @@
 # crunchy-cli
 
-A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account for full (api) access.
+A [go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account to for full (api) access.
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">
@@ -18,11 +18,8 @@ A [go](https://golang.org) written cli client for [crunchyroll](https://www.crun
   <a href="https://github.com/crunchy-labs/crunchy-cli/releases/latest">
     <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?style=flat-square" alt="Release">
   </a>
-  <a href="https://discord.gg/PXGPGpQxgk">
-    <img src="https://img.shields.io/discord/994882878125121596?label=discord&style=flat-square" alt="Discord">
-  </a>
-  <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/ci.yml">
-    <img src="https://github.com/crunchy-labs/crunchy-cli/workflows/CI/badge.svg?style=flat" alt="CI">
+  <a href="https://discord.gg/gUWwekeNNg">
+    <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
   </a>
 </p>
 
@@ -35,7 +32,11 @@ A [go](https://golang.org) written cli client for [crunchyroll](https://www.crun
 </p>
 
 _This repo was former known as **crunchyroll-go** (which still exists but now contains only the library part) but got split up into two separate repositories to provide more flexibility.
-See [#39](https://github.com/crunchy-labs/crunchy-cli/issues/39) for more information._
+See #39 for more information._
+
+> This tool relies on the [crunchyroll-go](https://github.com/crunchy-labs/crunchyroll-go) library to communicate with crunchyroll.
+> The library enters maintenance mode (only small fixes, no new features) with version v3 in favor of rewriting it completely in Rust.
+> **crunchy-cli** follows it (with version v2.3.0) and won't have major updates until the Rust rewrite of the library reaches a good usable state.
 
 # 🖥️ CLI
 
@@ -48,18 +49,23 @@ See [#39](https://github.com/crunchy-labs/crunchy-cli/issues/39) for more inform
 ## 💾 Get the executable
 
 - 📥 Download the latest binaries [here](https://github.com/crunchy-labs/crunchy-cli/releases/latest) or get it from below:
-  - [Linux (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
-  - [Windows (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
-  - [MacOS (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
+  - [Linux (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
+  - [Windows (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
+  - [MacOS (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```shell
   $ yay -S crunchyroll-go
   ```
-- On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
+- <del>
+
+  On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
   ```shell
   $ scoop bucket add extras # <- in case you haven't added the extra repository already
   $ scoop install crunchyroll-go
   ```
+
+  </del>
+  <i>Currently not working because the repo got renamed!</i>
 - 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/crunchy-labs/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
   - use `make` (requires `go` to be installed):
   ```shell

@@ -1,15 +1,14 @@
-package cmd
+package archive
 
 import (
-	"archive/tar"
-	"archive/zip"
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/crunchy-labs/crunchyroll-go/v2"
-	"github.com/crunchy-labs/crunchyroll-go/v2/utils"
+	"github.com/crunchy-labs/crunchy-cli/cli/commands"
+	"github.com/crunchy-labs/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchyroll-go/v3"
+	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
 	"github.com/grafov/m3u8"
 	"github.com/spf13/cobra"
 	"io"
@@ -23,8 +22,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -32,6 +29,7 @@ var (
 
 	archiveDirectoryFlag string
 	archiveOutputFlag    string
+	archiveTempDirFlag   string
 
 	archiveMergeFlag string
 
@@ -42,39 +40,39 @@ var (
 	archiveGoroutinesFlag int
 )
 
-var archiveCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "archive",
 	Short: "Stores the given videos with all subtitles and multiple audios in a .mkv file",
 	Args:  cobra.MinimumNArgs(1),
 
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		out.Debug("Validating arguments")
+		utils.Log.Debug("Validating arguments")
 
-		if !hasFFmpeg() {
+		if !utils.HasFFmpeg() {
 			return fmt.Errorf("ffmpeg is needed to run this command correctly")
 		}
-		out.Debug("FFmpeg detected")
+		utils.Log.Debug("FFmpeg detected")
 
 		if filepath.Ext(archiveOutputFlag) != ".mkv" {
 			return fmt.Errorf("currently only matroska / .mkv files are supported")
 		}
 
 		for _, locale := range archiveLanguagesFlag {
-			if !utils.ValidateLocale(crunchyroll.LOCALE(locale)) {
+			if !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(locale)) {
 				// if locale is 'all', match all known locales
 				if locale == "all" {
-					archiveLanguagesFlag = allLocalesAsStrings()
+					archiveLanguagesFlag = utils.LocalesAsStrings()
 					break
 				}
-				return fmt.Errorf("%s is not a valid locale. Choose from: %s", locale, strings.Join(allLocalesAsStrings(), ", "))
+				return fmt.Errorf("%s is not a valid locale. Choose from: %s", locale, strings.Join(utils.LocalesAsStrings(), ", "))
 			}
 		}
-		out.Debug("Using following audio locales: %s", strings.Join(archiveLanguagesFlag, ", "))
+		utils.Log.Debug("Using following audio locales: %s", strings.Join(archiveLanguagesFlag, ", "))
 
 		var found bool
 		for _, mode := range []string{"auto", "audio", "video"} {
 			if archiveMergeFlag == mode {
-				out.Debug("Using %s merge behavior", archiveMergeFlag)
+				utils.Log.Debug("Using %s merge behavior", archiveMergeFlag)
 				found = true
 				break
 			}
@@ -87,7 +85,7 @@ var archiveCmd = &cobra.Command{
 			found = false
 			for _, algo := range []string{".tar", ".tar.gz", ".tgz", ".zip"} {
 				if strings.HasSuffix(archiveCompressFlag, algo) {
-					out.Debug("Using %s compression", algo)
+					utils.Log.Debug("Using %s compression", algo)
 					found = true
 					break
 				}
@@ -100,8 +98,8 @@ var archiveCmd = &cobra.Command{
 
 		switch archiveResolutionFlag {
 		case "1080p", "720p", "480p", "360p":
-			intRes, _ := strconv.ParseFloat(strings.TrimSuffix(downloadResolutionFlag, "p"), 84)
-			archiveResolutionFlag = fmt.Sprintf("%.0fx%s", math.Ceil(intRes*(float64(16)/float64(9))), strings.TrimSuffix(downloadResolutionFlag, "p"))
+			intRes, _ := strconv.ParseFloat(strings.TrimSuffix(archiveResolutionFlag, "p"), 84)
+			archiveResolutionFlag = fmt.Sprintf("%.0fx%s", math.Ceil(intRes*(float64(16)/float64(9))), strings.TrimSuffix(archiveResolutionFlag, "p"))
 		case "240p":
 			// 240p would round up to 427x240 if used in the case statement above, so it has to be handled separately
 			archiveResolutionFlag = "428x240"
@@ -109,31 +107,33 @@ var archiveCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("'%s' is not a valid resolution", archiveResolutionFlag)
 		}
-		out.Debug("Using resolution '%s'", archiveResolutionFlag)
+		utils.Log.Debug("Using resolution '%s'", archiveResolutionFlag)
 
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		loadCrunchy()
+		if err := commands.LoadCrunchy(); err != nil {
+			return err
+		}
 
 		return archive(args)
 	},
 }
 
 func init() {
-	archiveCmd.Flags().StringSliceVarP(&archiveLanguagesFlag,
+	Cmd.Flags().StringSliceVarP(&archiveLanguagesFlag,
 		"language",
 		"l",
-		[]string{string(systemLocale(false)), string(crunchyroll.JP)},
+		[]string{string(utils.SystemLocale(false)), string(crunchyroll.JP)},
 		"Audio locale which should be downloaded. Can be used multiple times")
 
 	cwd, _ := os.Getwd()
-	archiveCmd.Flags().StringVarP(&archiveDirectoryFlag,
+	Cmd.Flags().StringVarP(&archiveDirectoryFlag,
 		"directory",
 		"d",
 		cwd,
 		"The directory to store the files into")
-	archiveCmd.Flags().StringVarP(&archiveOutputFlag,
+	Cmd.Flags().StringVarP(&archiveOutputFlag,
 		"output",
 		"o",
 		"{title}.mkv",
@@ -147,14 +147,18 @@ func init() {
 			"\t{fps} » Frame Rate of the video\n"+
 			"\t{audio} » Audio locale of the video\n"+
 			"\t{subtitle} » Subtitle locale of the video")
+	Cmd.Flags().StringVar(&archiveTempDirFlag,
+		"temp",
+		os.TempDir(),
+		"Directory to store temporary files in")
 
-	archiveCmd.Flags().StringVarP(&archiveMergeFlag,
+	Cmd.Flags().StringVarP(&archiveMergeFlag,
 		"merge",
 		"m",
 		"auto",
 		"Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'")
 
-	archiveCmd.Flags().StringVarP(&archiveCompressFlag,
+	Cmd.Flags().StringVarP(&archiveCompressFlag,
 		"compress",
 		"c",
 		"",
@@ -162,7 +166,7 @@ func init() {
 			"This flag sets the name of the compressed output file. The file ending specifies the compression algorithm. "+
 			"The following algorithms are supported: gzip, tar, zip")
 
-	archiveCmd.Flags().StringVarP(&archiveResolutionFlag,
+	Cmd.Flags().StringVarP(&archiveResolutionFlag,
 		"resolution",
 		"r",
 		"best",
@@ -171,49 +175,49 @@ func init() {
 			"\tAvailable abbreviations: 1080p, 720p, 480p, 360p, 240p\n"+
 			"\tAvailable common-use words: best (best available resolution), worst (worst available resolution)")
 
-	archiveCmd.Flags().IntVarP(&archiveGoroutinesFlag,
+	Cmd.Flags().IntVarP(&archiveGoroutinesFlag,
 		"goroutines",
 		"g",
 		runtime.NumCPU(),
 		"Number of parallel segment downloads")
-
-	rootCmd.AddCommand(archiveCmd)
 }
 
 func archive(urls []string) error {
 	for i, url := range urls {
-		out.SetProgress("Parsing url %d", i+1)
+		utils.Log.SetProcess("Parsing url %d", i+1)
 		episodes, err := archiveExtractEpisodes(url)
 		if err != nil {
-			out.StopProgress("Failed to parse url %d", i+1)
-			out.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-				"try the corresponding crunchyroll beta url instead and try again. See https://github.com/crunchy-labs/crunchyroll-go/issues/22 for more information")
+			utils.Log.StopProcess("Failed to parse url %d", i+1)
+			if utils.Crunchy.Config.Premium {
+				utils.Log.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
+					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/crunchy-labs/crunchy-cli/issues/22 for more information")
+			}
 			return err
 		}
-		out.StopProgress("Parsed url %d", i+1)
+		utils.Log.StopProcess("Parsed url %d", i+1)
 
 		var compressFile *os.File
-		var c compress
+		var c Compress
 
 		if archiveCompressFlag != "" {
-			compressFile, err = os.Create(generateFilename(archiveCompressFlag, ""))
+			compressFile, err = os.Create(utils.GenerateFilename(archiveCompressFlag, ""))
 			if err != nil {
 				return fmt.Errorf("failed to create archive file: %v", err)
 			}
 			if strings.HasSuffix(archiveCompressFlag, ".tar") {
-				c = newTarCompress(compressFile)
+				c = NewTarCompress(compressFile)
 			} else if strings.HasSuffix(archiveCompressFlag, ".tar.gz") || strings.HasSuffix(archiveCompressFlag, ".tgz") {
-				c = newGzipCompress(compressFile)
+				c = NewGzipCompress(compressFile)
 			} else if strings.HasSuffix(archiveCompressFlag, ".zip") {
-				c = newZipCompress(compressFile)
+				c = NewZipCompress(compressFile)
 			}
 		}
 
 		for _, season := range episodes {
-			out.Info("%s Season %d", season[0].SeriesName, season[0].SeasonNumber)
+			utils.Log.Info("%s Season %d", season[0].SeriesName, season[0].SeasonNumber)
 
 			for j, info := range season {
-				out.Info("\t%d. %s » %spx, %.2f FPS (S%02dE%02d)",
+				utils.Log.Info("\t%d. %s » %spx, %.2f FPS (S%02dE%02d)",
 					j+1,
 					info.Title,
 					info.Resolution,
@@ -222,26 +226,26 @@ func archive(urls []string) error {
 					info.EpisodeNumber)
 			}
 		}
-		out.Empty()
+		utils.Log.Empty()
 
 		for j, season := range episodes {
 			for k, info := range season {
 				var filename string
 				var writeCloser io.WriteCloser
 				if c != nil {
-					filename = info.Format(archiveOutputFlag)
+					filename = info.FormatString(archiveOutputFlag)
 					writeCloser, err = c.NewFile(info)
 					if err != nil {
 						return fmt.Errorf("failed to pre generate new archive file: %v", err)
 					}
 				} else {
-					dir := info.Format(archiveDirectoryFlag)
+					dir := info.FormatString(archiveDirectoryFlag)
 					if _, err = os.Stat(dir); os.IsNotExist(err) {
 						if err = os.MkdirAll(dir, 0777); err != nil {
 							return fmt.Errorf("error while creating directory: %v", err)
 						}
 					}
-					filename = generateFilename(info.Format(archiveOutputFlag), dir)
+					filename = utils.GenerateFilename(info.FormatString(archiveOutputFlag), dir)
 					writeCloser, err = os.Create(filename)
 					if err != nil {
 						return fmt.Errorf("failed to create new file: %v", err)
@@ -262,7 +266,7 @@ func archive(urls []string) error {
 				writeCloser.Close()
 
 				if i != len(urls)-1 || j != len(episodes)-1 || k != len(season)-1 {
-					out.Empty()
+					utils.Log.Empty()
 				}
 			}
 		}
@@ -276,8 +280,8 @@ func archive(urls []string) error {
 	return nil
 }
 
-func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename string) error {
-	out.Debug("Entering season %d, episode %d with %d additional formats", info.SeasonNumber, info.EpisodeNumber, len(info.additionalFormats))
+func archiveInfo(info utils.FormatInformation, writeCloser io.WriteCloser, filename string) error {
+	utils.Log.Debug("Entering season %d, episode %d with %d additional formats", info.SeasonNumber, info.EpisodeNumber, len(info.AdditionalFormats))
 
 	dp, err := createArchiveProgress(info)
 	if err != nil {
@@ -305,7 +309,7 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 			return nil
 		}
 
-		if out.IsDev() {
+		if utils.Log.IsDev() {
 			dp.UpdateMessage(fmt.Sprintf("Downloading %d/%d (%.2f%%) » %s", current, total, float32(current)/float32(total)*100, segment.URI), false)
 		} else {
 			dp.Update()
@@ -316,6 +320,8 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 		}
 		return nil
 	})
+	tmp, _ := os.MkdirTemp(archiveTempDirFlag, "crunchy_")
+	downloader.TempDir = tmp
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -323,8 +329,8 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 		select {
 		case <-sig:
 			signal.Stop(sig)
-			out.Exit("Exiting... (may take a few seconds)")
-			out.Exit("To force exit press ctrl+c (again)")
+			utils.Log.Err("Exiting... (may take a few seconds)")
+			utils.Log.Err("To force exit press ctrl+c (again)")
 			cancel()
 			// os.Exit(1) is not called since an immediate exit after the cancel function does not let
 			// the download process enough time to stop gratefully. A result of this is that the temporary
@@ -333,15 +339,15 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 			// this is just here to end the goroutine and prevent it from running forever without a reason
 		}
 	}()
-	out.Debug("Set up signal catcher")
+	utils.Log.Debug("Set up signal catcher")
 
 	var additionalDownloaderOpts []string
 	var mergeMessage string
 	switch archiveMergeFlag {
 	case "auto":
 		additionalDownloaderOpts = []string{"-vn"}
-		for _, format := range info.additionalFormats {
-			if format.Video.Bandwidth != info.format.Video.Bandwidth {
+		for _, format := range info.AdditionalFormats {
+			if format.Video.Bandwidth != info.Format.Video.Bandwidth {
 				// revoke the changed FFmpegOpts above
 				additionalDownloaderOpts = []string{}
 				break
@@ -359,12 +365,12 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 		mergeMessage = "merging video for additional formats"
 	}
 
-	out.Info("Downloading episode `%s` to `%s` (%s)", info.Title, filepath.Base(filename), mergeMessage)
-	out.Info("\tEpisode: S%02dE%02d", info.SeasonNumber, info.EpisodeNumber)
-	out.Info("\tAudio: %s", info.Audio)
-	out.Info("\tSubtitle: %s", info.Subtitle)
-	out.Info("\tResolution: %spx", info.Resolution)
-	out.Info("\tFPS: %.2f", info.FPS)
+	utils.Log.Info("Downloading episode `%s` to `%s` (%s)", info.Title, filepath.Base(filename), mergeMessage)
+	utils.Log.Info("\tEpisode: S%02dE%02d", info.SeasonNumber, info.EpisodeNumber)
+	utils.Log.Info("\tAudio: %s", info.Audio)
+	utils.Log.Info("\tSubtitle: %s", info.Subtitle)
+	utils.Log.Info("\tResolution: %spx", info.Resolution)
+	utils.Log.Info("\tFPS: %.2f", info.FPS)
 
 	var videoFiles, audioFiles, subtitleFiles []string
 	defer func() {
@@ -374,7 +380,7 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	}()
 
 	var f []string
-	if f, err = archiveDownloadVideos(downloader, filepath.Base(filename), true, info.format); err != nil {
+	if f, err = archiveDownloadVideos(downloader, filepath.Base(filename), true, info.Format); err != nil {
 		if err != ctx.Err() {
 			return fmt.Errorf("error while downloading: %v", err)
 		}
@@ -385,29 +391,29 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	if len(additionalDownloaderOpts) == 0 {
 		var videos []string
 		downloader.FFmpegOpts = additionalDownloaderOpts
-		if videos, err = archiveDownloadVideos(downloader, filepath.Base(filename), true, info.additionalFormats...); err != nil {
+		if videos, err = archiveDownloadVideos(downloader, filepath.Base(filename), true, info.AdditionalFormats...); err != nil {
 			return fmt.Errorf("error while downloading additional videos: %v", err)
 		}
 		downloader.FFmpegOpts = []string{}
 		videoFiles = append(videoFiles, videos...)
 	} else {
 		var audios []string
-		if audios, err = archiveDownloadVideos(downloader, filepath.Base(filename), false, info.additionalFormats...); err != nil {
+		if audios, err = archiveDownloadVideos(downloader, filepath.Base(filename), false, info.AdditionalFormats...); err != nil {
 			return fmt.Errorf("error while downloading additional videos: %v", err)
 		}
 		audioFiles = append(audioFiles, audios...)
 	}
 
-	sort.Sort(utils.SubtitlesByLocale(info.format.Subtitles))
+	sort.Sort(crunchyUtils.SubtitlesByLocale(info.Format.Subtitles))
 
 	sortSubtitles, _ := strconv.ParseBool(os.Getenv("SORT_SUBTITLES"))
 	if sortSubtitles && len(archiveLanguagesFlag) > 0 {
 		// this sort the subtitle locales after the languages which were specified
 		// with the `archiveLanguagesFlag` flag
 		for _, language := range archiveLanguagesFlag {
-			for i, subtitle := range info.format.Subtitles {
+			for i, subtitle := range info.Format.Subtitles {
 				if subtitle.Locale == crunchyroll.LOCALE(language) {
-					info.format.Subtitles = append([]*crunchyroll.Subtitle{subtitle}, append(info.format.Subtitles[:i], info.format.Subtitles[i+1:]...)...)
+					info.Format.Subtitles = append([]*crunchyroll.Subtitle{subtitle}, append(info.Format.Subtitles[:i], info.Format.Subtitles[i+1:]...)...)
 					break
 				}
 			}
@@ -415,7 +421,7 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	}
 
 	var subtitles []string
-	if subtitles, err = archiveDownloadSubtitles(filepath.Base(filename), info.format.Subtitles...); err != nil {
+	if subtitles, err = archiveDownloadSubtitles(filepath.Base(filename), info.Format.Subtitles...); err != nil {
 		return fmt.Errorf("error while downloading subtitles: %v", err)
 	}
 	subtitleFiles = append(subtitleFiles, subtitles...)
@@ -427,22 +433,22 @@ func archiveInfo(info formatInformation, writeCloser io.WriteCloser, filename st
 	dp.UpdateMessage("Download finished", false)
 
 	signal.Stop(sig)
-	out.Debug("Stopped signal catcher")
+	utils.Log.Debug("Stopped signal catcher")
 
-	out.Empty()
+	utils.Log.Empty()
 
 	return nil
 }
 
-func createArchiveProgress(info formatInformation) (*downloadProgress, error) {
+func createArchiveProgress(info utils.FormatInformation) (*commands.DownloadProgress, error) {
 	var progressCount int
-	if err := info.format.InitVideo(); err != nil {
+	if err := info.Format.InitVideo(); err != nil {
 		return nil, fmt.Errorf("error while initializing a video: %v", err)
 	}
 	// + number of segments a video has +1 is for merging
-	progressCount += int(info.format.Video.Chunklist.Count()) + 1
-	for _, f := range info.additionalFormats {
-		if f == info.format {
+	progressCount += int(info.Format.Video.Chunklist.Count()) + 1
+	for _, f := range info.AdditionalFormats {
+		if f == info.Format {
 			continue
 		}
 
@@ -453,16 +459,16 @@ func createArchiveProgress(info formatInformation) (*downloadProgress, error) {
 		progressCount += int(f.Video.Chunklist.Count()) + 1
 	}
 
-	dp := &downloadProgress{
-		Prefix:  out.InfoLog.Prefix(),
+	dp := &commands.DownloadProgress{
+		Prefix:  utils.Log.(*commands.Logger).InfoLog.Prefix(),
 		Message: "Downloading video",
 		// number of segments a video +1 is for the success message
 		Total: progressCount + 1,
-		Dev:   out.IsDev(),
-		Quiet: out.IsQuiet(),
+		Dev:   utils.Log.IsDev(),
+		Quiet: utils.Log.(*commands.Logger).IsQuiet(),
 	}
-	if out.IsDev() {
-		dp.Prefix = out.DebugLog.Prefix()
+	if utils.Log.IsDev() {
+		dp.Prefix = utils.Log.(*commands.Logger).DebugLog.Prefix()
 	}
 
 	return dp, nil
@@ -495,7 +501,7 @@ func archiveDownloadVideos(downloader crunchyroll.Downloader, filename string, v
 		}
 		f.Close()
 
-		out.Debug("Downloaded '%s' video", format.AudioLocale)
+		utils.Log.Debug("Downloaded '%s' video", format.AudioLocale)
 	}
 
 	return files, nil
@@ -520,7 +526,7 @@ func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitl
 		}
 		f.Close()
 
-		out.Debug("Downloaded '%s' subtitles", subtitle.Locale)
+		utils.Log.Debug("Downloaded '%s' subtitles", subtitle.Locale)
 	}
 
 	return files, nil
@@ -535,9 +541,9 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		maps = append(maps, "-map", strconv.Itoa(i))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(video)[1])
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("language=%s", locale))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 	}
 
 	for i, audio := range audioFiles {
@@ -545,7 +551,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles)))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(audio)[1])
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 	}
 
 	for i, subtitle := range subtitleFiles {
@@ -553,7 +559,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles)+len(audioFiles)))
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(subtitle)[1])
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("language=%s", locale))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("title=%s", utils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:s:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 	}
 
 	commandOptions := []string{"-y"}
@@ -575,7 +581,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 	commandOptions = append(commandOptions, "-disposition:s:0", "0", "-c", "copy", "-f", "matroska", file.Name())
 
 	// just a little nicer debug output to copy and paste the ffmpeg for debug reasons
-	if out.IsDev() {
+	if utils.Log.IsDev() {
 		var debugOptions []string
 
 		for _, option := range commandOptions {
@@ -589,7 +595,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 				debugOptions = append(debugOptions, option)
 			}
 		}
-		out.Debug("FFmpeg merge command: ffmpeg %s", strings.Join(debugOptions, " "))
+		utils.Log.Debug("FFmpeg merge command: ffmpeg %s", strings.Join(debugOptions, " "))
 	}
 
 	var errBuf bytes.Buffer
@@ -609,7 +615,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 	return err
 }
 
-func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
+func archiveExtractEpisodes(url string) ([][]utils.FormatInformation, error) {
 	var hasJapanese bool
 	languagesAsLocale := []crunchyroll.LOCALE{crunchyroll.JP}
 	for _, language := range archiveLanguagesFlag {
@@ -621,7 +627,13 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 		}
 	}
 
-	episodes, err := extractEpisodes(url, languagesAsLocale...)
+	if _, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
+		return nil, fmt.Errorf("archiving episodes by url is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+	} else if _, _, _, _, ok := crunchyroll.ParseEpisodeURL(url); ok {
+		return nil, fmt.Errorf("archiving episodes by url is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
+	}
+
+	episodes, err := utils.ExtractEpisodes(url, languagesAsLocale...)
 	if err != nil {
 		return nil, err
 	}
@@ -632,9 +644,9 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 
 	for i, eps := range episodes {
 		if len(eps) == 0 {
-			out.SetProgress("%s has no matching episodes", languagesAsLocale[i])
+			utils.Log.SetProcess("%s has no matching episodes", languagesAsLocale[i])
 		} else if len(episodes[0]) > len(eps) {
-			out.SetProgress("%s has %d less episodes than existing in japanese (%d)", languagesAsLocale[i], len(episodes[0])-len(eps), len(episodes[0]))
+			utils.Log.SetProcess("%s has %d less episodes than existing in japanese (%d)", languagesAsLocale[i], len(episodes[0])-len(eps), len(episodes[0]))
 		}
 	}
 
@@ -642,11 +654,11 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 		episodes = episodes[1:]
 	}
 
-	eps := make(map[int]map[int]*formatInformation)
+	eps := make(map[int]map[int]*utils.FormatInformation)
 	for _, lang := range episodes {
-		for _, season := range utils.SortEpisodesBySeason(lang) {
+		for _, season := range crunchyUtils.SortEpisodesBySeason(lang) {
 			if _, ok := eps[season[0].SeasonNumber]; !ok {
-				eps[season[0].SeasonNumber] = map[int]*formatInformation{}
+				eps[season[0].SeasonNumber] = map[int]*utils.FormatInformation{}
 			}
 			for _, episode := range season {
 				format, err := episode.GetFormat(archiveResolutionFlag, "", false)
@@ -655,9 +667,9 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 				}
 
 				if _, ok := eps[episode.SeasonNumber][episode.EpisodeNumber]; !ok {
-					eps[episode.SeasonNumber][episode.EpisodeNumber] = &formatInformation{
-						format:            format,
-						additionalFormats: make([]*crunchyroll.Format, 0),
+					eps[episode.SeasonNumber][episode.EpisodeNumber] = &utils.FormatInformation{
+						Format:            format,
+						AdditionalFormats: make([]*crunchyroll.Format, 0),
 
 						Title:         episode.Title,
 						SeriesName:    episode.SeriesTitle,
@@ -669,15 +681,15 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 						Audio:         format.AudioLocale,
 					}
 				} else {
-					eps[episode.SeasonNumber][episode.EpisodeNumber].additionalFormats = append(eps[episode.SeasonNumber][episode.EpisodeNumber].additionalFormats, format)
+					eps[episode.SeasonNumber][episode.EpisodeNumber].AdditionalFormats = append(eps[episode.SeasonNumber][episode.EpisodeNumber].AdditionalFormats, format)
 				}
 			}
 		}
 	}
 
-	var infoFormat [][]formatInformation
+	var infoFormat [][]utils.FormatInformation
 	for _, e := range eps {
-		var tmpFormatInfo []formatInformation
+		var tmpFormatInfo []utils.FormatInformation
 
 		var keys []int
 		for episodeNumber := range e {
@@ -693,125 +705,4 @@ func archiveExtractEpisodes(url string) ([][]formatInformation, error) {
 	}
 
 	return infoFormat, nil
-}
-
-type compress interface {
-	io.Closer
-
-	NewFile(information formatInformation) (io.WriteCloser, error)
-}
-
-func newGzipCompress(file *os.File) *tarCompress {
-	gw := gzip.NewWriter(file)
-	return &tarCompress{
-		parent: gw,
-		dst:    tar.NewWriter(gw),
-	}
-}
-
-func newTarCompress(file *os.File) *tarCompress {
-	return &tarCompress{
-		dst: tar.NewWriter(file),
-	}
-}
-
-type tarCompress struct {
-	compress
-
-	wg sync.WaitGroup
-
-	parent *gzip.Writer
-	dst    *tar.Writer
-}
-
-func (tc *tarCompress) Close() error {
-	// we have to wait here in case the actual content isn't copied completely into the
-	// writer yet
-	tc.wg.Wait()
-
-	var err, err2 error
-	if tc.parent != nil {
-		err2 = tc.parent.Close()
-	}
-	err = tc.dst.Close()
-
-	if err != nil && err2 != nil {
-		// best way to show double errors at once that I've found
-		return fmt.Errorf("%v\n%v", err, err2)
-	} else if err == nil && err2 != nil {
-		err = err2
-	}
-
-	return err
-}
-
-func (tc *tarCompress) NewFile(information formatInformation) (io.WriteCloser, error) {
-	rp, wp := io.Pipe()
-	go func() {
-		tc.wg.Add(1)
-		defer tc.wg.Done()
-		var buf bytes.Buffer
-		io.Copy(&buf, rp)
-
-		header := &tar.Header{
-			Name:     filepath.Join(fmt.Sprintf("S%2d", information.SeasonNumber), information.Title),
-			ModTime:  time.Now(),
-			Mode:     0644,
-			Typeflag: tar.TypeReg,
-			// fun fact: I did not set the size for quiet some time because I thought that it isn't
-			// required. well because of this I debugged this part for multiple hours because without
-			// proper size information only a tiny amount gets copied into the tar (or zip) writer.
-			// this is also the reason why the file content is completely copied into a buffer before
-			// writing it to the writer. I could bypass this and save some memory but this requires
-			// some rewriting and im nearly at the (planned) finish for version 2 so nah in the future
-			// maybe
-			Size: int64(buf.Len()),
-		}
-		tc.dst.WriteHeader(header)
-		io.Copy(tc.dst, &buf)
-	}()
-	return wp, nil
-}
-
-func newZipCompress(file *os.File) *zipCompress {
-	return &zipCompress{
-		dst: zip.NewWriter(file),
-	}
-}
-
-type zipCompress struct {
-	compress
-
-	wg sync.WaitGroup
-
-	dst *zip.Writer
-}
-
-func (zc *zipCompress) Close() error {
-	zc.wg.Wait()
-	return zc.dst.Close()
-}
-
-func (zc *zipCompress) NewFile(information formatInformation) (io.WriteCloser, error) {
-	rp, wp := io.Pipe()
-	go func() {
-		zc.wg.Add(1)
-		defer zc.wg.Done()
-
-		var buf bytes.Buffer
-		io.Copy(&buf, rp)
-
-		header := &zip.FileHeader{
-			Name:               filepath.Join(fmt.Sprintf("S%2d", information.SeasonNumber), information.Title),
-			Modified:           time.Now(),
-			Method:             zip.Deflate,
-			UncompressedSize64: uint64(buf.Len()),
-		}
-		header.SetMode(0644)
-
-		hw, _ := zc.dst.CreateHeader(header)
-		io.Copy(hw, &buf)
-	}()
-
-	return wp, nil
 }

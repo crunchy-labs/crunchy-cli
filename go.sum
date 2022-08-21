@@ -1,4 +1,6 @@
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
+github.com/crunchy-labs/crunchyroll-go/v3 v3.0.0-20220812161741-903599bcbe60 h1:cvEKs8D8816yWJDXYl8V7bYLYsAcbNbGGcUZDUofwTI=
+github.com/crunchy-labs/crunchyroll-go/v3 v3.0.0-20220812161741-903599bcbe60/go.mod h1:SjTQD3IX7Z+MLsMSd2fP5ttsJ4KtpXY6r08bHLwrOLM=
 github.com/grafov/m3u8 v0.11.1 h1:igZ7EBIB2IAsPPazKwRKdbhxcoBKO3lO1UY57PZDeNA=
 github.com/grafov/m3u8 v0.11.1/go.mod h1:nqzOkfBiZJENr52zTVd/Dcl03yzphIMbJqkXGu+u080=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=

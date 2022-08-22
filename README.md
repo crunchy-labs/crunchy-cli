@@ -53,7 +53,7 @@ _This repo was former known as **crunchyroll-go** (which still exists but now co
   - [MacOS (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```shell
-  $ yay -S crunchyroll-go
+  $ yay -S crunchy-cli
   ```
 - On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
   ```shell

@@ -89,10 +89,10 @@ This can be performed via crunchyroll account email and password.
 $ crunchy login user@example.com password
 ```
 
-or via session id
+or via refresh token / `etp_rt` cookie
 
 ```shell
-$ crunchy login --session-id 8e9gs135defhga790dvrf2i0eris8gts
+$ crunchy login --refresh-token 7578ce50-5712-3gef-b97e-01332d6b588c
 ```
 
 ### Download
@@ -168,6 +168,24 @@ The following flags can be (optional) passed to modify the [archive](#archive) p
 | `-c`  | `--compress`   | If is set, all output will be compresses into an archive. This flag sets the name of the compressed output file and the file ending specifies the compression algorithm (gzip, tar, zip are supported). |
 | `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst.                                                                                                                          |
 | `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                                                                                                                                                |
+
+
+### Info
+
+The `info` displays some information about the account which is used for the cli.
+
+```shell
+$ crunchy info
+```
+
+### Update
+
+If you want to update your local version of `crunchy-cli`, this command makes this easier.
+It checks if a new version is available and if so, updates itself.
+
+```shell
+$ crunchy update
+```
 
 ### Global flags
 

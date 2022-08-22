@@ -31,8 +31,7 @@ A [Go](https://golang.org) written cli client for [crunchyroll](https://www.crun
   <a href="#-license">License ⚖</a>
 </p>
 
-_This repo was former known as **crunchyroll-go** (which still exists but now contains only the library part) but got split up into two separate repositories to provide more flexibility.
-See #39 for more information._
+_This repo was former known as **crunchyroll-go** (which still exists but now contains only the library part) but got split up into two separate repositories to provide more flexibility._
 
 > This tool relies on the [crunchyroll-go](https://github.com/crunchy-labs/crunchyroll-go) library to communicate with crunchyroll.
 > The library enters maintenance mode (only small fixes, no new features) with version v3 in favor of rewriting it completely in Rust.

@@ -548,10 +548,10 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 
 	for i, audio := range audioFiles {
 		input = append(input, "-i", audio)
-		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles)))
+		maps = append(maps, "-map", strconv.Itoa(i+len(videoFiles))+":1")
 		locale := crunchyroll.LOCALE(re.FindStringSubmatch(audio)[1])
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
-		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i+len(videoFiles)), fmt.Sprintf("language=%s", locale))
+		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i+len(videoFiles)), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 	}
 
 	for i, subtitle := range subtitleFiles {

@@ -535,6 +535,10 @@ func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitl
 func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, subtitleFiles []string) error {
 	var input, maps, metadata []string
 	re := regexp.MustCompile(`(?m)_([a-z]{2}-([A-Z]{2}|[0-9]{3}))_(video|audio|subtitle)`)
+	// https://github.com/crunchy-labs/crunchy-cli/issues/32
+	videoLength32Fix := regexp.MustCompile(`Duration:\s?(\d+):(\d+):(\d+).(\d+),`)
+
+	videoLength := [4]int{0, 0, 0, 0}
 
 	for i, video := range videoFiles {
 		input = append(input, "-i", video)
@@ -544,6 +548,27 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:v:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("language=%s", locale))
 		metadata = append(metadata, fmt.Sprintf("-metadata:s:a:%d", i), fmt.Sprintf("title=%s", crunchyUtils.LocaleLanguage(locale)))
+
+		var errBuf bytes.Buffer
+		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", video)
+		cmd.Stderr = &errBuf
+		cmd.Run()
+
+		matches := videoLength32Fix.FindStringSubmatch(errBuf.String())
+		hours, _ := strconv.Atoi(matches[1])
+		minutes, _ := strconv.Atoi(matches[2])
+		seconds, _ := strconv.Atoi(matches[3])
+		millis, _ := strconv.Atoi(matches[4])
+
+		if hours > videoLength[0] {
+			videoLength = [4]int{hours, minutes, seconds, millis}
+		} else if hours == videoLength[0] && minutes > videoLength[1] {
+			videoLength = [4]int{hours, minutes, seconds, millis}
+		} else if hours == videoLength[0] && minutes == videoLength[1] && seconds > videoLength[2] {
+			videoLength = [4]int{hours, minutes, seconds, millis}
+		} else if hours == videoLength[0] && minutes == videoLength[1] && seconds == videoLength[2] && millis > videoLength[3] {
+			videoLength = [4]int{hours, minutes, seconds, millis}
+		}
 	}
 
 	for i, audio := range audioFiles {
@@ -610,6 +635,56 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		return err
 	}
 	defer file.Close()
+
+	errBuf.Reset()
+	cmd = exec.CommandContext(ctx, "ffmpeg", "-i", file.Name())
+	cmd.Stderr = &errBuf
+	cmd.Run()
+
+	matches := videoLength32Fix.FindStringSubmatch(errBuf.String())
+	hours, _ := strconv.Atoi(matches[1])
+	minutes, _ := strconv.Atoi(matches[2])
+	seconds, _ := strconv.Atoi(matches[3])
+	millis, _ := strconv.Atoi(matches[4])
+
+	var reencode bool
+	if hours > videoLength[0] {
+		reencode = true
+	} else if hours == videoLength[0] && minutes > videoLength[1] {
+		reencode = true
+	} else if hours == videoLength[0] && minutes == videoLength[1] && seconds > videoLength[2] {
+		reencode = true
+	} else if hours == videoLength[0] && minutes == videoLength[1] && seconds == videoLength[2] && millis > videoLength[3] {
+		reencode = true
+	}
+
+	// very dirty solution to https://github.com/crunchy-labs/crunchy-cli/issues/32.
+	// this might get triggered when not needed but there is currently no easy way to
+	// bypass this unwanted triggering
+	if reencode {
+		utils.Log.Debug("Reencode to short video length")
+
+		file.Close()
+
+		tmpFile, _ := os.CreateTemp("", filepath.Base(file.Name())+"-32_fix")
+		tmpFile.Close()
+
+		errBuf.Reset()
+		cmd = exec.CommandContext(ctx, "ffmpeg", "-y", "-i", file.Name(), "-c", "copy", "-t", fmt.Sprintf("%02d:%02d:%02d.%d", videoLength[0], videoLength[1], videoLength[2], videoLength[3]), "-f", "matroska", tmpFile.Name())
+		cmd.Stderr = &errBuf
+		if err = cmd.Run(); err != nil {
+			return fmt.Errorf(errBuf.String())
+		}
+
+		os.Remove(file.Name())
+		os.Rename(tmpFile.Name(), file.Name())
+
+		file, err = os.Open(file.Name())
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+	}
 
 	_, err = bufio.NewWriter(dst).ReadFrom(file)
 	return err

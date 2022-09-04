@@ -662,7 +662,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 	// this might get triggered when not needed but there is currently no easy way to
 	// bypass this unwanted triggering
 	if reencode {
-		utils.Log.Debug("Reencode to short video length")
+		utils.Log.Debug("Re-encode to short video length")
 
 		file.Close()
 
@@ -670,7 +670,7 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		tmpFile.Close()
 
 		errBuf.Reset()
-		cmd = exec.CommandContext(ctx, "ffmpeg", "-y", "-i", file.Name(), "-c", "copy", "-t", fmt.Sprintf("%02d:%02d:%02d.%d", videoLength[0], videoLength[1], videoLength[2], videoLength[3]), "-f", "matroska", tmpFile.Name())
+		cmd = exec.CommandContext(ctx, "ffmpeg", "-y", "-i", file.Name(), "-c", "copy", "-map", "0", "-t", fmt.Sprintf("%02d:%02d:%02d.%d", videoLength[0], videoLength[1], videoLength[2], videoLength[3]), "-f", "matroska", tmpFile.Name())
 		cmd.Stderr = &errBuf
 		if err = cmd.Run(); err != nil {
 			return fmt.Errorf(errBuf.String())

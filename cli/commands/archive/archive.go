@@ -670,7 +670,15 @@ func archiveFFmpeg(ctx context.Context, dst io.Writer, videoFiles, audioFiles, s
 		tmpFile.Close()
 
 		errBuf.Reset()
-		cmd = exec.CommandContext(ctx, "ffmpeg", "-y", "-i", file.Name(), "-c", "copy", "-map", "0", "-t", fmt.Sprintf("%02d:%02d:%02d.%d", videoLength[0], videoLength[1], videoLength[2], videoLength[3]), "-f", "matroska", tmpFile.Name())
+		cmd = exec.CommandContext(ctx, "ffmpeg",
+			"-y",
+			"-i", file.Name(),
+			"-map", "0",
+			"-c", "copy",
+			"-disposition:s:0", "0",
+			"-t", fmt.Sprintf("%02d:%02d:%02d.%d", videoLength[0], videoLength[1], videoLength[2], videoLength[3]),
+			"-f", "matroska",
+			tmpFile.Name())
 		cmd.Stderr = &errBuf
 		if err = cmd.Run(); err != nil {
 			return fmt.Errorf(errBuf.String())

@@ -45,9 +45,9 @@ _This repo was former known as **crunchyroll-go** (which still exists but now co
 ## 💾 Get the executable
 
 - 📥 Download the latest binaries [here](https://github.com/crunchy-labs/crunchy-cli/releases/latest) or get it from below:
-  - [Linux (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
-  - [Windows (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
-  - [MacOS (x64)](https://smartrelease.crunchy-labs.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
+  - [Linux (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
+  - [Windows (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
+  - [MacOS (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
 - If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
   ```shell
   $ yay -S crunchy-cli

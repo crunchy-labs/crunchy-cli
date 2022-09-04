@@ -12,9 +12,6 @@ A [Go](https://golang.org) written cli client for [crunchyroll](https://www.crun
   <a href="https://github.com/crunchy-labs/crunchy-cli/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/crunchy-labs/crunchy-cli?style=flat-square" alt="License">
   </a>
-  <a href="https://golang.org">
-    <img src="https://img.shields.io/github/go-mod/go-version/crunchy-labs/crunchy-cli?style=flat-square" alt="Go version">
-  </a>
   <a href="https://github.com/crunchy-labs/crunchy-cli/releases/latest">
     <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?style=flat-square" alt="Release">
   </a>

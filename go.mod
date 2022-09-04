@@ -1,6 +1,6 @@
 module github.com/crunchy-labs/crunchy-cli
 
-go 1.18
+go 1.19
 
 require (
 	github.com/crunchy-labs/crunchyroll-go/v3 v3.0.2

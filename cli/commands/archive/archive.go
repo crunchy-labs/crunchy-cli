@@ -144,7 +144,7 @@ func init() {
 	Cmd.Flags().StringSliceVarP(&archiveSubLanguagesFlag,
 		"sublang",
 		"s",
-		[]string{},
+		utils.LocalesAsStrings(),
 		"Subtitles langs which should be downloaded. Can be used multiple times")
 
 	cwd, _ := os.Getwd()
@@ -534,10 +534,8 @@ func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitl
 	var files []string
 
 	for _, subtitle := range subtitles {
-		if len(archiveSubLanguagesFlag) > 0 {
-			if !utils.ElementInSlice(string(subtitle.Locale), archiveSubLanguagesFlag) {
-				continue
-			}
+		if !utils.ElementInSlice(string(subtitle.Locale), archiveSubLanguagesFlag) {
+			continue
 		}
 
 		f, err := os.CreateTemp("", fmt.Sprintf("%s_%s_subtitle_*.ass", filename, subtitle.Locale))

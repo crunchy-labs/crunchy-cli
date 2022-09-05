@@ -5,12 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/crunchy-labs/crunchy-cli/cli/commands"
-	"github.com/crunchy-labs/crunchy-cli/utils"
-	"github.com/crunchy-labs/crunchyroll-go/v3"
-	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
-	"github.com/grafov/m3u8"
-	"github.com/spf13/cobra"
 	"io"
 	"math"
 	"os"
@@ -22,10 +16,18 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/crunchy-labs/crunchy-cli/cli/commands"
+	"github.com/crunchy-labs/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchyroll-go/v3"
+	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
+	"github.com/grafov/m3u8"
+	"github.com/spf13/cobra"
 )
 
 var (
-	archiveLanguagesFlag []string
+	archiveLanguagesFlag    []string
+	archiveSubLanguagesFlag []string
 
 	archiveDirectoryFlag string
 	archiveOutputFlag    string
@@ -68,6 +70,18 @@ var Cmd = &cobra.Command{
 			}
 		}
 		utils.Log.Debug("Using following audio locales: %s", strings.Join(archiveLanguagesFlag, ", "))
+
+		for _, locale := range archiveSubLanguagesFlag {
+			if !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(locale)) {
+				// if locale is 'all', match all known locales
+				if locale == "all" {
+					archiveSubLanguagesFlag = utils.LocalesAsStrings()
+					break
+				}
+				return fmt.Errorf("%s is not a valid locale for Subtitels. Choose from: %s", locale, strings.Join(utils.LocalesAsStrings(), ", "))
+			}
+		}
+		utils.Log.Debug("Using following subtitels locales: %s", strings.Join(archiveSubLanguagesFlag, ", "))
 
 		var found bool
 		for _, mode := range []string{"auto", "audio", "video"} {
@@ -127,12 +141,20 @@ func init() {
 		[]string{string(utils.SystemLocale(false)), string(crunchyroll.JP)},
 		"Audio locale which should be downloaded. Can be used multiple times")
 
+	Cmd.Flags().StringSliceVarP(&archiveSubLanguagesFlag,
+		"sublang",
+		"s",
+		[]string{},
+		"Subtitles langs which should be downloaded. Can be used multiple times")
+
 	cwd, _ := os.Getwd()
+
 	Cmd.Flags().StringVarP(&archiveDirectoryFlag,
 		"directory",
 		"d",
 		cwd,
 		"The directory to store the files into")
+
 	Cmd.Flags().StringVarP(&archiveOutputFlag,
 		"output",
 		"o",
@@ -147,6 +169,7 @@ func init() {
 			"\t{fps} » Frame Rate of the video\n"+
 			"\t{audio} » Audio locale of the video\n"+
 			"\t{subtitle} » Subtitle locale of the video")
+
 	Cmd.Flags().StringVar(&archiveTempDirFlag,
 		"temp",
 		os.TempDir(),
@@ -511,6 +534,12 @@ func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitl
 	var files []string
 
 	for _, subtitle := range subtitles {
+		if len(archiveSubLanguagesFlag) > 0 {
+			if !utils.ElementInSlice(string(subtitle.Locale), archiveSubLanguagesFlag) {
+				continue
+			}
+		}
+
 		f, err := os.CreateTemp("", fmt.Sprintf("%s_%s_subtitle_*.ass", filename, subtitle.Locale))
 		if err != nil {
 			return nil, err

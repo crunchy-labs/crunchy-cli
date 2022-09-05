@@ -530,21 +530,12 @@ func archiveDownloadVideos(downloader crunchyroll.Downloader, filename string, v
 	return files, nil
 }
 
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
 func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitle) ([]string, error) {
 	var files []string
 
 	for _, subtitle := range subtitles {
 		if len(archiveSubLanguagesFlag) > 0 {
-			if !stringInSlice(string(subtitle.Locale), archiveSubLanguagesFlag) {
+			if !utils.ElementInSlice(string(subtitle.Locale), archiveSubLanguagesFlag) {
 				continue
 			}
 		}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 )
@@ -90,8 +91,8 @@ func update() error {
 		var downloadFile string
 		switch runtime.GOOS {
 		case "linux":
-			yayCommand := exec.Command("pacman -Q crunchy-cli")
-			if yayCommand.Run() == nil && yayCommand.ProcessState.Success() {
+			pacmanCommand := exec.Command("pacman -Q crunchy-cli")
+			if pacmanCommand.Run() == nil && pacmanCommand.ProcessState.Success() {
 				utils.Log.Info("crunchy-cli was probably installed via an Arch Linux AUR helper (like yay). Updating via this AUR helper is recommended")
 				return nil
 			}
@@ -105,14 +106,29 @@ func update() error {
 				"You have to update manually (https://github.com/crunchy-labs/crunchy-cli", runtime.GOOS)
 		}
 
-		utils.Log.SetProcess("Updating executable %s", os.Args[0])
+		executePath := os.Args[0]
+		var perms os.FileInfo
+		// check if the path is relative, absolute or non (if so, the executable must be in PATH)
+		if strings.HasPrefix(executePath, "."+string(os.PathSeparator)) || path.IsAbs(executePath) {
+			if perms, err = os.Stat(os.Args[0]); err != nil {
+				return err
+			}
+		} else {
+			executePath, err = exec.LookPath(os.Args[0])
+			if err != nil {
+				return err
+			}
+			if perms, err = os.Stat(executePath); err != nil {
+				return err
+			}
+		}
 
-		perms, err := os.Stat(os.Args[0])
-		if err != nil {
+		utils.Log.SetProcess("Updating executable %s", executePath)
+
+		if err = os.Remove(executePath); err != nil {
 			return err
 		}
-		os.Remove(os.Args[0])
-		executeFile, err := os.OpenFile(os.Args[0], os.O_CREATE|os.O_WRONLY, perms.Mode())
+		executeFile, err := os.OpenFile(executePath, os.O_CREATE|os.O_WRONLY, perms.Mode())
 		if err != nil {
 			return err
 		}
@@ -128,7 +144,7 @@ func update() error {
 			return err
 		}
 
-		utils.Log.StopProcess("Updated executable %s", os.Args[0])
+		utils.Log.StopProcess("Updated executable %s", executePath)
 	}
 
 	return nil

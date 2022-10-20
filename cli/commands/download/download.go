@@ -139,10 +139,6 @@ func download(urls []string) error {
 		episodes, err := downloadExtractEpisodes(url)
 		if err != nil {
 			utils.Log.StopProcess("Failed to parse url %d", i+1)
-			if utils.Crunchy.Config.Premium {
-				utils.Log.Debug("If the error says no episodes could be found but the passed url is correct and a crunchyroll classic url, " +
-					"try the corresponding crunchyroll beta url instead and try again. See https://github.com/crunchy-labs/crunchy-cli/issues/22 for more information")
-			}
 			return err
 		}
 		utils.Log.StopProcess("Parsed url %d", i+1)
@@ -284,9 +280,7 @@ func downloadExtractEpisodes(url string) ([][]utils.FormatInformation, error) {
 	var final []*crunchyroll.Episode
 
 	if downloadAudioFlag != "" {
-		if _, ok := crunchyroll.ParseBetaEpisodeURL(url); ok {
-			return nil, fmt.Errorf("downloading episodes by url and specifying a language is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
-		} else if _, _, _, _, ok := crunchyroll.ParseEpisodeURL(url); ok {
+		if _, ok := crunchyroll.ParseEpisodeURL(url); ok {
 			return nil, fmt.Errorf("downloading episodes by url and specifying a language is no longer supported (thx crunchyroll). use the series url instead and filter after the given episode (https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter)")
 		}
 

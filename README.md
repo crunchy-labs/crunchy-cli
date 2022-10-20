@@ -1,6 +1,6 @@
 # crunchy-cli
 
-A [Go](https://golang.org) written cli client for [crunchyroll](https://www.crunchyroll.com). To use it, you need a crunchyroll premium account for full access & features.
+A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https://www.crunchyroll.com).
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">
@@ -21,178 +21,202 @@ A [Go](https://golang.org) written cli client for [crunchyroll](https://www.crun
 </p>
 
 <p align="center">
-  <a href="#%EF%B8%8F-cli">CLI 🖥️</a>
+  <a href="#%EF%B8%8F-usage">Usage 🖥️</a>
   •
   <a href="#%EF%B8%8F-disclaimer">Disclaimer ☝️</a>
   •
   <a href="#-license">License ⚖</a>
 </p>
 
-_This repo was former known as **crunchyroll-go** (which still exists but now contains only the library part) but got split up into two separate repositories to provide more flexibility._
-
-> This tool relies on the [crunchyroll-go](https://github.com/crunchy-labs/crunchyroll-go) library to communicate with crunchyroll.
-> The library enters maintenance mode (only small fixes, no new features) with version v3 in favor of rewriting it completely in Rust.
-> **crunchy-cli** follows it (with version v2.3.0) and won't have major updates until the Rust rewrite of the library reaches a good usable state.
-
-# 🖥️ CLI
+> We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
+> The official Crunchyroll website can be found at https://crunchyroll.com/.
 
 ## ✨ Features
 
-- Download single videos and entire series from [crunchyroll](https://www.crunchyroll.com).
-- Archive episode or seasons in an `.mkv` file with multiple subtitles and audios and compress them to gzip or zip files.
+- Download single videos and entire series from [Crunchyroll](https://www.crunchyroll.com).
+- Archive episode or seasons in an `.mkv` file with multiple subtitles and audios.
 - Specify a range which episodes to download from an anime.
 
 ## 💾 Get the executable
 
-- 📥 Download the latest binaries [here](https://github.com/crunchy-labs/crunchy-cli/releases/latest) or get it from below:
-  - [Linux (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_linux)
-  - [Windows (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_windows.exe)
-  - [MacOS (x64)](https://smartrelease.bytedream.org/github/crunchy-labs/crunchy-cli/crunchy-{tag}_darwin)
-- If you use Arch btw. or any other Linux distro which is based on Arch Linux, you can download the package via the [AUR](https://aur.archlinux.org/packages/crunchyroll-go/):
-  ```shell
-  $ yay -S crunchy-cli
-  ```
-- On Windows [scoop](https://scoop.sh/) can be used to install it (added by [@AdmnJ](https://github.com/AdmnJ)):
-  ```shell
-  $ scoop bucket add extras # <- in case you haven't added the extra repository already
-  $ scoop install crunchyroll-go
-  ```
-- 🛠 Build it yourself. Must be done if your target platform is not covered by the [provided binaries](https://github.com/crunchy-labs/crunchy-cli/releases/latest) (like Raspberry Pi or M1 Mac):
-  - use `make` (requires `go` to be installed):
-  ```shell
-  $ git clone https://github.com/crunchy-labs/crunchy-cli
-  $ cd crunchy-cli
-  $ make
-  $ sudo make install # <- only if you want to install it on your system
-  ```
-  - use `go`:
-  ```shell
-  $ git clone https://github.com/crunchy-labs/crunchy-cli
-  $ cd crunchy-cli
-  $ go build -o crunchy .
-  ```
+### 📥 Download the latest binaries
 
-## 📝 Examples
+Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest release.
 
-_Before reading_: Because of the huge functionality not all cases can be covered in the README. Make sure to check the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli), further usages and options are described there.
+### 🛠 Build it yourself
+
+Since we do not support every platform and architecture you may have to build the project yourself.
+This requires [git](https://git-scm.com/) and [Cargo](https://doc.rust-lang.org/cargo).
+```shell
+$ git clone https://github.com/crunchy-labs/crunchy-cli
+$ cd crunchy-cli
+$ cargo build --release
+```
+After the binary has built successfully it is available in `target/release`.
+
+## 🖥️ Usage
+
+> All shown command are just examples
+
+Every command requires you to be logged in with an account.
+It doesn't matter if this account is premium or not, both works (but as free user you do not have access to premium content).
+You can pass your account via credentials (username & password) or refresh token.
+
+- Refresh Token
+  - To get the token you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie. 
+    The easiest way to get it is via a browser extension with lets you view your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox Store](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/); [Chrome Store](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
+    If installed, search the `etp_rt` entry and extract the value.
+  - ```shell
+    $ crunchy --etp-rt "abcd1234-zyxw-9876-98zy-a1b2c3d4e5f6"
+    ```
+- Credentials
+  - Credentials must be provided as one single expression.
+    Username and password must be separated by a `:`.
+  - ```shell
+    $ crunchy --credentials "user:password"
+    ```
 
 ### Login
 
-Before you can do something, you have to log in first.
-
-This can be performed via crunchyroll account email and password.
-
-```shell
-$ crunchy login user@example.com password
-```
-
-or via refresh token / `etp_rt` cookie
+If you do not want to provide your credentials every time you execute a command, they can be stored permanently on disk.
+This can be done with the `login` subcommand.
 
 ```shell
-$ crunchy login --refresh-token 7578ce50-5712-3gef-b97e-01332d6b588c
+$ crunchy --etp-rt "abcd1234-zyxw-9876-98zy-a1b2c3d4e5f6" login
 ```
+
+Once set, you do not need to provide `--etp-rt` / `--credentials` anymore when using the cli.
 
 ### Download
 
-By default, the cli tries to download the episode with your system language as audio. If no streams with your system language are available, the video will be downloaded with japanese audio and hardsubbed subtitles in your system language.
-**If your system language is not supported, an error message will be displayed and en-US (american english) will be chosen as language.**
+**Supported urls**
+- Single episode
+  ```shell
+  $ crunchy download https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+- Episode range
+  
+  If you want only specific episodes / seasons of an anime you can easily provide the series url along with a _filter_.
+  The filter has to be attached to the url. See the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter) for more information
+  ```shell
+  $ crunchy download https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1]
+  ```
+- Series
+  ```shell
+  $ crunchy download https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  
+**Options**
+- Audio language
 
-```shell
-$ crunchy download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
-```
+  Which audio the episode(s) should be can be set via the `-a` / `--audio` flag.
+  This only works if the url points to a series since episode urls are language specific.
+  ```shell
+  $ crunchy download -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is your system language. If not supported by Crunchyroll, `en-US` (American English) is the default.
 
-With `-r best` the video(s) will have the best available resolution (mostly 1920x1080 / Full HD).
+- Subtitle language
 
-```shell
-$ crunchy download -r best https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
-```
+  Besides the audio, it's also possible to specify which language the subtitles should have with the `-s` / `--subtitle` flag.
+  The subtitle will be hardsubbed (burned into the video) and thus, can't be turned off or on.
+  ```shell
+  $ crunchy download -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is no subtitle.
 
-The file is by default saved as a `.ts` (mpeg transport stream) file.
-`.ts` files may can't be played or are looking very weird (it depends on the video player you are using). With the `-o` flag, you can change the name (and file ending) of the output file. So if you want to save it as, for example, `mp4`
-file, just name it `whatever.mp4`.
-**You need [ffmpeg](https://ffmpeg.org) to store the video in other file formats.**
+- Output filename
 
-```shell
-$ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
-```
+  You can specify the name of the output file with the `-o` / `--output` flag.
+  If you want to use any other file format than [`.ts`](https://en.wikipedia.org/wiki/MPEG_transport_stream) you need [ffmpeg](https://ffmpeg.org/).
+  ```shell
+  $ crunchy download -o "ditf.ts" https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+  Default is `{title}.ts`.
 
-With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have. Type `crunchy help download` to see all available locales.
+- Resolution
 
-```shell
-$ crunchy download --audio ja-JP --subtitle de-DE https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
-```
-
-##### Flags
-
-The following flags can be (optional) passed to modify the [download](#download) process.
-
-| Short | Extended       | Description                                                                    |
-|-------|----------------|--------------------------------------------------------------------------------|
-| `-a`  | `--audio`      | Forces audio of the video(s).                                                  |
-| `-s`  | `--subtitle`   | Forces subtitle of the video(s).                                               |
-| `-d`  | `--directory`  | Directory to download the video(s) to.                                         |
-| `-o`  | `--output`     | Name of the output file.                                                       |
-| `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst. |
-| `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                       |
+  The resolution for videos can be set via the `-r` / `--resolution` flag.
+  ```shell
+  $ crunchy download -r worst https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+  Default is `best`.
 
 ### Archive
 
-Archive works just like [download](#download). It downloads the given videos as `.mkv` files and stores all (soft) subtitles in it. Default audio locales are japanese and your system language (if available) but you can set more or less with
-the `--language` flag.
+**Supported urls**
+- Series
 
-Archive a file
+  Only series urls are supported since single episode urls are (audio) language locked.
+  ```shell
+  $ crunchy archive https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  
+**Options**
+- Audio languages
 
-```shell
-$ crunchy archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
-```
+  Which audios the episode(s) should be can be set via the `-a` / `--audio` flag.
+  ```shell
+  $ crunchy archive -a ja-JP -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Can be used multiple times.
+  Default is your system language (if not supported by Crunchyroll, `en-US` (American English) is the default) + `ja-JP` (Japanese).
 
-Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
+- Subtitle languages
 
-```shell
-$ crunchy archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
-```
+  Besides the audio, it's also possible to specify which languages the subtitles should have with the `-s` / `--subtitle` flag.
+  ```shell
+  $ crunchy archive -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is all subtitles.
 
-##### Flags
+- Output filename
 
-The following flags can be (optional) passed to modify the [archive](#archive) process.
+  You can specify the name of the output file with the `-o` / `--output` flag.
+  The only supported file / container format is [`.mkv`](https://en.wikipedia.org/wiki/Matroska) since it stores / can store multiple audio, video and subtitle streams.
+  ```shell
+  $ crunchy archive -o "{title}.mkv" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is `{title}.mkv`.
 
-| Short | Extended       | Description                                                                                                                                                                                             |
-|-------|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `-l`  | `--language`   | Audio locale which should be downloaded. Can be used multiple times.                                                                                                                                    |
-| `-d`  | `--directory`  | Directory to download the video(s) to.                                                                                                                                                                  |
-| `-o`  | `--output`     | Name of the output file.                                                                                                                                                                                |
-| `-m`  | `--merge`      | Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio', 'video'. See the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#archive) for more information.                  |
-| `-c`  | `--compress`   | If is set, all output will be compresses into an archive. This flag sets the name of the compressed output file and the file ending specifies the compression algorithm (gzip, tar, zip are supported). |
-| `-r`  | `--resolution` | The resolution of the video(s). `best` for best resolution, `worst` for worst.                                                                                                                          |
-| `-g`  | `--goroutines` | Sets how many parallel segment downloads should be used.                                                                                                                                                |
+- Resolution
 
+  The resolution for videos can be set via the `-r` / `--resolution` flag.
+  ```shell
+  $ crunchy archive -r worst https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is `best`.
 
-### Info
+- Merge behavior
 
-The `info` displays some information about the account which is used for the cli.
+  Because of local restrictions (or other reasons) some episodes with different languages does not have the same length (e.g. when some scenes were cut out).
+  The ideal state, when multiple audios & subtitles used, would be if only one _video_ has to be stored and all other languages can be stored as audio-only.
+  But, as said, this is not always the case.
+  With the `-m` / `--merge` flag you can set what you want to do if some video lengths differ.
+  Valid options are `audio` - store one video and all other languages as audio only; `video` - store the video + audio for every language; `auto` - detect if videos differ in length: if so, behave like `video` else like `audio`.
+  Subtitles will always match to the first / primary audio and video.
+  ```shell
+  $ crunchy archive -m audio https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is `auto`.
 
-```shell
-$ crunchy info
-```
+- Default subtitle
 
-### Update
+  `--default_subtitle` set which subtitle language should be set as default / auto appear when starting the downloaded video(s).
+  ```shell
+  $ crunchy archive --default_subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is none.
 
-If you want to update your local version of `crunchy-cli`, this command makes this easier.
-It checks if a new version is available and if so, updates itself.
+- No subtitle optimizations
 
-```shell
-$ crunchy update
-```
-
-### Global flags
-
-These flags you can use across every sub-command:
-
-| Flag | Description                                          |
-|------|------------------------------------------------------|
-| `-q` | Disables all output.                                 |
-| `-v` | Shows additional debug output.                       |
-| `-p` | Use a proxy to hide your ip / redirect your traffic. |
+  Subtitles, as Crunchyroll delivers them, look weird in some video players (#66). 
+  This can be fixed by adding a specific entry to the subtitles.
+  But since this entry is only a de-factor standard and not represented in the official specification of the subtitle format ([`.ass`](https://en.wikipedia.org/wiki/SubStation_Alpha)) it could cause issues with some video players (but no issue got reported so far, so it's relatively safe to use).
+  `--no_subtitle_optimizations` can disable these optimizations.
+  ```shell
+  $ crunchy archive --no_subtitle_optimizations https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
 
 # ☝️ Disclaimer
 

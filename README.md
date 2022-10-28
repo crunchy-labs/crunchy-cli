@@ -98,13 +98,13 @@ By default, the cli tries to download the episode with your system language as a
 **If your system language is not supported, an error message will be displayed and en-US (american english) will be chosen as language.**
 
 ```shell
-$ crunchy download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy download https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 ```
 
 With `-r best` the video(s) will have the best available resolution (mostly 1920x1080 / Full HD).
 
 ```shell
-$ crunchy download -r best https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy download -r best https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 ```
 
 The file is by default saved as a `.ts` (mpeg transport stream) file.
@@ -113,13 +113,13 @@ file, just name it `whatever.mp4`.
 **You need [ffmpeg](https://ffmpeg.org) to store the video in other file formats.**
 
 ```shell
-$ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy download -o "daaaaaaaaaaaaaaaarling.ts" https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 ```
 
 With the `--audio` flag you can specify which audio the video should have and with `--subtitle` which subtitle it should have. Type `crunchy help download` to see all available locales.
 
 ```shell
-$ crunchy download --audio ja-JP --subtitle de-DE https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+$ crunchy download --audio ja-JP --subtitle de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
 ```
 
 ##### Flags
@@ -143,13 +143,13 @@ the `--language` flag.
 Archive a file
 
 ```shell
-$ crunchy archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy archive https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 ```
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
 
 ```shell
-$ crunchy archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+$ crunchy archive -c "ditf.tar.gz" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
 ```
 
 ##### Flags

@@ -51,7 +51,7 @@ func init() {
 	Cmd.Flags().BoolVar(&loginRefreshTokenFlag,
 		"refresh-token",
 		false,
-		"Use a refresh token to login instead of username and password. Can be obtained by copying the `etp-rt` cookie from beta.crunchyroll.com")
+		"Use a refresh token to login instead of username and password. Can be obtained by copying the `etp-rt` cookie from crunchyroll.com")
 
 	Cmd.MarkFlagsMutuallyExclusive("session-id", "refresh-token")
 }

@@ -164,7 +164,7 @@ Use the list below to get a better overview what is possible
     ...[S3E4-] - Download all episodes from and including season 3, episode 4.
     ...[S1E4-S3] - Download all episodes from and including season 1, episode 4, until and including season 3.
 
-In practise, it would look like this: \fIhttps://beta.crunchyroll.com/series/12345678/example[S1E5-S3E2]\fR.
+In practise, it would look like this: \fIhttps://www.crunchyroll.com/series/12345678/example[S1E5-S3E2]\fR.
 
 The \fBS\fR, followed by the number indicates the season number, \fBE\fR, followed by the number indicates an episode number. It doesn't matter if \fBS\fR, \fBE\fR or both are missing. Theoretically \fB[-]\fR is a valid pattern too. Note that \fBS\fR must always stay before \fBE\fR when used.
 
@@ -175,23 +175,23 @@ $ crunchy-cli login user@example.com 12345678
 
 Download a episode normally. Your system locale will be used for the video's audio.
 .br
-$ crunchy-cli download https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with 720p and name it to 'darling.mp4'. Note that you need \fBffmpeg\fR to save files which do not have '.ts' as file extension.
 .br
-$ crunchy-cli download -o "darling.mp4" -r 720p https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli download -o "darling.mp4" -r 720p https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Download a episode with japanese audio and american subtitles.
 .br
-$ crunchy-cli download -a ja-JP -s en-US https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
+$ crunchy-cli download -a ja-JP -s en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E3-E5]
 
 Stores the episode in a .mkv file.
 .br
-$ crunchy-cli archive https://beta.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
+$ crunchy-cli archive https://www.crunchyroll.com/watch/GRDKJZ81Y/alone-and-lonesome
 
 Downloads the first two episode of Darling in the FranXX and stores it compressed in a file.
 .br
-$ crunchy-cli archive -c "ditf.tar.gz" https://beta.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
+$ crunchy-cli archive -c "ditf.tar.gz" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E2]
 
 .SH BUGS
 If you notice any bug or want an enhancement, feel free to create a new issue or pull request in the GitHub repository.

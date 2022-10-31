@@ -824,17 +824,22 @@ func archiveExtractEpisodes(url string) ([][]utils.FormatInformation, error) {
 	}
 
 	var infoFormat [][]utils.FormatInformation
-	for _, e := range eps {
+	var keys []int
+	for e := range eps {
+		keys = append(keys, e)
+	}
+	sort.Ints(keys)
+
+	for _, k := range keys {
 		var tmpFormatInfo []utils.FormatInformation
-
-		var keys []int
-		for episodeNumber := range e {
-			keys = append(keys, episodeNumber)
+		var kkey []int
+		for ee := range eps[k] {
+			kkey = append(kkey, ee)
 		}
-		sort.Ints(keys)
+		sort.Ints(kkey)
 
-		for _, key := range keys {
-			tmpFormatInfo = append(tmpFormatInfo, *e[key])
+		for _, kk := range kkey {
+			tmpFormatInfo = append(tmpFormatInfo, *eps[k][kk])
 		}
 
 		infoFormat = append(infoFormat, tmpFormatInfo)

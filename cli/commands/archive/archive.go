@@ -40,6 +40,8 @@ var (
 	archiveResolutionFlag string
 
 	archiveGoroutinesFlag int
+
+	archiveNoSubtitleOptimizations bool
 )
 
 var Cmd = &cobra.Command{
@@ -203,6 +205,11 @@ func init() {
 		"g",
 		runtime.NumCPU(),
 		"Number of parallel segment downloads")
+
+	Cmd.Flags().BoolVar(&archiveNoSubtitleOptimizations,
+		"no-subtitle-optimizations",
+		false,
+		"Disable subtitle optimizations. See https://github.com/crunchy-labs/crunchy-cli/issues/66 for more information")
 }
 
 func archive(urls []string) error {
@@ -540,13 +547,38 @@ func archiveDownloadSubtitles(filename string, subtitles ...*crunchyroll.Subtitl
 		}
 		files = append(files, f.Name())
 
-		if err := subtitle.Save(f); err != nil {
+		buffer := &bytes.Buffer{}
+
+		if err := subtitle.Save(buffer); err != nil {
 			f.Close()
 			for _, file := range files {
 				os.Remove(file)
 			}
 			return nil, err
 		}
+
+		if !archiveNoSubtitleOptimizations {
+			buffer2 := &bytes.Buffer{}
+			var scriptInfo bool
+			for _, line := range strings.Split(buffer.String(), "\n") {
+				if scriptInfo && strings.HasPrefix(strings.TrimSpace(line), "[") {
+					buffer2.WriteString("ScaledBorderAndShadows: yes\n")
+					scriptInfo = false
+				} else if strings.TrimSpace(line) == "[Script Info]" {
+					scriptInfo = true
+				}
+				buffer2.WriteString(line + "\n")
+			}
+
+			if _, err = io.Copy(f, buffer2); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err = io.Copy(f, buffer); err != nil {
+				return nil, err
+			}
+		}
+
 		f.Close()
 
 		utils.Log.Debug("Downloaded '%s' subtitles", subtitle.Locale)

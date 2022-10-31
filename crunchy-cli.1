@@ -146,6 +146,10 @@ The video resolution. Can either be specified via the pixels (e.g. 1920x1080), t
 
 \fB-g, --goroutines GOROUTINES\fR
 Sets the number of parallel downloads for the segments the final video is made of. Default is the number of cores the computer has.
+.TP
+
+\fB--no-subtitle-optimizations DISABLE\fR
+Disable subtitle optimizations which caused subtitle sizing and layout issues (https://github.com/crunchy-labs/crunchy-cli/issues/66).
 
 .SH UPDATE COMMAND
 Checks if a newer version is available.

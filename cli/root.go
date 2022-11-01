@@ -10,6 +10,8 @@ import (
 	"github.com/crunchy-labs/crunchy-cli/cli/commands/login"
 	"github.com/crunchy-labs/crunchy-cli/cli/commands/update"
 	"github.com/crunchy-labs/crunchy-cli/utils"
+	"github.com/crunchy-labs/crunchyroll-go/v3"
+	crunchyUtils "github.com/crunchy-labs/crunchyroll-go/v3/utils"
 	"github.com/spf13/cobra"
 	"os"
 	"runtime/debug"
@@ -21,6 +23,8 @@ var (
 	verboseFlag bool
 
 	proxyFlag string
+
+	langFlag string
 
 	useragentFlag string
 )
@@ -40,6 +44,14 @@ var RootCmd = &cobra.Command{
 			utils.Log = commands.NewLogger(false, false, false)
 		}
 
+		if langFlag != "" {
+			if !crunchyUtils.ValidateLocale(crunchyroll.LOCALE(langFlag)) {
+				return fmt.Errorf("'%s' is not a valid language. Choose from %s", langFlag, strings.Join(utils.LocalesAsStrings(), ", "))
+			}
+
+			os.Setenv("CRUNCHY_LANG", langFlag)
+		}
+
 		utils.Log.Debug("Executing `%s` command with %d arg(s)", cmd.Name(), len(args))
 
 		utils.Client, err = utils.CreateOrDefaultClient(proxyFlag, useragentFlag)
@@ -52,6 +64,8 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Adds debug messages to the normal output")
 
 	RootCmd.PersistentFlags().StringVarP(&proxyFlag, "proxy", "p", "", "Proxy to use")
+
+	RootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", fmt.Sprintf("Set language to use. If not set, it's received from the system locale dynamically. Choose from: %s", strings.Join(utils.LocalesAsStrings(), ", ")))
 
 	RootCmd.PersistentFlags().StringVar(&useragentFlag, "useragent", fmt.Sprintf("crunchy-cli/%s", utils.Version), "Useragent to do all request with")
 

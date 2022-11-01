@@ -14,6 +14,10 @@ import (
 // SystemLocale receives the system locale
 // https://stackoverflow.com/questions/51829386/golang-get-system-language/51831590#51831590
 func SystemLocale(verbose bool) crunchyroll.LOCALE {
+	if lang, ok := os.LookupEnv("CRUNCHY_LANG"); ok {
+		return crunchyroll.LOCALE(lang)
+	}
+
 	if runtime.GOOS != "windows" {
 		if lang, ok := os.LookupEnv("LANG"); ok {
 			var l crunchyroll.LOCALE

@@ -41,7 +41,9 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
 
 ### 📥 Download the latest binaries
 
-Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest release.
+~~Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest release.~~
+
+Currently, no pre-built binary of the rewrite / this branch is available.
 
 ### 🛠 Build it yourself
 

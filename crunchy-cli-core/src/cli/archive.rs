@@ -44,7 +44,7 @@ pub struct Archive {
     #[arg(long_help = format!("Audio languages. Can be used multiple times. \
     Available languages are:\n{}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(short, long, default_values_t = vec![crate::utils::locale::system_locale(), Locale::ja_JP])]
-    audio: Vec<Locale>,
+    locale: Vec<Locale>,
     #[arg(help = format!("Subtitle languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Subtitle languages. Can be used multiple times. \
@@ -292,7 +292,7 @@ async fn formats_from_series(
         // get all locales which are specified but not present in the current iterated season and
         // print an error saying this
         let not_present_audio = archive
-            .audio
+            .locale
             .clone()
             .into_iter()
             .filter(|l| !season.iter().any(|s| &s.metadata.audio_locale == l))
@@ -309,7 +309,7 @@ async fn formats_from_series(
         // remove all seasons with the wrong audio for the current iterated season number
         seasons.retain(|s| {
             s.metadata.season_number != season.first().unwrap().metadata.season_number
-                || archive.audio.contains(&s.metadata.audio_locale)
+                || archive.locale.contains(&s.metadata.audio_locale)
         })
     }
 
@@ -318,7 +318,7 @@ async fn formats_from_series(
         BTreeMap::new();
     for season in series.seasons().await? {
         if !url_filter.is_season_valid(season.metadata.season_number)
-            || !archive.audio.contains(&season.metadata.audio_locale)
+            || !archive.locale.contains(&season.metadata.audio_locale)
         {
             continue;
         }

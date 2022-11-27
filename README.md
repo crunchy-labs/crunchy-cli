@@ -12,8 +12,8 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
   <a href="https://github.com/crunchy-labs/crunchy-cli/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/crunchy-labs/crunchy-cli?style=flat-square" alt="License">
   </a>
-  <a href="https://github.com/crunchy-labs/crunchy-cli/releases/latest">
-    <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?style=flat-square" alt="Release">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/releases">
+    <img src="https://img.shields.io/github/v/release/crunchy-labs/crunchy-cli?include_prereleases&style=flat-square" alt="Release">
   </a>
   <a href="https://discord.gg/gUWwekeNNg">
     <img src="https://img.shields.io/discord/915659846836162561?label=discord&style=flat-square" alt="Discord">
@@ -44,9 +44,7 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
 
 ### 📥 Download the latest binaries
 
-~~Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest release.~~
-
-Currently, no pre-built binary of the rewrite / this branch is available.
+Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest (pre-)release.
 
 ### 🛠 Build it yourself
 

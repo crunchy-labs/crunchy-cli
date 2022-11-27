@@ -119,20 +119,20 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-${{ short_commit_sha.sha_short }}_${{ matrix.platform }}${{ matrix.ext }}
+          name: crunchy-${{ steps.short_commit_sha.sha_short }}_${{ matrix.platform }}${{ matrix.ext }}
           path: ./target/release/crunchy-cli${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
-          name: manpages-${{ short_commit_sha.sha_short }}.zip
+          name: manpages-${{ steps.short_commit_sha.sha_short }}.zip
           path: ./manpages.zip
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
-          name: completions-${{ short_commit_sha.sha_short }}.zip
+          name: completions-${{ steps.short_commit_sha.sha_short }}.zip
           path: ./completions.zip
           if-no-files-found: error

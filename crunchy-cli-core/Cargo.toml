@@ -1,5 +1,6 @@
 [package]
 name = "crunchy-cli-core"
+authors = ["Crunchy Labs Maintainers"]
 version = "0.1.0"
 edition = "2021"
 

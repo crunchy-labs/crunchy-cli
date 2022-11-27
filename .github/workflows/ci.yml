@@ -121,13 +121,13 @@ jobs:
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
-          name:
+          name: manpages.zip
           path: ./manpages.zip
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
-          name:
+          name: completions.zip
           path: ./completions.zip
           if-no-files-found: error

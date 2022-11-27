@@ -98,14 +98,14 @@ jobs:
           args: --release --all-features
 
       - name: Bundle manpages
-        uses: thedoctor0/zip-release@0.6
+        uses: thedoctor0/zip-release@0:6
         with:
           type: zip
           filename: manpages.zip
           path: ./target/release/manpages
 
       - name: Bundle completions
-        uses: thedoctor0/zip-release@0.6
+        uses: thedoctor0/zip-release@0:6
         with:
           type: zip
           filename: completions.zip

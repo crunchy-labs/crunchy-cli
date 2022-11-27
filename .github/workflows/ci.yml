@@ -1,0 +1,133 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            toolchain: x86_64-unknown-linux-musl
+          - os: windows-latest
+            toolchain: x86_64-pc-windows-msvc
+          - os: macos-latest
+            toolchain: x86_64-apple-darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.toolchain }}
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+
+  build:
+    if: github.ref == 'refs/heads/master'
+    needs:
+      - test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            toolchain: x86_64-unknown-linux-musl
+            ext:
+            output: crunchy_linux
+          - os: windows-latest
+            toolchain: x86_64-pc-windows-msvc
+            ext: .exe
+            output: crunchy_windows.exe
+          - os: macos-latest
+            toolchain: x86_64-apple-darwin
+            ext:
+            output: crunchy_darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.toolchain }}
+          default: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+
+      - name: Bundle manpages
+        uses: thedoctor0/zip-release@0.6
+        with:
+          type: zip
+          filename: manpages.zip
+          path: ./target/release/manpages
+
+      - name: Bundle completions
+        uses: thedoctor0/zip-release@0.6
+        with:
+          type: zip
+          filename: completions.zip
+          path: ./target/release/completions
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.output }}
+          path: ./target/release/crunchy-cli${{ matrix.ext }}
+          if-no-files-found: error
+
+      - name: Upload manpages artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name:
+          path: ./manpages.zip
+          if-no-files-found: error
+
+      - name: Upload completions artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name:
+          path: ./completions.zip
+          if-no-files-found: error

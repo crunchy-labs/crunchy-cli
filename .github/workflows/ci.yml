@@ -58,16 +58,16 @@ jobs:
         include:
           - os: ubuntu-latest
             toolchain: x86_64-unknown-linux-musl
+            platform: linux
             ext:
-            output: crunchy_linux
           - os: windows-latest
             toolchain: x86_64-pc-windows-msvc
+            platform: windows
             ext: .exe
-            output: crunchy_windows.exe
           - os: macos-latest
             toolchain: x86_64-apple-darwin
+            platform: darwin
             ext:
-            output: crunchy_darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -98,36 +98,41 @@ jobs:
           args: --release --all-features
 
       - name: Bundle manpages
-        uses: TheDoctor0/zip-release@0.6.2
+        uses: thedoctor0/zip-release@0.6
         with:
           type: zip
           filename: manpages.zip
           path: ./target/release/manpages
 
       - name: Bundle completions
-        uses: TheDoctor0/zip-release@0.6.2
+        uses: thedoctor0/zip-release@0.6
         with:
           type: zip
           filename: completions.zip
           path: ./target/release/completions
 
+      - name: Get short commit SHA
+        id: short_commit_sha
+        shell: bash
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.output }}
+          name: crunchy-${{ short_commit_sha.sha_short }}_${{ matrix.platform }}${{ matrix.ext }}
           path: ./target/release/crunchy-cli${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
-          name: manpages.zip
+          name: manpages-${{ short_commit_sha.sha_short }}.zip
           path: ./manpages.zip
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
-          name: completions.zip
+          name: completions-${{ short_commit_sha.sha_short }}.zip
           path: ./completions.zip
           if-no-files-found: error

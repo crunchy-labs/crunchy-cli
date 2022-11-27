@@ -1,6 +1,17 @@
 version: 2
 updates:
-  - package-ecosystem: "gomod"
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-patch" ]
+
+  - package-ecosystem: "cargo"
+    directory: "/crunchy-cli-core"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-patch" ]

@@ -97,42 +97,23 @@ jobs:
           command: build
           args: --release --all-features
 
-      - name: Bundle manpages
-        uses: thedoctor0/zip-release@0.6.2
-        with:
-          type: zip
-          filename: manpages.zip
-          path: ./target/release/manpages
-
-      - name: Bundle completions
-        uses: thedoctor0/zip-release@0.6.2
-        with:
-          type: zip
-          filename: completions.zip
-          path: ./target/release/completions
-
-      - name: Get short commit SHA
-        id: short_commit_sha
-        shell: bash
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-${{ steps.short_commit_sha.outputs.sha_short }}_${{ matrix.platform }}${{ matrix.ext }}
+          name: crunchy-cli_${{ matrix.platform }}
           path: ./target/release/crunchy-cli${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
-          name: manpages-${{ steps.short_commit_sha.outputs.sha_short }}.zip
-          path: ./manpages.zip
+          name: manpages
+          path: ./target/release/manpages
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
-          name: completions-${{ steps.short_commit_sha.outputs.sha_short }}.zip
-          path: ./completions.zip
+          name: completions
+          path: ./target/release/completions
           if-no-files-found: error

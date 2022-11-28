@@ -14,7 +14,7 @@ static-ssl = ["crunchyroll-rs/static-ssl"]
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive", "string"] }
 chrono = "0.4"
 crunchyroll-rs = { git = "https://github.com/crunchy-labs/crunchyroll-rs", default-features = false, features = ["stream", "parse"] }
 ctrlc = "3.2"
@@ -28,3 +28,6 @@ tempfile = "3.3"
 terminal_size = "0.2"
 tokio = { version = "1.21", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.2"
+
+[build-dependencies]
+chrono = "0.4"

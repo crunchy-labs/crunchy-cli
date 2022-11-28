@@ -20,13 +20,15 @@ trait Execute {
 }
 
 #[derive(Debug, Parser)]
-#[clap(author, version, about)]
+#[clap(author, version = version(), about)]
 #[clap(name = "crunchy-cli")]
 pub struct Cli {
     #[clap(flatten)]
     verbosity: Option<Verbosity>,
 
-    #[arg(help = "Overwrite the language in which results are returned. Default is your system language")]
+    #[arg(
+        help = "Overwrite the language in which results are returned. Default is your system language"
+    )]
     #[arg(long)]
     lang: Option<Locale>,
 
@@ -35,6 +37,18 @@ pub struct Cli {
 
     #[clap(subcommand)]
     command: Command,
+}
+
+fn version() -> String {
+    let package_version = env!("CARGO_PKG_VERSION");
+    let git_commit_hash = env!("GIT_HASH");
+    let build_date = env!("BUILD_DATE");
+
+    if git_commit_hash.is_empty() {
+        format!("{}", package_version)
+    } else {
+        format!("{} ({} {})", package_version, git_commit_hash, build_date)
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -51,7 +65,9 @@ struct Verbosity {
     v: bool,
 
     #[arg(help = "Quiet output. Does not print anything unless it's a error")]
-    #[arg(long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout")]
+    #[arg(
+        long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout"
+    )]
     #[arg(short)]
     q: bool,
 }
@@ -59,11 +75,15 @@ struct Verbosity {
 #[derive(Debug, Parser)]
 struct LoginMethod {
     #[arg(help = "Login with credentials (username or email and password)")]
-    #[arg(long_help = "Login with credentials (username or email and password). Must be provided as user:password")]
+    #[arg(
+        long_help = "Login with credentials (username or email and password). Must be provided as user:password"
+    )]
     #[arg(long)]
     credentials: Option<String>,
     #[arg(help = "Login with the etp-rt cookie")]
-    #[arg(long_help = "Login with the etp-rt cookie. This can be obtained when you login on crunchyroll.com and extract it from there")]
+    #[arg(
+        long_help = "Login with the etp-rt cookie. This can be obtained when you login on crunchyroll.com and extract it from there"
+    )]
     #[arg(long)]
     etp_rt: Option<String>,
 }

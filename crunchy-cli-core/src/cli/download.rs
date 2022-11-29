@@ -243,6 +243,7 @@ async fn download_ffmpeg(
         .args(["-f", "mpegts", "-i", "pipe:"])
         .args(["-safe", "0"])
         .args(["-c", "copy"])
+        .args(["-bsf:a", "aac_adtstoasc"])
         .arg(target.to_str().unwrap())
         .spawn()?;
 

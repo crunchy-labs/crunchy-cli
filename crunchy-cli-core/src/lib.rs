@@ -171,7 +171,7 @@ async fn create_ctx(cli: &Cli) -> Result<Context> {
     let client = isahc::HttpClient::new().unwrap();
     #[cfg(all(windows, target_env = "msvc"))]
     let client = isahc::HttpClientBuilder::default()
-        .proxy_tls_config(
+        .tls_config(
             isahc::tls::TlsConfigBuilder::default().root_cert_store(
                 isahc::tls::RootCertStore::custom(
                     rustls_native_certs::load_native_certs()

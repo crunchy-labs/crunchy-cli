@@ -48,7 +48,7 @@ jobs:
           command: test
           args: --all-features
 
-  build:
+  build-nix:
     if: github.ref == 'refs/heads/master'
     needs:
       - test
@@ -59,15 +59,9 @@ jobs:
           - os: ubuntu-latest
             toolchain: x86_64-unknown-linux-musl
             platform: linux
-            ext:
-          - os: windows-latest
-            toolchain: x86_64-pc-windows-gnu
-            platform: windows
-            ext: .exe
           - os: macos-latest
             toolchain: x86_64-apple-darwin
             platform: darwin
-            ext:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -101,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: crunchy-cli_${{ matrix.platform }}
-          path: ./target/release/crunchy-cli${{ matrix.ext }}
+          path: ./target/release/crunchy-cli
           if-no-files-found: error
 
       - name: Upload manpages artifact
@@ -116,4 +110,52 @@ jobs:
         with:
           name: completions
           path: ./target/release/completions
+          if-no-files-found: error
+
+  build-windows:
+    if: github.ref == 'refs/heads/master'
+    needs:
+      - test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install OpenSSL
+        run: vcpkg install openssl:x64-windows-static-md
+
+      - name: Set env variables
+        shell: bash
+        run: echo "CFLAGS=-I$(echo $VCPKG_INSTALLATION_ROOT)\packages\openssl_x64-windows-static-md\include" >> $GITHUB_ENV
+
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          default: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: crunchy-cli_windows.exe
+          path: ./target/release/crunchy-cli.exe
           if-no-files-found: error

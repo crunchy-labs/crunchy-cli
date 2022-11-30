@@ -64,6 +64,10 @@ struct Verbosity {
     #[arg(short)]
     v: bool,
 
+    #[arg(help = "Very verbose output. Generally not recommended, use '-v' instead")]
+    #[arg(long)]
+    vv: bool,
+
     #[arg(help = "Quiet output. Does not print anything unless it's a error")]
     #[arg(
         long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout"
@@ -92,16 +96,18 @@ pub async fn cli_entrypoint() {
     let cli: Cli = Cli::parse();
 
     if let Some(verbosity) = &cli.verbosity {
-        if verbosity.v && verbosity.q {
+        if verbosity.v as u8 + verbosity.q as u8 + verbosity.vv as u8 > 1 {
             eprintln!("Output cannot be verbose ('-v') and quiet ('-q') at the same time");
             std::process::exit(1)
         } else if verbosity.v {
-            CliLogger::init(LevelFilter::Debug).unwrap()
+            CliLogger::init(false, LevelFilter::Debug).unwrap()
         } else if verbosity.q {
-            CliLogger::init(LevelFilter::Error).unwrap()
+            CliLogger::init(false, LevelFilter::Error).unwrap()
+        } else if verbosity.vv {
+            CliLogger::init(true, LevelFilter::Debug).unwrap()
         }
     } else {
-        CliLogger::init(LevelFilter::Info).unwrap()
+        CliLogger::init(false, LevelFilter::Info).unwrap()
     }
 
     debug!("cli input: {:?}", cli);

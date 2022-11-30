@@ -9,9 +9,6 @@ default = ["static-curl"]
 
 # Embed a static curl library into the binary instead of just linking it.
 static-curl = ["crunchy-cli-core/static-curl"]
-# Embed a static openssl library into the binary instead of just linking it. If you want to compile this project against
-# musl and have openssl issues, this might solve these issues.
-static-ssl = ["crunchy-cli-core/static-ssl"]
 
 [dependencies]
 tokio = { version = "1.22", features = ["macros", "rt-multi-thread", "time"], default-features = false }
@@ -26,7 +23,10 @@ clap_mangen = "0.2"
 
 # The static-* features must be used here since build dependency features cannot be manipulated from the features
 # specified in this Cargo.toml [features].
-crunchy-cli-core = { path = "./crunchy-cli-core", features = ["static-curl", "static-ssl"] }
+crunchy-cli-core = { path = "./crunchy-cli-core", features = ["static-curl"] }
+
+[target.'cfg(all(windows, target_env = "msvc"))'.build-dependencies]
+static_vcruntime = "2.0"
 
 [profile.release]
 strip = true

@@ -92,6 +92,7 @@ impl CliProgress {
 
 #[allow(clippy::type_complexity)]
 pub struct CliLogger {
+    all: bool,
     level: LevelFilter,
     progress: Mutex<Option<CliProgress>>,
 }
@@ -105,7 +106,7 @@ impl Log for CliLogger {
         if !self.enabled(record.metadata())
             || (record.target() != "progress"
                 && record.target() != "progress_end"
-                && !record.target().starts_with("crunchy_cli"))
+                && (!self.all && !record.target().starts_with("crunchy_cli")))
         {
             return;
         }
@@ -136,16 +137,17 @@ impl Log for CliLogger {
 }
 
 impl CliLogger {
-    pub fn new(level: LevelFilter) -> Self {
+    pub fn new(all: bool, level: LevelFilter) -> Self {
         Self {
+            all,
             level,
             progress: Mutex::new(None),
         }
     }
 
-    pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
+    pub fn init(all: bool, level: LevelFilter) -> Result<(), SetLoggerError> {
         set_max_level(level);
-        set_boxed_logger(Box::new(CliLogger::new(level)))
+        set_boxed_logger(Box::new(CliLogger::new(all, level)))
     }
 
     fn extended(&self, record: &Record) {

@@ -7,9 +7,6 @@ edition = "2021"
 [features]
 # Embed a static curl library into the binary instead of just linking it.
 static-curl = ["crunchyroll-rs/static-curl"]
-# Embed a static openssl library into the binary instead of just linking it. If you want to compile this project against
-# musl and have openssl issues, this might solve these issues.
-static-ssl = ["crunchyroll-rs/static-ssl"]
 
 [dependencies]
 anyhow = "1.0"
@@ -19,7 +16,7 @@ chrono = "0.4"
 crunchyroll-rs = { git = "https://github.com/crunchy-labs/crunchyroll-rs", default-features = false, features = ["stream", "parse"] }
 ctrlc = "3.2"
 dirs = "4.0"
-isahc = { git = "https://github.com/sagebind/isahc", rev = "34f158ef" }
+isahc = { git = "https://github.com/sagebind/isahc", rev = "c39f6f8" }
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.13"
 regex = "1.6"
@@ -28,6 +25,10 @@ tempfile = "3.3"
 terminal_size = "0.2"
 tokio = { version = "1.21", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.2"
+
+[target.'cfg(all(windows, target_env = "msvc"))'.dependencies]
+isahc = { git = "https://github.com/sagebind/isahc", rev = "c39f6f8", features = ["data-encoding"] }
+rustls-native-certs = "0.6"
 
 [build-dependencies]
 chrono = "0.4"

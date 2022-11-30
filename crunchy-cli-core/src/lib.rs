@@ -164,24 +164,27 @@ pub async fn cli_entrypoint() {
 
 async fn create_ctx(cli: &Cli) -> Result<Context> {
     let crunchy = crunchyroll_session(cli).await?;
-    // TODO: Use crunchy.client() when it's possible
+    // use crunchy.client() when it's possible
     // currently crunchy.client() has a cloudflare bypass built-in to access crunchyroll. the servers
     // where crunchy stores their videos can't handle this bypass and simply refuses to connect
     #[cfg(not(all(windows, target_env = "msvc")))]
     let client = isahc::HttpClient::new().unwrap();
     #[cfg(all(windows, target_env = "msvc"))]
+    use isahc::config::Configurable;
+    #[cfg(all(windows, target_env = "msvc"))]
     let client = isahc::HttpClientBuilder::default()
         .tls_config(
-            isahc::tls::TlsConfigBuilder::default().root_cert_store(
-                isahc::tls::RootCertStore::custom(
+            isahc::tls::TlsConfigBuilder::default()
+                .root_cert_store(isahc::tls::RootCertStore::custom(
                     rustls_native_certs::load_native_certs()
                         .unwrap()
                         .into_iter()
                         .map(|l| isahc::tls::Certificate::from_der(l.0)),
-                ),
-            ),
+                ))
+                .build(),
         )
-        .build();
+        .build()
+        .unwrap();
 
     Ok(Context { crunchy, client })
 }

@@ -28,6 +28,9 @@ clap_mangen = "0.2"
 # specified in this Cargo.toml [features].
 crunchy-cli-core = { path = "./crunchy-cli-core", features = ["static-curl", "static-ssl"] }
 
+[target.'cfg(all(windows, target_env = "msvc"))'.build-dependencies]
+static_vcruntime = "2.0"
+
 [profile.release]
 strip = true
 opt-level = "z"

@@ -269,6 +269,7 @@ dependencies = [
  "clap_complete",
  "clap_mangen",
  "crunchy-cli-core",
+ "static_vcruntime",
  "tokio",
 ]
 
@@ -297,7 +298,7 @@ dependencies = [
 [[package]]
 name = "crunchyroll-rs"
 version = "0.1.0"
-source = "git+https://github.com/crunchy-labs/crunchyroll-rs#3e9f7bfaab68649ecdb486aee0b15fe658d51917"
+source = "git+https://github.com/crunchy-labs/crunchyroll-rs#3d455ebca34cfa83df39777f3e1414cee4f84002"
 dependencies = [
  "aes",
  "cbc",
@@ -313,14 +314,13 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "smart-default",
- "static_vcruntime",
  "tokio",
 ]
 
 [[package]]
 name = "crunchyroll-rs-internal"
 version = "0.1.0"
-source = "git+https://github.com/crunchy-labs/crunchyroll-rs#3e9f7bfaab68649ecdb486aee0b15fe658d51917"
+source = "git+https://github.com/crunchy-labs/crunchyroll-rs#3d455ebca34cfa83df39777f3e1414cee4f84002"
 dependencies = [
  "darling",
  "quote",

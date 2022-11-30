@@ -8,15 +8,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  test-nix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             toolchain: x86_64-unknown-linux-musl
-          - os: windows-latest
-            toolchain: x86_64-pc-windows-gnu
           - os: macos-latest
             toolchain: x86_64-apple-darwin
     steps:
@@ -48,10 +46,50 @@ jobs:
           command: test
           args: --all-features
 
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - run: vcpkg integrate install
+
+      - name: Install OpenSSL
+        run: vcpkg install openssl:x64-windows-static-md
+
+      - name: Set env variables
+        shell: bash
+        run: echo "CFLAGS=-I$(echo $VCPKG_INSTALLATION_ROOT)\packages\openssl_x64-windows-static-md\include" >> $GITHUB_ENV
+
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args:
+
   build-nix:
     if: github.ref == 'refs/heads/master'
     needs:
-      - test
+      - test-nix
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -115,7 +153,7 @@ jobs:
   build-windows:
     if: github.ref == 'refs/heads/master'
     needs:
-      - test
+      - test-windows
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -160,4 +198,18 @@ jobs:
         with:
           name: crunchy-cli_windows.exe
           path: ./target/release/crunchy-cli.exe
+          if-no-files-found: error
+
+      - name: Upload manpages artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: manpages
+          path: ./target/release/manpages
+          if-no-files-found: error
+
+      - name: Upload completions artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: completions
+          path: ./target/release/completions
           if-no-files-found: error

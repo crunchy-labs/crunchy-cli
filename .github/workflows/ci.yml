@@ -121,6 +121,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - run: vcpkg integrate install
+
       - name: Install OpenSSL
         run: vcpkg install openssl:x64-windows-static-md
 

@@ -9,6 +9,7 @@ edition = "2021"
 static-curl = ["crunchyroll-rs/static-curl"]
 # Embed a static openssl library into the binary instead of just linking it. If you want to compile this project against
 # musl and have openssl issues, this might solve these issues.
+# Has no effect on Windows, the library is always statically linked there.
 static-ssl = ["crunchyroll-rs/static-ssl"]
 
 [dependencies]

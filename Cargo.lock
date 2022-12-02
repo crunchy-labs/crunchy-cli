@@ -302,7 +302,7 @@ dependencies = [
 [[package]]
 name = "crunchyroll-rs"
 version = "0.1.0"
-source = "git+https://github.com/crunchy-labs/crunchyroll-rs#b05ab04af60547f4d5b8d008e3b3f829eb99aa0f"
+source = "git+https://github.com/crunchy-labs/crunchyroll-rs#66678d49bc071f49c83a7fa73ab280d1c1de5b2f"
 dependencies = [
  "aes",
  "cbc",
@@ -324,7 +324,7 @@ dependencies = [
 [[package]]
 name = "crunchyroll-rs-internal"
 version = "0.1.0"
-source = "git+https://github.com/crunchy-labs/crunchyroll-rs#b05ab04af60547f4d5b8d008e3b3f829eb99aa0f"
+source = "git+https://github.com/crunchy-labs/crunchyroll-rs#66678d49bc071f49c83a7fa73ab280d1c1de5b2f"
 dependencies = [
  "darling",
  "quote",

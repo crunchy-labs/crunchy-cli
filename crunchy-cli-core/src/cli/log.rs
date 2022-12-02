@@ -19,6 +19,12 @@ impl CliProgress {
         let init_message = format!("{}", record.args());
         let init_level = record.level();
         let handler = thread::spawn(move || {
+            #[cfg(not(windows))]
+            let ok = '✔';
+            #[cfg(windows)]
+            // windows does not support all unicode characters by default in their consoles, so
+            // we're using this (square root?) symbol instead. microsoft.
+            let ok = '√';
             let states = ["-", "\\", "|", "/"];
 
             let mut old_message = init_message.clone();
@@ -68,7 +74,7 @@ impl CliProgress {
             // clear last line
             // prefix (2), space (1), state (1), space (1), message(n)
             let _ = write!(stdout(), "\r     {}", " ".repeat(old_message.len()));
-            let _ = writeln!(stdout(), "\r:: ✓ {}", old_message);
+            let _ = writeln!(stdout(), "\r:: {} {}", ok, old_message);
             let _ = stdout().flush();
         });
 

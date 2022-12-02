@@ -8,88 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-nix:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            toolchain: x86_64-unknown-linux-musl
-          - os: macos-latest
-            toolchain: x86_64-apple-darwin
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.toolchain }}
-          default: true
-
-      - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
-
-  test-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - run: vcpkg integrate install
-
-      - name: Install OpenSSL
-        run: vcpkg install openssl:x64-windows-static-md
-
-      - name: Set env variables
-        shell: bash
-        run: echo "CFLAGS=-I$(echo $VCPKG_INSTALLATION_ROOT)\packages\openssl_x64-windows-static-md\include" >> $GITHUB_ENV
-
-      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-pc-windows-msvc
-          default: true
-
-      - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args:
-
   build-nix:
     if: github.ref == 'refs/heads/master'
-    needs:
-      - test-nix
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -123,6 +43,12 @@ jobs:
           target: ${{ matrix.toolchain }}
           default: true
 
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --all-features
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
@@ -152,8 +78,6 @@ jobs:
 
   build-windows:
     if: github.ref == 'refs/heads/master'
-    needs:
-      - test-windows
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -187,11 +111,17 @@ jobs:
           target: x86_64-pc-windows-msvc
           default: true
 
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --all-features
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release --all-features
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3

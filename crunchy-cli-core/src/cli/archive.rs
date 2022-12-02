@@ -387,7 +387,7 @@ async fn download_video(ctx: &Context, format: &Format, only_audio: bool) -> Res
         ctx,
         &mut ffmpeg.stdin.unwrap(),
         Some(format!("Download {}", format.audio)),
-        format.stream.segments().await?,
+        format.stream.clone()
     )
     .await?;
 

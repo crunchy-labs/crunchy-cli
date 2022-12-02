@@ -8,7 +8,7 @@ use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
 use crate::Execute;
 use anyhow::{bail, Result};
-use crunchyroll_rs::media::{Resolution, VariantSegment};
+use crunchyroll_rs::media::{Resolution, VariantData};
 use crunchyroll_rs::{
     Episode, Locale, Media, MediaCollection, Movie, MovieListing, Season, Series,
 };
@@ -212,16 +212,14 @@ impl Execute for Download {
                 tab_info!("Resolution: {}", format.stream.resolution);
                 tab_info!("FPS: {:.2}", format.stream.fps);
 
-                let segments = format.stream.segments().await?;
-
                 if use_ffmpeg {
-                    download_ffmpeg(&ctx, segments, path.as_path()).await?;
+                    download_ffmpeg(&ctx, format.stream, path.as_path()).await?;
                 } else if path.to_str().unwrap() == "-" {
                     let mut stdout = std::io::stdout().lock();
-                    download_segments(&ctx, &mut stdout, None, segments).await?;
+                    download_segments(&ctx, &mut stdout, None, format.stream).await?;
                 } else {
                     let mut file = File::options().create(true).write(true).open(&path)?;
-                    download_segments(&ctx, &mut file, None, segments).await?
+                    download_segments(&ctx, &mut file, None, format.stream).await?
                 }
             }
         }
@@ -232,7 +230,7 @@ impl Execute for Download {
 
 async fn download_ffmpeg(
     ctx: &Context,
-    segments: Vec<VariantSegment>,
+    variant_data: VariantData,
     target: &Path,
 ) -> Result<()> {
     let ffmpeg = Command::new("ffmpeg")
@@ -246,7 +244,7 @@ async fn download_ffmpeg(
         .arg(target.to_str().unwrap())
         .spawn()?;
 
-    download_segments(ctx, &mut ffmpeg.stdin.unwrap(), None, segments).await?;
+    download_segments(ctx, &mut ffmpeg.stdin.unwrap(), None, variant_data).await?;
 
     Ok(())
 }

@@ -26,14 +26,15 @@ pub fn find_resolution(
 }
 
 pub async fn download_segments(
-    ctx: &Context,
+    _ctx: &Context,
     writer: &mut impl Write,
     message: Option<String>,
-    segments: Vec<VariantSegment>,
+    variant_data: VariantData,
 ) -> Result<()> {
+    let segments = variant_data.segments().await?;
     let total_segments = segments.len();
 
-    let client = Arc::new(ctx.client.clone());
+    let client = Arc::new(variant_data.download_client());
     let count = Arc::new(Mutex::new(0));
     let amount = Arc::new(Mutex::new(0));
 

@@ -126,7 +126,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli_windows.exe
+          name: crunchy-cli_windows
           path: ./target/release/crunchy-cli.exe
           if-no-files-found: error
 

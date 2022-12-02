@@ -178,8 +178,7 @@ impl Execute for Download {
                         .to_string(),
                         &format,
                     )),
-                )
-                .0;
+                );
 
                 let use_ffmpeg = if let Some(extension) = path.extension() {
                     if extension != "ts" {
@@ -228,11 +227,7 @@ impl Execute for Download {
     }
 }
 
-async fn download_ffmpeg(
-    ctx: &Context,
-    variant_data: VariantData,
-    target: &Path,
-) -> Result<()> {
+async fn download_ffmpeg(ctx: &Context, variant_data: VariantData, target: &Path) -> Result<()> {
     let ffmpeg = Command::new("ffmpeg")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())

@@ -206,8 +206,7 @@ impl Execute for Archive {
                         .to_string(),
                         primary,
                     )),
-                )
-                .0;
+                );
 
                 info!(
                     "Downloading {} to '{}'",
@@ -387,7 +386,7 @@ async fn download_video(ctx: &Context, format: &Format, only_audio: bool) -> Res
         ctx,
         &mut ffmpeg.stdin.unwrap(),
         Some(format!("Download {}", format.audio)),
-        format.stream.clone()
+        format.stream.clone(),
     )
     .await?;
 

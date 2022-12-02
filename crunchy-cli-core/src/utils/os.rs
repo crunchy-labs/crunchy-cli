@@ -19,7 +19,7 @@ pub fn has_ffmpeg() -> bool {
     }
 }
 
-/// Any tempfiles should be created with this function. The prefix and directory of every file
+/// Any tempfile should be created with this function. The prefix and directory of every file
 /// created with this method stays the same which is helpful to query all existing tempfiles and
 /// e.g. remove them in a case of ctrl-c. Having one function also good to prevent mistakes like
 /// setting the wrong prefix if done manually.
@@ -36,17 +36,20 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
 }
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.
-pub fn free_file(mut path: PathBuf) -> (PathBuf, bool) {
+pub fn free_file(mut path: PathBuf) -> PathBuf {
     let mut i = 0;
     while path.exists() {
         i += 1;
 
-        let ext = path.extension().unwrap().to_str().unwrap();
-        let mut filename = path.file_name().unwrap().to_str().unwrap();
-
-        filename = &filename[0..filename.len() - ext.len() - 1];
+        let ext = path.extension().unwrap().to_string_lossy();
+        let filename = path.file_stem().unwrap().to_string_lossy();
 
         path.set_file_name(format!("{} ({}).{}", filename, i, ext))
     }
-    (path, i != 0)
+    sanitize_file(path)
+}
+
+/// Sanitizes the given path to not contain any invalid file character.
+pub fn sanitize_file(path: PathBuf) -> PathBuf {
+    path.with_file_name(sanitize_filename::sanitize(path.file_name().unwrap().to_string_lossy()))
 }

@@ -20,6 +20,7 @@ isahc = { git = "https://github.com/sagebind/isahc", rev = "c39f6f8" }
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.13"
 regex = "1.6"
+sanitize-filename = "0.4"
 signal-hook = "0.3"
 tempfile = "3.3"
 terminal_size = "0.2"

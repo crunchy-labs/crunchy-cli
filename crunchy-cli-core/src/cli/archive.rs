@@ -3,7 +3,7 @@ use crate::cli::utils::{download_segments, find_resolution};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
-use crate::utils::os::{free_file, tempfile};
+use crate::utils::os::{free_file, has_ffmpeg, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
 use crate::Execute;
@@ -110,6 +110,16 @@ pub struct Archive {
 
 #[async_trait::async_trait(?Send)]
 impl Execute for Archive {
+    fn pre_check(&self) -> Result<()> {
+        if !has_ffmpeg() {
+            bail!("FFmpeg is needed to run this command")
+        } else if PathBuf::from(&self.output).extension().unwrap_or_default().to_string_lossy() != "mkv" {
+            bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
+        }
+
+        Ok(())
+    }
+
     async fn execute(self, ctx: Context) -> Result<()> {
         let mut parsed_urls = vec![];
 

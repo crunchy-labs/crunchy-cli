@@ -65,6 +65,16 @@ pub struct Download {
 
 #[async_trait::async_trait(?Send)]
 impl Execute for Download {
+    fn pre_check(&self) -> Result<()> {
+        if has_ffmpeg() {
+            debug!("FFmpeg detected")
+        } else if PathBuf::from(&self.output).extension().unwrap_or_default().to_string_lossy() != "ts" {
+            bail!("File extension is not '.ts'. If you want to use a custom file format, please install ffmpeg")
+        }
+
+        Ok(())
+    }
+
     async fn execute(self, ctx: Context) -> Result<()> {
         let mut parsed_urls = vec![];
 
@@ -180,21 +190,6 @@ impl Execute for Download {
                     )),
                 );
 
-                let use_ffmpeg = if let Some(extension) = path.extension() {
-                    if extension != "ts" {
-                        if !has_ffmpeg() {
-                            bail!(
-                                "File ending is not `.ts`, ffmpeg is required to convert the video"
-                            )
-                        }
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                };
-
                 info!(
                     "Downloading {} to '{}'",
                     format.title,
@@ -211,7 +206,7 @@ impl Execute for Download {
                 tab_info!("Resolution: {}", format.stream.resolution);
                 tab_info!("FPS: {:.2}", format.stream.fps);
 
-                if use_ffmpeg {
+                if path.extension().unwrap_or_default().to_string_lossy() != "ts" {
                     download_ffmpeg(&ctx, format.stream, path.as_path()).await?;
                 } else if path.to_str().unwrap() == "-" {
                     let mut stdout = std::io::stdout().lock();

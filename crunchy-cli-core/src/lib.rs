@@ -16,6 +16,7 @@ pub use cli::{archive::Archive, download::Download, login::Login};
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
+    fn pre_check(&self) -> Result<()> { Ok(()) }
     async fn execute(self, ctx: Context) -> Result<()>;
 }
 
@@ -163,7 +164,7 @@ pub async fn cli_entrypoint() {
         }
     };
     if let Err(err) = result {
-        error!("{}", err);
+        error!("a unexpected error occurred: {}", err);
         std::process::exit(1)
     }
 }

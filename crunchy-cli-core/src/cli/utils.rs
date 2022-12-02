@@ -77,7 +77,7 @@ pub async fn download_segments(
 
                 let progress_available = size
                     - if let Some(msg) = &message {
-                        35 + msg.len()
+                        34 + msg.len()
                     } else {
                         33
                     };

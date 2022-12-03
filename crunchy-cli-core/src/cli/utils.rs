@@ -75,11 +75,17 @@ pub async fn download_segments(
                     .0
                      .0 as usize;
 
+                // there is a offset of 1 "length" (idk how to describe it), so removing 1 from
+                // `progress_available` would fill the terminal width completely. on multiple
+                // systems there is a bug that printing until the end of the line causes a newline
+                // even though technically there shouldn't be one. on my tests, this only happens on
+                // windows and mac machines and (at the addressed environments) only with release
+                // builds. so maybe an unwanted optimization?
                 let progress_available = size
                     - if let Some(msg) = &message {
-                        34 + msg.len()
+                        35 + msg.len()
                     } else {
-                        33
+                        34
                     };
                 let progress_done_count =
                     (progress_available as f64 * (percentage / 100f64)).ceil() as usize;

@@ -6,7 +6,7 @@ edition = "2021"
 
 [features]
 static-curl = ["crunchyroll-rs/static-curl"]
-static-ssl = ["isahc/native-tls-static"]
+static-ssl = ["crunchyroll-rs/static-ssl"]
 
 [dependencies]
 anyhow = "1.0"

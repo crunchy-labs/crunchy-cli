@@ -5,8 +5,8 @@ version = "3.0.0-dev.1"
 edition = "2021"
 
 [features]
-# Embed a static curl library into the binary instead of just linking it.
 static-curl = ["crunchyroll-rs/static-curl"]
+static-ssl = ["isahc/native-tls-static"]
 
 [dependencies]
 anyhow = "1.0"

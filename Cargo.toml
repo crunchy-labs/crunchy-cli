@@ -9,6 +9,9 @@ default = ["static-curl"]
 
 # Embed a static curl library into the binary instead of just linking it.
 static-curl = ["crunchy-cli-core/static-curl"]
+# Embed a static tls library into the binary instead of just linking it.
+# has no effect on Windows, always activated there.
+static-ssl = ["crunchy-cli-core/static-ssl"]
 
 [dependencies]
 tokio = { version = "1.22", features = ["macros", "rt-multi-thread", "time"], default-features = false }

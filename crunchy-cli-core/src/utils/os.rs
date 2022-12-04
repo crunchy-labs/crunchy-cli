@@ -42,7 +42,11 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
         i += 1;
 
         let ext = path.extension().unwrap().to_string_lossy();
-        let filename = path.file_stem().unwrap().to_string_lossy();
+        let mut filename = path.file_stem().unwrap().to_str().unwrap();
+
+        if filename.ends_with(&format!(" ({})", i-1)) {
+            filename = filename.strip_suffix(&format!(" ({})", i-1)).unwrap();
+        }
 
         path.set_file_name(format!("{} ({}).{}", filename, i, ext))
     }

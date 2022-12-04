@@ -169,7 +169,7 @@ pub async fn download_segments(
             data_pos += 1;
         }
 
-        if *count.lock().unwrap() >= total_segments {
+        if *count.lock().unwrap() >= total_segments && buf.is_empty() {
             break;
         }
     }

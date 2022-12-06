@@ -51,5 +51,7 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
 
 /// Sanitizes the given path to not contain any invalid file character.
 pub fn sanitize_file(path: PathBuf) -> PathBuf {
-    path.with_file_name(sanitize_filename::sanitize(path.file_name().unwrap().to_string_lossy()))
+    path.with_file_name(sanitize_filename::sanitize(
+        path.file_name().unwrap().to_string_lossy(),
+    ))
 }

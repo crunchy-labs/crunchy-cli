@@ -16,7 +16,9 @@ pub use cli::{archive::Archive, download::Download, login::Login};
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
-    fn pre_check(&self) -> Result<()> { Ok(()) }
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
     async fn execute(self, ctx: Context) -> Result<()>;
 }
 

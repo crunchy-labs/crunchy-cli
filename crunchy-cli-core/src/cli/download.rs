@@ -68,7 +68,12 @@ impl Execute for Download {
     fn pre_check(&self) -> Result<()> {
         if has_ffmpeg() {
             debug!("FFmpeg detected")
-        } else if PathBuf::from(&self.output).extension().unwrap_or_default().to_string_lossy() != "ts" {
+        } else if PathBuf::from(&self.output)
+            .extension()
+            .unwrap_or_default()
+            .to_string_lossy()
+            != "ts"
+        {
             bail!("File extension is not '.ts'. If you want to use a custom file format, please install ffmpeg")
         }
 

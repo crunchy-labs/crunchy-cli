@@ -8,7 +8,7 @@ use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
 use crate::Execute;
 use anyhow::{bail, Result};
-use chrono::{NaiveTime, Timelike};
+use chrono::NaiveTime;
 use crunchyroll_rs::media::{Resolution, StreamSubtitle};
 use crunchyroll_rs::{Locale, Media, MediaCollection, Series};
 use log::{debug, error, info};
@@ -402,7 +402,9 @@ async fn download_video(ctx: &Context, format: &Format, only_audio: bool) -> Res
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .arg("-y")
-        .args(["-f", "mpegts", "-i", "pipe:"])
+        .args(["-f", "mpegts"])
+        .args(["-i", "pipe:"])
+        .args(["-c", "copy"])
         .args(if only_audio { vec!["-vn"] } else { vec![] })
         .arg(path.to_str().unwrap())
         .spawn()?;

@@ -26,13 +26,145 @@ pub enum MergeBehavior {
     Video,
 }
 
-fn parse_merge_behavior(s: &str) -> Result<MergeBehavior, String> {
-    Ok(match s.to_lowercase().as_str() {
-        "auto" => MergeBehavior::Auto,
-        "audio" => MergeBehavior::Audio,
-        "video" => MergeBehavior::Video,
-        _ => return Err(format!("'{}' is not a valid merge behavior", s)),
-    })
+impl MergeBehavior {
+    fn parse(s: &str) -> Result<MergeBehavior, String> {
+        Ok(match s.to_lowercase().as_str() {
+            "auto" => MergeBehavior::Auto,
+            "audio" => MergeBehavior::Audio,
+            "video" => MergeBehavior::Video,
+            _ => return Err(format!("'{}' is not a valid merge behavior", s)),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FFmpegPreset {
+    Nvidia,
+
+    Av1,
+    H265,
+    H264,
+}
+
+impl ToString for FFmpegPreset {
+    fn to_string(&self) -> String {
+        match self {
+            &FFmpegPreset::Nvidia => "nvidia",
+            &FFmpegPreset::Av1 => "av1",
+            &FFmpegPreset::H265 => "h265",
+            &FFmpegPreset::H264 => "h264",
+        }
+        .to_string()
+    }
+}
+
+impl FFmpegPreset {
+    fn all() -> Vec<FFmpegPreset> {
+        vec![
+            FFmpegPreset::Nvidia,
+            FFmpegPreset::Av1,
+            FFmpegPreset::H265,
+            FFmpegPreset::H264,
+        ]
+    }
+
+    fn description(self) -> String {
+        match self {
+            FFmpegPreset::Nvidia => "If you're have a nvidia card, use hardware / gpu accelerated video processing if available",
+            FFmpegPreset::Av1 => "Encode the video(s) with the av1 codec. Hardware acceleration is currently not possible with this",
+            FFmpegPreset::H265 => "Encode the video(s) with the h265 codec",
+            FFmpegPreset::H264 => "Encode the video(s) with the h264 codec"
+        }.to_string()
+    }
+
+    fn parse(s: &str) -> Result<FFmpegPreset, String> {
+        Ok(match s.to_lowercase().as_str() {
+            "nvidia" => FFmpegPreset::Nvidia,
+            "av1" => FFmpegPreset::Av1,
+            "h265" | "h.265" | "hevc" => FFmpegPreset::H265,
+            "h264" | "h.264" => FFmpegPreset::H264,
+            _ => return Err(format!("'{}' is not a valid ffmpeg preset", s)),
+        })
+    }
+
+    fn ffmpeg_presets(mut presets: Vec<FFmpegPreset>) -> Result<(Vec<String>, Vec<String>)> {
+        fn preset_check_remove(presets: &mut Vec<FFmpegPreset>, preset: FFmpegPreset) -> bool {
+            if let Some(i) = presets.iter().position(|p| p == &preset) {
+                presets.remove(i);
+                true
+            } else {
+                false
+            }
+        }
+
+        let nvidia = preset_check_remove(&mut presets, FFmpegPreset::Nvidia);
+        if presets.len() > 1 {
+            bail!(
+                "Can only use one video codec, {} found: {}",
+                presets.len(),
+                presets
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        }
+
+        let (mut input, mut output) = (vec![], vec![]);
+        for preset in presets {
+            if nvidia {
+                match preset {
+                    FFmpegPreset::Av1 => bail!("Hardware acceleration preset ('nvidia') is not available in combination with the 'av1' preset"),
+                    FFmpegPreset::H265 => {
+                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                        output.extend(["-c:v", "hevc_nvenc"]);
+                    }
+                    FFmpegPreset::H264 => {
+                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                        output.extend(["-c:v", "h264_nvenc"]);
+                    }
+                    _ => ()
+                }
+            } else {
+                match preset {
+                    FFmpegPreset::Av1 => {
+                        output.extend(["-c:v", "libaom-av1"]);
+                    }
+                    FFmpegPreset::H265 => {
+                        output.extend(["-c:v", "libx265"]);
+                    }
+                    FFmpegPreset::H264 => {
+                        output.extend(["-c:v", "libx264"]);
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        if input.is_empty() && output.is_empty() {
+            let mut new_presets = vec![];
+            if nvidia {
+                new_presets.push(FFmpegPreset::Nvidia)
+            }
+
+            if !new_presets.is_empty() {
+                return FFmpegPreset::ffmpeg_presets(new_presets);
+            } else {
+                output.extend(["-c", "copy"])
+            }
+        } else {
+            if output.is_empty() {
+                output.extend(["-c", "copy"])
+            } else {
+                output.extend(["-c:a", "copy", "-c:s", "copy"])
+            }
+        }
+
+        Ok((
+            input.into_iter().map(|i| i.to_string()).collect(),
+            output.into_iter().map(|o| o.to_string()).collect(),
+        ))
+    }
 }
 
 #[derive(Debug, clap::Parser)]
@@ -88,8 +220,13 @@ pub struct Archive {
     Valid options are 'audio' (stores one video and all other languages as audio only), 'video' (stores the video + audio for every language) and 'auto' (detects if videos differ in length: if so, behave like 'video' else like 'audio')"
     )]
     #[arg(short, long, default_value = "auto")]
-    #[arg(value_parser = parse_merge_behavior)]
+    #[arg(value_parser = MergeBehavior::parse)]
     merge: MergeBehavior,
+
+    #[arg(help = format!("Presets for audio converting. Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    #[arg(long)]
+    #[arg(value_parser = FFmpegPreset::parse)]
+    ffmpeg_preset: Vec<FFmpegPreset>,
 
     #[arg(
         help = "Set which subtitle language should be set as default / auto shown when starting a video"
@@ -122,6 +259,7 @@ impl Execute for Archive {
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
+        let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
 
         Ok(())
     }
@@ -286,12 +424,7 @@ impl Execute for Archive {
                 let primary_video_length = get_video_length(primary_video.to_path_buf()).unwrap();
                 for subtitle in subtitles {
                     subtitle_paths.push((
-                        download_subtitle(
-                            &self,
-                            subtitle.clone(),
-                            primary_video_length
-                        )
-                        .await?,
+                        download_subtitle(&self, subtitle.clone(), primary_video_length).await?,
                         subtitle,
                     ))
                 }
@@ -475,11 +608,15 @@ fn fix_subtitle_length(raw: Vec<u8>, max_length: NaiveTime) -> Vec<u8> {
     // digits so them have to be reduced manually to avoid the panic
     fn format_naive_time(native_time: NaiveTime) -> String {
         let formatted_time = native_time.format("%f").to_string();
-        format!("{}.{}", native_time.format("%T"), if formatted_time.len() <= 2 {
-            native_time.format("%2f").to_string()
-        } else {
-            formatted_time.split_at(2).0.parse().unwrap()
-        })
+        format!(
+            "{}.{}",
+            native_time.format("%T"),
+            if formatted_time.len() <= 2 {
+                native_time.format("%2f").to_string()
+            } else {
+                formatted_time.split_at(2).0.parse().unwrap()
+            }
+        )
     }
 
     let length_as_string = format_naive_time(max_length);
@@ -495,16 +632,20 @@ fn fix_subtitle_length(raw: Vec<u8>, max_length: NaiveTime) -> Vec<u8> {
             });
 
             if start > max_length {
-                continue
+                continue;
             } else if end > max_length {
-                new.push_str(re.replace(
-                    line,
-                    format!(
-                        "Dialogue: {},{},",
-                        format_naive_time(start),
-                        &length_as_string
-                    ),
-                ).to_string().as_str())
+                new.push_str(
+                    re.replace(
+                        line,
+                        format!(
+                            "Dialogue: {},{},",
+                            format_naive_time(start),
+                            &length_as_string
+                        ),
+                    )
+                    .to_string()
+                    .as_str(),
+                )
             } else {
                 new.push_str(line)
             }
@@ -579,7 +720,11 @@ fn generate_mkv(
         ]);
     }
 
+    let (input_presets, output_presets) =
+        FFmpegPreset::ffmpeg_presets(archive.ffmpeg_preset.clone())?;
+
     let mut command_args = vec!["-y".to_string()];
+    command_args.extend(input_presets);
     command_args.extend(input);
     command_args.extend(maps);
     command_args.extend(metadata);
@@ -599,9 +744,8 @@ fn generate_mkv(
         command_args.extend(["-disposition:s:0".to_string(), "0".to_string()])
     }
 
+    command_args.extend(output_presets);
     command_args.extend([
-        "-c".to_string(),
-        "copy".to_string(),
         "-f".to_string(),
         "matroska".to_string(),
         target.to_string_lossy().to_string(),

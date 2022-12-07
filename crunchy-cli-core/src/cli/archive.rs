@@ -11,7 +11,7 @@ use anyhow::{bail, Result};
 use chrono::NaiveTime;
 use crunchyroll_rs::media::{Resolution, StreamSubtitle};
 use crunchyroll_rs::{Locale, Media, MediaCollection, Series};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -114,7 +114,7 @@ impl FFmpegPreset {
         for preset in presets {
             if nvidia {
                 match preset {
-                    FFmpegPreset::Av1 => bail!("Hardware acceleration preset ('nvidia') is not available in combination with the 'av1' preset"),
+                    FFmpegPreset::Av1 => bail!("'nvidia' hardware acceleration preset is not available in combination with the 'av1' codec preset"),
                     FFmpegPreset::H265 => {
                         input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
                         output.extend(["-c:v", "hevc_nvenc"]);
@@ -142,16 +142,7 @@ impl FFmpegPreset {
         }
 
         if input.is_empty() && output.is_empty() {
-            let mut new_presets = vec![];
-            if nvidia {
-                new_presets.push(FFmpegPreset::Nvidia)
-            }
-
-            if !new_presets.is_empty() {
-                return FFmpegPreset::ffmpeg_presets(new_presets);
-            } else {
-                output.extend(["-c", "copy"])
-            }
+            output.extend(["-c", "copy"])
         } else {
             if output.is_empty() {
                 output.extend(["-c", "copy"])
@@ -265,6 +256,11 @@ impl Execute for Archive {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
         let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
+        // check if the only given preset is FFmpegPreset::Nvidia. This checking is not done in
+        // FFmpegPreset::ffmpeg_presets since the warning it emits would print twice
+        if self.ffmpeg_preset.len() == 1 && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia {
+            warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
+        }
 
         Ok(())
     }

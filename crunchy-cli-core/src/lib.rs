@@ -152,18 +152,28 @@ pub async fn cli_entrypoint() {
     .unwrap();
     debug!("Created ctrl-c handler");
 
-    let result = match cli.command {
-        Command::Archive(archive) => archive.execute(ctx).await,
-        Command::Download(download) => download.execute(ctx).await,
+    match cli.command {
+        Command::Archive(archive) => execute_executor(archive,ctx).await,
+        Command::Download(download) => execute_executor(download, ctx).await,
         Command::Login(login) => {
             if login.remove {
-                Ok(())
+                return;
             } else {
-                login.execute(ctx).await
+                execute_executor(login, ctx).await
             }
         }
     };
-    if let Err(err) = result {
+}
+
+/// Cannot be done in the main function. I wanted to return `dyn` [`Execute`] from the match but had to
+/// box it which then conflicts with [`Execute::execute`] which consumes `self`
+async fn execute_executor(executor: impl Execute, ctx: Context) {
+    if let Err(err) = executor.pre_check() {
+        error!("Misconfigurations detected: {}", err);
+        std::process::exit(1)
+    }
+
+    if let Err(err) = executor.execute(ctx).await {
         error!("a unexpected error occurred: {}", err);
         std::process::exit(1)
     }

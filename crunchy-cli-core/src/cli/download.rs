@@ -352,9 +352,9 @@ async fn format_from_episode(
             );
             return Ok(None);
         }
-        streams.streaming_data(Some(subtitle.clone())).await?
+        streams.hls_streaming_data(Some(subtitle.clone())).await?
     } else {
-        streams.streaming_data(None).await?
+        streams.hls_streaming_data(None).await?
     };
 
     let Some(stream) = find_resolution(streaming_data, &download.resolution) else {
@@ -400,9 +400,9 @@ async fn format_from_movie(
             error!("Movie {} has no {} subtitles", movie.title, subtitle);
             return Ok(None);
         }
-        streams.streaming_data(Some(subtitle.clone())).await?
+        streams.hls_streaming_data(Some(subtitle.clone())).await?
     } else {
-        streams.streaming_data(None).await?
+        streams.hls_streaming_data(None).await?
     };
 
     streaming_data.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());

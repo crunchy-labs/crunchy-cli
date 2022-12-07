@@ -341,7 +341,7 @@ async fn formats_from_series(
             }
 
             let streams = episode.streams().await?;
-            let streaming_data = streams.streaming_data(None).await?;
+            let streaming_data = streams.hls_streaming_data(None).await?;
             let Some(stream) = find_resolution(streaming_data, &archive.resolution) else {
                 bail!(
                     "Resolution ({}x{}) is not available for episode {} ({}) of season {} ({}) of {}",

@@ -1,5 +1,5 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, find_resolution};
+use crate::cli::utils::{download_segments, FFmpegPreset, find_resolution};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
@@ -34,127 +34,6 @@ impl MergeBehavior {
             "video" => MergeBehavior::Video,
             _ => return Err(format!("'{}' is not a valid merge behavior", s)),
         })
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum FFmpegPreset {
-    Nvidia,
-
-    Av1,
-    H265,
-    H264,
-}
-
-impl ToString for FFmpegPreset {
-    fn to_string(&self) -> String {
-        match self {
-            &FFmpegPreset::Nvidia => "nvidia",
-            &FFmpegPreset::Av1 => "av1",
-            &FFmpegPreset::H265 => "h265",
-            &FFmpegPreset::H264 => "h264",
-        }
-        .to_string()
-    }
-}
-
-impl FFmpegPreset {
-    fn all() -> Vec<FFmpegPreset> {
-        vec![
-            FFmpegPreset::Nvidia,
-            FFmpegPreset::Av1,
-            FFmpegPreset::H265,
-            FFmpegPreset::H264,
-        ]
-    }
-
-    fn description(self) -> String {
-        match self {
-            FFmpegPreset::Nvidia => "If you're have a nvidia card, use hardware / gpu accelerated video processing if available",
-            FFmpegPreset::Av1 => "Encode the video(s) with the av1 codec. Hardware acceleration is currently not possible with this",
-            FFmpegPreset::H265 => "Encode the video(s) with the h265 codec",
-            FFmpegPreset::H264 => "Encode the video(s) with the h264 codec"
-        }.to_string()
-    }
-
-    fn parse(s: &str) -> Result<FFmpegPreset, String> {
-        Ok(match s.to_lowercase().as_str() {
-            "nvidia" => FFmpegPreset::Nvidia,
-            "av1" => FFmpegPreset::Av1,
-            "h265" | "h.265" | "hevc" => FFmpegPreset::H265,
-            "h264" | "h.264" => FFmpegPreset::H264,
-            _ => return Err(format!("'{}' is not a valid ffmpeg preset", s)),
-        })
-    }
-
-    fn ffmpeg_presets(mut presets: Vec<FFmpegPreset>) -> Result<(Vec<String>, Vec<String>)> {
-        fn preset_check_remove(presets: &mut Vec<FFmpegPreset>, preset: FFmpegPreset) -> bool {
-            if let Some(i) = presets.iter().position(|p| p == &preset) {
-                presets.remove(i);
-                true
-            } else {
-                false
-            }
-        }
-
-        let nvidia = preset_check_remove(&mut presets, FFmpegPreset::Nvidia);
-        if presets.len() > 1 {
-            bail!(
-                "Can only use one video codec, {} found: {}",
-                presets.len(),
-                presets
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        }
-
-        let (mut input, mut output) = (vec![], vec![]);
-        for preset in presets {
-            if nvidia {
-                match preset {
-                    FFmpegPreset::Av1 => bail!("'nvidia' hardware acceleration preset is not available in combination with the 'av1' codec preset"),
-                    FFmpegPreset::H265 => {
-                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "hevc_nvenc"]);
-                    }
-                    FFmpegPreset::H264 => {
-                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "h264_nvenc"]);
-                    }
-                    _ => ()
-                }
-            } else {
-                match preset {
-                    FFmpegPreset::Av1 => {
-                        output.extend(["-c:v", "libaom-av1"]);
-                    }
-                    FFmpegPreset::H265 => {
-                        output.extend(["-c:v", "libx265"]);
-                    }
-                    FFmpegPreset::H264 => {
-                        output.extend(["-c:v", "libx264"]);
-                    }
-                    _ => (),
-                }
-            }
-        }
-
-        if input.is_empty() && output.is_empty() {
-            output.extend(["-c", "copy"])
-        } else {
-            if output.is_empty() {
-                output.extend(["-c", "copy"])
-            } else {
-                output.extend(["-c:a", "copy", "-c:s", "copy"])
-            }
-        }
-
-        Ok((
-            input.into_iter().map(|i| i.to_string()).collect(),
-            output.into_iter().map(|o| o.to_string()).collect(),
-        ))
     }
 }
 
@@ -214,9 +93,9 @@ pub struct Archive {
     #[arg(value_parser = MergeBehavior::parse)]
     merge: MergeBehavior,
 
-    #[arg(help = format!("Presets for audio converting. \
+    #[arg(help = format!("Presets for video converting. \
     Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
-    #[arg(help = format!("Presets for audio converting. \
+    #[arg(help = format!("Presets for video converting. \
     Generally used to minify the file size with keeping (nearly) the same quality. \
     It is recommended to only use this if you archive videos with high resolutions since low resolution videos tend to result in a larger file with any of the provided presets. \
     Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
@@ -256,8 +135,6 @@ impl Execute for Archive {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
         let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
-        // check if the only given preset is FFmpegPreset::Nvidia. This checking is not done in
-        // FFmpegPreset::ffmpeg_presets since the warning it emits would print twice
         if self.ffmpeg_preset.len() == 1 && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia {
             warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }

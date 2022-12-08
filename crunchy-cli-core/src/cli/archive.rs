@@ -307,7 +307,9 @@ impl Execute for Archive {
                     ))
                 }
 
-                generate_mkv(&self, path, video_paths, audio_paths, subtitle_paths)?
+                let _progess_handler = progress!("Generating mkv");
+                generate_mkv(&self, path, video_paths, audio_paths, subtitle_paths)?;
+                info!("Mkv generated")
             }
         }
 

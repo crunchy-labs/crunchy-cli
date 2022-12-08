@@ -248,7 +248,7 @@ async fn download_ffmpeg(ctx: &Context, download: &Download, variant_data: Varia
     let (input_presets, output_presets) =
         FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
 
-    let ffmpeg = Command::new("ffmpeg")
+    let mut ffmpeg = Command::new("ffmpeg")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -259,7 +259,11 @@ async fn download_ffmpeg(ctx: &Context, download: &Download, variant_data: Varia
         .arg(target.to_str().unwrap())
         .spawn()?;
 
-    download_segments(ctx, &mut ffmpeg.stdin.unwrap(), None, variant_data).await?;
+    download_segments(ctx, &mut ffmpeg.stdin.take().unwrap(), None, variant_data).await?;
+
+    let _progress_handler = progress!("Generating output file");
+    ffmpeg.wait()?;
+    info!("Output file generated");
 
     Ok(())
 }

@@ -59,9 +59,9 @@ pub struct Download {
     #[arg(value_parser = crate::utils::clap::clap_parse_resolution)]
     resolution: Resolution,
 
-    #[arg(help = format!("Presets for video converting. \
+    #[arg(help = format!("Presets for video converting. Can be used multiple times. \
     Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
-    #[arg(help = format!("Presets for video converting. \
+    #[arg(long_help = format!("Presets for video converting. Can be used multiple times. \
     Generally used to minify the file size with keeping (nearly) the same quality. \
     It is recommended to only use this if you download videos with high resolutions since low resolution videos tend to result in a larger file with any of the provided presets. \
     Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]

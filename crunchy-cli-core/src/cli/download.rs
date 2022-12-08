@@ -1,5 +1,5 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, find_resolution};
+use crate::cli::utils::{download_segments, FFmpegPreset, find_resolution};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
@@ -12,7 +12,7 @@ use crunchyroll_rs::media::{Resolution, VariantData};
 use crunchyroll_rs::{
     Episode, Locale, Media, MediaCollection, Movie, MovieListing, Season, Series,
 };
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -59,6 +59,16 @@ pub struct Download {
     #[arg(value_parser = crate::utils::clap::clap_parse_resolution)]
     resolution: Resolution,
 
+    #[arg(help = format!("Presets for video converting. Can be used multiple times. \
+    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    #[arg(long_help = format!("Presets for video converting. Can be used multiple times. \
+    Generally used to minify the file size with keeping (nearly) the same quality. \
+    It is recommended to only use this if you download videos with high resolutions since low resolution videos tend to result in a larger file with any of the provided presets. \
+    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    #[arg(long)]
+    #[arg(value_parser = FFmpegPreset::parse)]
+    ffmpeg_preset: Vec<FFmpegPreset>,
+
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     urls: Vec<String>,
 }
@@ -75,6 +85,13 @@ impl Execute for Download {
             != "ts"
         {
             bail!("File extension is not '.ts'. If you want to use a custom file format, please install ffmpeg")
+        } else if !self.ffmpeg_preset.is_empty() {
+            bail!("FFmpeg is required to use (ffmpeg) presets")
+        }
+
+        let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
+        if self.ffmpeg_preset.len() == 1 && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia {
+            warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }
 
         Ok(())
@@ -211,8 +228,8 @@ impl Execute for Download {
                 tab_info!("Resolution: {}", format.stream.resolution);
                 tab_info!("FPS: {:.2}", format.stream.fps);
 
-                if path.extension().unwrap_or_default().to_string_lossy() != "ts" {
-                    download_ffmpeg(&ctx, format.stream, path.as_path()).await?;
+                if path.extension().unwrap_or_default().to_string_lossy() != "ts" || !self.ffmpeg_preset.is_empty() {
+                    download_ffmpeg(&ctx, &self, format.stream, path.as_path()).await?;
                 } else if path.to_str().unwrap() == "-" {
                     let mut stdout = std::io::stdout().lock();
                     download_segments(&ctx, &mut stdout, None, format.stream).await?;
@@ -227,15 +244,18 @@ impl Execute for Download {
     }
 }
 
-async fn download_ffmpeg(ctx: &Context, variant_data: VariantData, target: &Path) -> Result<()> {
+async fn download_ffmpeg(ctx: &Context, download: &Download, variant_data: VariantData, target: &Path) -> Result<()> {
+    let (input_presets, output_presets) =
+        FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
+
     let ffmpeg = Command::new("ffmpeg")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .arg("-y")
+        .args(input_presets)
         .args(["-f", "mpegts", "-i", "pipe:"])
-        .args(["-safe", "0"])
-        .args(["-c", "copy"])
+        .args(output_presets)
         .arg(target.to_str().unwrap())
         .spawn()?;
 

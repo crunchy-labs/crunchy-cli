@@ -1,12 +1,12 @@
 use log::debug;
 use std::io::ErrorKind;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::{env, io};
 use tempfile::{Builder, NamedTempFile};
 
 pub fn has_ffmpeg() -> bool {
-    if let Err(e) = Command::new("ffmpeg").spawn() {
+    if let Err(e) = Command::new("ffmpeg").stderr(Stdio::null()).spawn() {
         if ErrorKind::NotFound != e.kind() {
             debug!(
                 "unknown error occurred while checking if ffmpeg exists: {}",

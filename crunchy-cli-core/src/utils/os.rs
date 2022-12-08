@@ -44,8 +44,8 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
         let ext = path.extension().unwrap().to_string_lossy();
         let mut filename = path.file_stem().unwrap().to_str().unwrap();
 
-        if filename.ends_with(&format!(" ({})", i-1)) {
-            filename = filename.strip_suffix(&format!(" ({})", i-1)).unwrap();
+        if filename.ends_with(&format!(" ({})", i - 1)) {
+            filename = filename.strip_suffix(&format!(" ({})", i - 1)).unwrap();
         }
 
         path.set_file_name(format!("{} ({}).{}", filename, i, ext))
@@ -55,5 +55,7 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
 
 /// Sanitizes the given path to not contain any invalid file character.
 pub fn sanitize_file(path: PathBuf) -> PathBuf {
-    path.with_file_name(sanitize_filename::sanitize(path.file_name().unwrap().to_string_lossy()))
+    path.with_file_name(sanitize_filename::sanitize(
+        path.file_name().unwrap().to_string_lossy(),
+    ))
 }

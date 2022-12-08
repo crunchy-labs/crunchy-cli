@@ -12,11 +12,13 @@ use std::{env, fs};
 mod cli;
 mod utils;
 
-pub use cli::{archive::Archive, download::Download, login::Login};
+pub use cli::{archive::Archive, download::Download, login::Login, search::Search};
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
-    fn pre_check(&self) -> Result<()> { Ok(()) }
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
     async fn execute(self, ctx: Context) -> Result<()>;
 }
 
@@ -57,6 +59,7 @@ enum Command {
     Archive(Archive),
     Download(Download),
     Login(Login),
+    Search(Search),
 }
 
 #[derive(Debug, Parser)]
@@ -153,7 +156,7 @@ pub async fn cli_entrypoint() {
     debug!("Created ctrl-c handler");
 
     match cli.command {
-        Command::Archive(archive) => execute_executor(archive,ctx).await,
+        Command::Archive(archive) => execute_executor(archive, ctx).await,
         Command::Download(download) => execute_executor(download, ctx).await,
         Command::Login(login) => {
             if login.remove {
@@ -162,6 +165,7 @@ pub async fn cli_entrypoint() {
                 execute_executor(login, ctx).await
             }
         }
+        Command::Search(search) => execute_executor(search, ctx).await,
     };
 }
 

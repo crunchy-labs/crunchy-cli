@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.1"
+version = "3.0.0-dev.3"
 dependencies = [
  "anyhow",
  "async-trait",

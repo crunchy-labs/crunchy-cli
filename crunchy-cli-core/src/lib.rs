@@ -81,9 +81,8 @@ struct Verbosity {
 
 #[derive(Debug, Parser)]
 struct LoginMethod {
-    #[arg(help = "Login with credentials (username or email and password)")]
     #[arg(
-        long_help = "Login with credentials (username or email and password). Must be provided as user:password"
+        help = "Login with credentials (username or email and password). Must be provided as user:password"
     )]
     #[arg(long)]
     credentials: Option<String>,
@@ -93,6 +92,9 @@ struct LoginMethod {
     )]
     #[arg(long)]
     etp_rt: Option<String>,
+    #[arg(help = "Login anonymously / without an account")]
+    #[arg(long, default_value_t = false)]
+    anonymous: bool,
 }
 
 pub async fn cli_entrypoint() {
@@ -190,8 +192,12 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
     let mut builder = Crunchyroll::builder();
     builder.locale(cli.lang.clone().unwrap_or_else(system_locale));
 
+    let login_methods_count = cli.login_method.credentials.is_some() as u8
+        + cli.login_method.etp_rt.is_some() as u8
+        + cli.login_method.anonymous as u8;
+
     let _progress_handler = progress!("Logging in");
-    if cli.login_method.credentials.is_none() && cli.login_method.etp_rt.is_none() {
+    if login_methods_count == 0 {
         if let Some(login_file_path) = cli::login::login_file_path() {
             if login_file_path.exists() {
                 let session = fs::read_to_string(login_file_path)?;
@@ -207,9 +213,9 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
                 bail!("Could not read stored session ('{}')", session)
             }
         }
-        bail!("Please use a login method ('--credentials' or '--etp_rt')")
-    } else if cli.login_method.credentials.is_some() && cli.login_method.etp_rt.is_some() {
-        bail!("Please use only one login method ('--credentials' or '--etp_rt')")
+        bail!("Please use a login method ('--credentials', '--etp-rt' or '--anonymous')")
+    } else if login_methods_count > 1 {
+        bail!("Please use only one login method ('--credentials', '--etp-rt' or '--anonymous')")
     }
 
     let crunchy = if let Some(credentials) = &cli.login_method.credentials {
@@ -220,6 +226,8 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         }
     } else if let Some(etp_rt) = &cli.login_method.etp_rt {
         builder.login_with_etp_rt(etp_rt).await?
+    } else if cli.login_method.anonymous {
+        builder.login_anonymously().await?
     } else {
         bail!("should never happen")
     };

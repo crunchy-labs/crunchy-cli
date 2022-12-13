@@ -148,7 +148,7 @@ pub fn parse_resolution(mut resolution: String) -> Result<Resolution> {
             height: u64::MIN,
         })
     } else if resolution.ends_with('p') {
-        let without_p = resolution.as_str()[0..resolution.len() - 2]
+        let without_p = resolution.as_str()[0..resolution.len() - 1]
             .parse()
             .map_err(|_| anyhow!("Could not parse resolution"))?;
         Ok(Resolution {

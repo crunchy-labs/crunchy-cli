@@ -78,6 +78,11 @@ You can pass your account via credentials (username & password) or refresh token
   - ```shell
     $ crunchy --credentials "user:password"
     ```
+- Anonymous
+  - Login without an account at all is also possible.
+  - ```shell 
+    $ crunchy --anonymous
+    ```
 
 ### Login
 
@@ -89,6 +94,7 @@ $ crunchy --etp-rt "abcd1234-zyxw-9876-98zy-a1b2c3d4e5f6" login
 ```
 
 Once set, you do not need to provide `--etp-rt` / `--credentials` anymore when using the cli.
+This does not work if you've using this with `--anonymous`.
 
 ### Download
 

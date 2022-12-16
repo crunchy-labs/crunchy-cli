@@ -16,7 +16,7 @@ jobs:
           - os: ubuntu-latest
             toolchain: x86_64-unknown-linux-musl
             platform: linux
-            command: sudo apt install -y musl
+            command: sudo apt install -y musl-tools
             ext:
           - os: windows-latest
             toolchain: x86_64-pc-windows-gnu
@@ -43,6 +43,9 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Additional command
+        run: ${{ matrix.command }}
+
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -50,9 +53,6 @@ jobs:
           toolchain: stable
           target: ${{ matrix.toolchain }}
           default: true
-
-      - name: Additional command
-        run: ${{ matrix.command }}
 
       - name: Test
         uses: actions-rs/cargo@v1

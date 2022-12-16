@@ -3,9 +3,6 @@ use clap_complete::shells;
 use std::path::{Path, PathBuf};
 
 fn main() -> std::io::Result<()> {
-    #[cfg(all(windows, target_env = "msvc"))]
-    static_vcruntime::metabuild();
-
     // note that we're using an anti-pattern here / violate the rust conventions. build script are
     // not supposed to write outside of 'OUT_DIR'. to have the generated files in the build "root"
     // (the same directory where the output binary lives) is much simpler than in 'OUT_DIR' since

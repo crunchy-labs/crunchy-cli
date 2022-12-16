@@ -290,7 +290,7 @@ async fn formats_from_series(
         // check if the current iterated season has the specified audio language
         if !season
             .iter()
-            .any(|s| s.metadata.audio_locale == download.audio)
+            .any(|s| s.metadata.audio_locales.contains(&download.audio))
         {
             error!(
                 "Season {} of series {} is not available with {} audio",
@@ -303,7 +303,7 @@ async fn formats_from_series(
         // remove all seasons with the wrong audio for the current iterated season number
         seasons.retain(|s| {
             s.metadata.season_number != season.first().unwrap().metadata.season_number
-                || s.metadata.audio_locale == download.audio
+                || s.metadata.audio_locales.contains(&download.audio)
         })
     }
 
@@ -322,7 +322,7 @@ async fn formats_from_season(
     season: Media<Season>,
     url_filter: &UrlFilter,
 ) -> Result<Option<Vec<Format>>> {
-    if season.metadata.audio_locale != download.audio {
+    if !season.metadata.audio_locales.contains(&download.audio) {
         error!(
             "Season {} ({}) is not available with {} audio",
             season.metadata.season_number, season.title, download.audio

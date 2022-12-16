@@ -332,7 +332,7 @@ async fn formats_from_series(
             .locale
             .clone()
             .into_iter()
-            .filter(|l| !season.iter().any(|s| &s.metadata.audio_locale == l))
+            .filter(|l| !season.iter().any(|s| s.metadata.audio_locales.contains(l)))
             .collect::<Vec<Locale>>();
         for not_present in not_present_audio {
             error!(
@@ -346,7 +346,7 @@ async fn formats_from_series(
         // remove all seasons with the wrong audio for the current iterated season number
         seasons.retain(|s| {
             s.metadata.season_number != season.first().unwrap().metadata.season_number
-                || archive.locale.contains(&s.metadata.audio_locale)
+                || archive.locale.iter().any(|l| s.metadata.audio_locales.contains(l))
         })
     }
 
@@ -355,7 +355,7 @@ async fn formats_from_series(
         BTreeMap::new();
     for season in series.seasons().await? {
         if !url_filter.is_season_valid(season.metadata.season_number)
-            || !archive.locale.contains(&season.metadata.audio_locale)
+            || !archive.locale.iter().any(|l| season.metadata.audio_locales.contains(l))
         {
             continue;
         }

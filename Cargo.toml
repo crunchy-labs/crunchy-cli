@@ -4,17 +4,8 @@ authors = ["Crunchy Labs Maintainers"]
 version = "3.0.0-dev.3"
 edition = "2021"
 
-[features]
-default = ["static-curl"]
-
-# Embed a static curl library into the binary instead of just linking it.
-static-curl = ["crunchy-cli-core/static-curl"]
-# Embed a static tls library into the binary instead of just linking it.
-# has no effect on Windows, always activated there.
-static-ssl = ["crunchy-cli-core/static-ssl"]
-
 [dependencies]
-tokio = { version = "1.22", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.23", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
@@ -26,10 +17,7 @@ clap_mangen = "0.2"
 
 # The static-* features must be used here since build dependency features cannot be manipulated from the features
 # specified in this Cargo.toml [features].
-crunchy-cli-core = { path = "./crunchy-cli-core", features = ["static-curl"] }
-
-[target.'cfg(all(windows, target_env = "msvc"))'.build-dependencies]
-static_vcruntime = "2.0"
+crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [profile.release]
 strip = true

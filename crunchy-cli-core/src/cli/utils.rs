@@ -1,7 +1,6 @@
 use crate::utils::context::Context;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
-use isahc::AsyncReadResponseExt;
 use log::{debug, LevelFilter};
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
@@ -26,7 +25,7 @@ pub fn find_resolution(
 }
 
 pub async fn download_segments(
-    _ctx: &Context,
+    ctx: &Context,
     writer: &mut impl Write,
     message: Option<String>,
     variant_data: VariantData,
@@ -34,7 +33,7 @@ pub async fn download_segments(
     let segments = variant_data.segments().await?;
     let total_segments = segments.len();
 
-    let client = Arc::new(variant_data.download_client());
+    let client = Arc::new(ctx.crunchy.client());
     let count = Arc::new(Mutex::new(0));
     let amount = Arc::new(Mutex::new(0));
 
@@ -132,7 +131,7 @@ pub async fn download_segments(
         let thread_count = count.clone();
         join_set.spawn(async move {
             for (i, segment) in thread_segments.into_iter().enumerate() {
-                let mut response = thread_client.get_async(&segment.url).await?;
+                let response = thread_client.get(&segment.url).send().await?;
                 let mut buf = response.bytes().await?.to_vec();
 
                 *thread_amount.lock().unwrap() += buf.len();

@@ -44,6 +44,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Additional command
+        if: matrix.command != ''
         run: ${{ matrix.command }}
 
       - name: Install toolchain
@@ -53,6 +54,7 @@ jobs:
           toolchain: stable
           target: ${{ matrix.toolchain }}
           default: true
+          overwrite: true
 
       - name: Test
         uses: actions-rs/cargo@v1

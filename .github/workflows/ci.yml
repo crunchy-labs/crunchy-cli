@@ -16,17 +16,14 @@ jobs:
           - os: ubuntu-latest
             toolchain: x86_64-unknown-linux-musl
             platform: linux
-            command: sudo apt install -y musl-tools
             ext:
           - os: windows-latest
             toolchain: x86_64-pc-windows-gnu
             platform: windows
-            command:
             ext: .exe
           - os: macos-latest
             toolchain: x86_64-apple-darwin
             platform: darwin
-            command:
             ext:
     steps:
       - name: Checkout
@@ -43,48 +40,39 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Additional command
-        if: matrix.command != ''
-        run: ${{ matrix.command }}
+      - name: Install system dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get install musl-tools
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
           target: ${{ matrix.toolchain }}
-          default: true
-          overwrite: true
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release --all-features
+        run: cargo test --release --all-features --target ${{ matrix.toolchain }}
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
+        run: cargo build --release --all-features --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
           name: crunchy-cli_${{ matrix.platform }}
-          path: ./target/release/crunchy-cli${{ matrix.ext }}
+          path: ./target/${{ matrix.toolchain }}/release/crunchy-cli${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
           name: manpages
-          path: ./target/release/manpages
+          path: ./target/${{ matrix.toolchain }}/release/manpages
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
           name: completions
-          path: ./target/release/completions
+          path: ./target/${{ matrix.toolchain }}/release/completions
           if-no-files-found: error

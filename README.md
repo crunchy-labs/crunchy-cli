@@ -34,6 +34,10 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
 > We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
 
+> This README belongs to the _master_ branch which is currently under heavy development towards the next major version (3.0).
+> It is mostly stable but some issues may still occur.
+> If you do not want to use an under-development / pre-release version, head over to the _[golang](https://github.com/crunchy-labs/crunchy-cli/tree/golang)_ branch which contains the EOL but last stable version (and documentation for it).
+
 ## ✨ Features
 
 - Download single videos and entire series from [Crunchyroll](https://www.crunchyroll.com).

@@ -27,7 +27,7 @@ jobs:
             ext:
           - os: macos-latest
             toolchain: aarch64-apple-darwin
-            platform: darwin
+            platform: m1darwin
             ext:
     steps:
       - name: Checkout

@@ -25,6 +25,10 @@ jobs:
             toolchain: x86_64-apple-darwin
             platform: darwin
             ext:
+          - os: macos-latest
+            toolchain: aarch64-apple-darwin
+            platform: darwin
+            ext:
     steps:
       - name: Checkout
         uses: actions/checkout@v3

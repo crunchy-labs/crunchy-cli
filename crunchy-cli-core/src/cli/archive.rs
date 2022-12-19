@@ -237,6 +237,7 @@ impl Execute for Archive {
                         }
                         .to_string(),
                         primary,
+                        true,
                     )),
                 );
 

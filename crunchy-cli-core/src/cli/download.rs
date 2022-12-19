@@ -209,6 +209,7 @@ impl Execute for Download {
                         }
                         .to_string(),
                         &format,
+                        true,
                     )),
                 );
 

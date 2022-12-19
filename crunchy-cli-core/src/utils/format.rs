@@ -77,9 +77,26 @@ pub fn format_string(s: String, format: &Format, sanitize: bool) -> String {
         .replace("{series_name}", &sanitize_func(&format.series_name))
         .replace("{season_name}", &sanitize_func(&format.season_title))
         .replace("{audio}", &sanitize_func(&format.audio.to_string()))
-        .replace("{resolution}", &sanitize_func(&format.stream.resolution.to_string()))
-        .replace("{season_number}", &sanitize_func(&format.season_number.to_string()))
-        .replace("{episode_number}", &sanitize_func(&format.number.to_string()))
+        .replace(
+            "{resolution}",
+            &sanitize_func(&format.stream.resolution.to_string()),
+        )
+        .replace(
+            "{padded_season_number}",
+            &sanitize_func(&format!("{:0>2}", format.season_number.to_string())),
+        )
+        .replace(
+            "{season_number}",
+            &sanitize_func(&format.season_number.to_string()),
+        )
+        .replace(
+            "{padded_episode_number}",
+            &sanitize_func(&format!("{:0>2}", format.number.to_string())),
+        )
+        .replace(
+            "{episode_number}",
+            &sanitize_func(&format.number.to_string()),
+        )
         .replace("{series_id}", &sanitize_func(&format.series_id))
         .replace("{season_id}", &sanitize_func(&format.season_id))
         .replace("{episode_id}", &sanitize_func(&format.id))

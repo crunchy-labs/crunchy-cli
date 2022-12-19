@@ -36,16 +36,18 @@ pub struct Download {
     #[arg(help = "Name of the output file")]
     #[arg(long_help = "Name of the output file.\
     If you use one of the following pattern they will get replaced:\n  \
-      {title}          → Title of the video\n  \
-      {series_name}    → Name of the series\n  \
-      {season_name}    → Name of the season\n  \
-      {audio}          → Audio language of the video\n  \
-      {resolution}     → Resolution of the video\n  \
-      {season_number}  → Number of the season\n  \
-      {episode_number} → Number of the episode\n  \
-      {series_id}      → ID of the series\n  \
-      {season_id}      → ID of the season\n  \
-      {episode_id}     → ID of the episode")]
+      {title}                   → Title of the video\n  \
+      {series_name}             → Name of the series\n  \
+      {season_name}             → Name of the season\n  \
+      {audio}                   → Audio language of the video\n  \
+      {resolution}              → Resolution of the video\n  \
+      {padded_season_number}    → Number of the season padded to double digits\n  \
+      {season_number}           → Number of the season\n  \
+      {padded_episode_number}   → Number of the episode padded to double digits\n  \
+      {episode_number}          → Number of the episode\n  \
+      {series_id}               → ID of the series\n  \
+      {season_id}               → ID of the season\n  \
+      {episode_id}              → ID of the episode")]
     #[arg(short, long, default_value = "{title}.ts")]
     output: String,
 

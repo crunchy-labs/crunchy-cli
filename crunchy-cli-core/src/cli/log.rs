@@ -1,106 +1,17 @@
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{
     set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record, SetLoggerError,
 };
 use std::io::{stdout, Write};
-use std::sync::{mpsc, Mutex};
+use std::sync::Mutex;
 use std::thread;
-use std::thread::JoinHandle;
 use std::time::Duration;
-
-struct CliProgress {
-    handler: JoinHandle<()>,
-    sender: mpsc::SyncSender<(String, Level)>,
-}
-
-impl CliProgress {
-    fn new(record: &Record) -> Self {
-        let (tx, rx) = mpsc::sync_channel(1);
-
-        let init_message = format!("{}", record.args());
-        let init_level = record.level();
-        let handler = thread::spawn(move || {
-            #[cfg(not(windows))]
-            let ok = '✔';
-            #[cfg(windows)]
-            // windows does not support all unicode characters by default in their consoles, so
-            // we're using this (square root?) symbol instead. microsoft.
-            let ok = '√';
-            let states = ["-", "\\", "|", "/"];
-
-            let mut old_message = init_message.clone();
-            let mut latest_info_message = init_message;
-            let mut old_level = init_level;
-            for i in 0.. {
-                let (msg, level) = match rx.try_recv() {
-                    Ok(payload) => payload,
-                    Err(e) => match e {
-                        mpsc::TryRecvError::Empty => (old_message.clone(), old_level),
-                        mpsc::TryRecvError::Disconnected => break,
-                    },
-                };
-
-                // clear last line
-                // prefix (2), space (1), state (1), space (1), message(n)
-                let _ = write!(stdout(), "\r     {}", " ".repeat(old_message.len()));
-
-                if old_level != level || old_message != msg {
-                    if old_level <= Level::Warn {
-                        let _ = writeln!(stdout(), "\r:: • {}", old_message);
-                    } else if old_level == Level::Info && level <= Level::Warn {
-                        let _ = writeln!(stdout(), "\r:: → {}", old_message);
-                    } else if level == Level::Info {
-                        latest_info_message = msg.clone();
-                    }
-                }
-
-                let _ = write!(
-                    stdout(),
-                    "\r:: {} {}",
-                    states[i / 2 % states.len()],
-                    if level == Level::Info {
-                        &msg
-                    } else {
-                        &latest_info_message
-                    }
-                );
-                let _ = stdout().flush();
-
-                old_message = msg;
-                old_level = level;
-
-                thread::sleep(Duration::from_millis(100));
-            }
-
-            // clear last line
-            // prefix (2), space (1), state (1), space (1), message(n)
-            let _ = write!(stdout(), "\r     {}", " ".repeat(old_message.len()));
-            let _ = writeln!(stdout(), "\r:: {} {}", ok, old_message);
-            let _ = stdout().flush();
-        });
-
-        Self {
-            handler,
-            sender: tx,
-        }
-    }
-
-    fn send(&self, record: &Record) {
-        let _ = self
-            .sender
-            .send((format!("{}", record.args()), record.level()));
-    }
-
-    fn stop(self) {
-        drop(self.sender);
-        let _ = self.handler.join();
-    }
-}
 
 #[allow(clippy::type_complexity)]
 pub struct CliLogger {
     all: bool,
     level: LevelFilter,
-    progress: Mutex<Option<CliProgress>>,
+    progress: Mutex<Option<ProgressBar>>,
 }
 
 impl Log for CliLogger {
@@ -127,7 +38,7 @@ impl Log for CliLogger {
             "progress_end" => self.progress(record, true),
             _ => {
                 if self.progress.lock().unwrap().is_some() {
-                    self.progress(record, false);
+                    self.progress(record, false)
                 } else if record.level() > Level::Warn {
                     self.normal(record)
                 } else {
@@ -182,13 +93,34 @@ impl CliLogger {
     }
 
     fn progress(&self, record: &Record, stop: bool) {
-        let mut progress_option = self.progress.lock().unwrap();
-        if stop && progress_option.is_some() {
-            progress_option.take().unwrap().stop()
-        } else if let Some(p) = &*progress_option {
-            p.send(record);
+        let mut progress = self.progress.lock().unwrap();
+
+        let msg = format!("{}", record.args());
+        if stop && progress.is_some() {
+            if msg.is_empty() {
+                progress.take().unwrap().finish()
+            } else {
+                progress.take().unwrap().finish_with_message(msg)
+            }
+        } else if let Some(p) = &*progress {
+            p.println(format!(":: → {}", msg))
         } else {
-            *progress_option = Some(CliProgress::new(record))
+            #[cfg(not(windows))]
+            let finish_str = "✔";
+            #[cfg(windows)]
+            // windows does not support all unicode characters by default in their consoles, so
+            // we're using this (square root?) symbol instead. microsoft.
+            let finish_str = "√";
+
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(
+                ProgressStyle::with_template(":: {spinner} {msg}")
+                    .unwrap()
+                    .tick_strings(&["-", "\\", "|", "/", finish_str]),
+            );
+            pb.enable_steady_tick(Duration::from_millis(200));
+            pb.set_message(msg);
+            *progress = Some(pb)
         }
     }
 }

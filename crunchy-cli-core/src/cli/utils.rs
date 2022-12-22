@@ -1,13 +1,12 @@
 use crate::utils::context::Context;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
+use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 use log::{debug, LevelFilter};
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
-use std::io;
 use std::io::Write;
 use std::sync::{mpsc, Arc, Mutex};
-use std::time::Duration;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -35,78 +34,25 @@ pub async fn download_segments(
 
     let client = Arc::new(ctx.crunchy.client());
     let count = Arc::new(Mutex::new(0));
-    let amount = Arc::new(Mutex::new(0));
 
-    // only print progress when log level is info
-    let output_handler = if log::max_level() == LevelFilter::Info {
-        let output_count = count.clone();
-        let output_amount = amount.clone();
-        Some(tokio::spawn(async move {
-            let sleep_time_ms = 100;
-            let iter_per_sec = 1000f64 / sleep_time_ms as f64;
+    let progress = if log::max_level() == LevelFilter::Info {
+        let estimated_file_size = (variant_data.bandwidth / 8)
+            * segments
+                .iter()
+                .map(|s| s.length.unwrap_or_default().as_secs())
+                .sum::<u64>();
 
-            let mut bytes_start = 0f64;
-            let mut speed = 0f64;
-            let mut percentage = 0f64;
-
-            while *output_count.lock().unwrap() < total_segments || percentage < 100f64 {
-                let tmp_amount = *output_amount.lock().unwrap() as f64;
-
-                let tmp_speed = (tmp_amount - bytes_start) / 1024f64 / 1024f64;
-                if *output_count.lock().unwrap() < 3 {
-                    speed = tmp_speed;
-                } else {
-                    let (old_speed_ratio, new_speed_ratio) = if iter_per_sec <= 1f64 {
-                        (0f64, 1f64)
-                    } else {
-                        (1f64 - (1f64 / iter_per_sec), (1f64 / iter_per_sec))
-                    };
-
-                    // calculate the average download speed "smoother"
-                    speed = (speed * old_speed_ratio) + (tmp_speed * new_speed_ratio);
-                }
-
-                percentage =
-                    (*output_count.lock().unwrap() as f64 / total_segments as f64) * 100f64;
-
-                let size = terminal_size::terminal_size()
-                    .unwrap_or((terminal_size::Width(60), terminal_size::Height(0)))
-                    .0
-                     .0 as usize;
-
-                // there is a offset of 1 "length" (idk how to describe it), so removing 1 from
-                // `progress_available` would fill the terminal width completely. on multiple
-                // systems there is a bug that printing until the end of the line causes a newline
-                // even though technically there shouldn't be one. on my tests, this only happens on
-                // windows and mac machines and (at the addressed environments) only with release
-                // builds. so maybe an unwanted optimization?
-                let progress_available = size
-                    - if let Some(msg) = &message {
-                        35 + msg.len()
-                    } else {
-                        34
-                    };
-                let progress_done_count =
-                    (progress_available as f64 * (percentage / 100f64)).ceil() as usize;
-                let progress_to_do_count = progress_available - progress_done_count;
-
-                let _ = write!(
-                    io::stdout(),
-                    "\r:: {}{:>5.1} MiB  {:>5.2} MiB/s [{}{}] {:>3}%",
-                    message.clone().map_or("".to_string(), |msg| msg + " "),
-                    tmp_amount / 1024f64 / 1024f64,
-                    speed * iter_per_sec,
-                    "#".repeat(progress_done_count),
-                    "-".repeat(progress_to_do_count),
-                    percentage as usize
-                );
-
-                bytes_start = tmp_amount;
-
-                tokio::time::sleep(Duration::from_millis(sleep_time_ms)).await;
-            }
-            println!()
-        }))
+        let progress = ProgressBar::new(estimated_file_size)
+            .with_style(
+                ProgressStyle::with_template(
+                    ":: {msg}{bytes:>10} {bytes_per_sec:>12} [{wide_bar}] {percent:>3}%",
+                )
+                .unwrap()
+                .progress_chars("##-"),
+            )
+            .with_message(message.map(|m| m + " ").unwrap_or_default())
+            .with_finish(ProgressFinish::Abandon);
+        Some(progress)
     } else {
         None
     };
@@ -116,7 +62,7 @@ pub async fn download_segments(
     for _ in 0..cpus {
         segs.push(vec![])
     }
-    for (i, segment) in segments.into_iter().enumerate() {
+    for (i, segment) in segments.clone().into_iter().enumerate() {
         segs[i - ((i / cpus) * cpus)].push(segment);
     }
 
@@ -127,14 +73,11 @@ pub async fn download_segments(
         let thread_client = client.clone();
         let thread_sender = sender.clone();
         let thread_segments = segs.remove(0);
-        let thread_amount = amount.clone();
         let thread_count = count.clone();
         join_set.spawn(async move {
             for (i, segment) in thread_segments.into_iter().enumerate() {
                 let response = thread_client.get(&segment.url).send().await?;
                 let mut buf = response.bytes().await?.to_vec();
-
-                *thread_amount.lock().unwrap() += buf.len();
 
                 buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
                 debug!(
@@ -155,13 +98,28 @@ pub async fn download_segments(
     let mut buf: BTreeMap<usize, Vec<u8>> = BTreeMap::new();
     loop {
         // is always `Some` because `sender` does not get dropped when all threads are finished
-        let data = receiver.recv().unwrap();
+        let (pos, bytes) = receiver.recv().unwrap();
 
-        if data_pos == data.0 {
-            writer.write_all(data.1.borrow())?;
+        if let Some(p) = &progress {
+            let progress_len = p.length().unwrap();
+            let estimated_segment_len = (variant_data.bandwidth / 8)
+                * segments
+                    .get(pos)
+                    .unwrap()
+                    .length
+                    .unwrap_or_default()
+                    .as_secs();
+            let bytes_len = bytes.len() as u64;
+
+            p.set_length(progress_len - estimated_segment_len + bytes_len);
+            p.inc(bytes_len)
+        }
+
+        if data_pos == pos {
+            writer.write_all(bytes.borrow())?;
             data_pos += 1;
         } else {
-            buf.insert(data.0, data.1);
+            buf.insert(pos, bytes);
         }
         while let Some(b) = buf.remove(&data_pos) {
             writer.write_all(b.borrow())?;
@@ -175,9 +133,6 @@ pub async fn download_segments(
 
     while let Some(joined) = join_set.join_next().await {
         joined??
-    }
-    if let Some(handler) = output_handler {
-        handler.await?
     }
 
     Ok(())
@@ -200,7 +155,7 @@ impl ToString for FFmpegPreset {
             &FFmpegPreset::H265 => "h265",
             &FFmpegPreset::H264 => "h264",
         }
-            .to_string()
+        .to_string()
     }
 }
 
@@ -233,7 +188,9 @@ impl FFmpegPreset {
         })
     }
 
-    pub(crate) fn ffmpeg_presets(mut presets: Vec<FFmpegPreset>) -> Result<(Vec<String>, Vec<String>)> {
+    pub(crate) fn ffmpeg_presets(
+        mut presets: Vec<FFmpegPreset>,
+    ) -> Result<(Vec<String>, Vec<String>)> {
         fn preset_check_remove(presets: &mut Vec<FFmpegPreset>, preset: FFmpegPreset) -> bool {
             if let Some(i) = presets.iter().position(|p| p == &preset) {
                 presets.remove(i);

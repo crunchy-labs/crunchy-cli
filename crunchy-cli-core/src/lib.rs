@@ -6,7 +6,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use crunchyroll_rs::{Crunchyroll, Locale};
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, LevelFilter};
 use std::{env, fs};
 
 mod cli;
@@ -196,7 +196,7 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         + cli.login_method.etp_rt.is_some() as u8
         + cli.login_method.anonymous as u8;
 
-    let _progress_handler = progress!("Logging in");
+    let progress_handler = progress!("Logging in");
     if login_methods_count == 0 {
         if let Some(login_file_path) = cli::login::login_file_path() {
             if login_file_path.exists() {
@@ -232,7 +232,7 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         bail!("should never happen")
     };
 
-    info!("Logged in");
+    progress_handler.stop("Logged in");
 
     Ok(crunchy)
 }

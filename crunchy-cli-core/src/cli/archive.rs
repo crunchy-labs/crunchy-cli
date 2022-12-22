@@ -1,5 +1,5 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, FFmpegPreset, find_resolution};
+use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
@@ -137,7 +137,9 @@ impl Execute for Archive {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
         let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
-        if self.ffmpeg_preset.len() == 1 && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia {
+        if self.ffmpeg_preset.len() == 1
+            && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia
+        {
             warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }
 
@@ -148,20 +150,20 @@ impl Execute for Archive {
         let mut parsed_urls = vec![];
 
         for (i, url) in self.urls.iter().enumerate() {
-            let _progress_handler = progress!("Parsing url {}", i + 1);
+            let progress_handler = progress!("Parsing url {}", i + 1);
             match parse_url(&ctx.crunchy, url.clone(), true).await {
                 Ok((media_collection, url_filter)) => {
                     parsed_urls.push((media_collection, url_filter));
-                    info!("Parsed url {}", i + 1)
+                    progress_handler.stop(format!("Parsed url {}", i + 1))
                 }
                 Err(e) => bail!("url {} could not be parsed: {}", url, e),
             }
         }
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
+            let progress_handler = progress!("Fetching series details");
             let archive_formats = match media_collection {
                 MediaCollection::Series(series) => {
-                    let _progress_handler = progress!("Fetching series details");
                     formats_from_series(&self, series, &url_filter).await?
                 }
                 MediaCollection::Season(_) => bail!("Archiving a season is not supported"),
@@ -171,10 +173,13 @@ impl Execute for Archive {
             };
 
             if archive_formats.is_empty() {
-                info!("Skipping url {} (no matching episodes found)", i + 1);
+                progress_handler.stop(format!(
+                    "Skipping url {} (no matching episodes found)",
+                    i + 1
+                ));
                 continue;
             }
-            info!("Loaded series information for url {}", i + 1);
+            progress_handler.stop(format!("Loaded series information for url {}", i + 1));
 
             if log::max_level() == log::Level::Debug {
                 let seasons = sort_formats_after_seasons(
@@ -310,9 +315,9 @@ impl Execute for Archive {
                     ))
                 }
 
-                let _progess_handler = progress!("Generating mkv");
+                let progess_handler = progress!("Generating mkv");
                 generate_mkv(&self, path, video_paths, audio_paths, subtitle_paths)?;
-                info!("Mkv generated")
+                progess_handler.stop("Mkv generated")
             }
         }
 
@@ -349,7 +354,10 @@ async fn formats_from_series(
         // remove all seasons with the wrong audio for the current iterated season number
         seasons.retain(|s| {
             s.metadata.season_number != season.first().unwrap().metadata.season_number
-                || archive.locale.iter().any(|l| s.metadata.audio_locales.contains(l))
+                || archive
+                    .locale
+                    .iter()
+                    .any(|l| s.metadata.audio_locales.contains(l))
         })
     }
 
@@ -358,7 +366,10 @@ async fn formats_from_series(
         BTreeMap::new();
     for season in series.seasons().await? {
         if !url_filter.is_season_valid(season.metadata.season_number)
-            || !archive.locale.iter().any(|l| season.metadata.audio_locales.contains(l))
+            || !archive
+                .locale
+                .iter()
+                .any(|l| season.metadata.audio_locales.contains(l))
         {
             continue;
         }

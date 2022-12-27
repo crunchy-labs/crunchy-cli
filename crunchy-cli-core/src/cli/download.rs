@@ -240,6 +240,12 @@ impl Execute for Download {
                     let mut stdout = std::io::stdout().lock();
                     download_segments(&ctx, &mut stdout, None, format.stream).await?;
                 } else {
+                    // create parent directory if it does not exist
+                    if let Some(parent) = path.parent() {
+                        if !parent.exists() {
+                            std::fs::create_dir_all(parent)?
+                        }
+                    }
                     let mut file = File::options().create(true).write(true).open(&path)?;
                     download_segments(&ctx, &mut file, None, format.stream).await?
                 }
@@ -258,6 +264,13 @@ async fn download_ffmpeg(
 ) -> Result<()> {
     let (input_presets, output_presets) =
         FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
+
+    // create parent directory if it does not exist
+    if let Some(parent) = target.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?
+        }
+    }
 
     let mut ffmpeg = Command::new("ffmpeg")
         .stdin(Stdio::piped())

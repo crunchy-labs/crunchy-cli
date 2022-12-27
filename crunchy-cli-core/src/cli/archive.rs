@@ -647,6 +647,13 @@ fn generate_mkv(
 
     debug!("ffmpeg {}", command_args.join(" "));
 
+    // create parent directory if it does not exist
+    if let Some(parent) = target.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?
+        }
+    }
+
     let ffmpeg = Command::new("ffmpeg")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

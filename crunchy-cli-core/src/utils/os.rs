@@ -37,6 +37,12 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.
 pub fn free_file(mut path: PathBuf) -> PathBuf {
+    // if path is not a file and not a dir it's probably a pipe on linux which reguarly is intended
+    // and thus does not need to be renamed. what it is on windows ¯\_(ツ)_/¯
+    if !path.is_file() && !path.is_dir() {
+        return path;
+    }
+
     let mut i = 0;
     while path.exists() {
         i += 1;

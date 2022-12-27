@@ -1,6 +1,6 @@
 use log::debug;
 use std::io::ErrorKind;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::{env, io};
 use tempfile::{Builder, NamedTempFile};
@@ -37,9 +37,8 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.
 pub fn free_file(mut path: PathBuf) -> PathBuf {
-    // if path is not a file and not a dir it's probably a pipe on linux which reguarly is intended
-    // and thus does not need to be renamed. what it is on windows ¯\_(ツ)_/¯
-    if !path.is_file() && !path.is_dir() {
+    // if it's a special file does not rename it
+    if is_special_file(&path) {
         return path;
     }
 
@@ -57,4 +56,10 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
         path.set_file_name(format!("{} ({}).{}", filename, i, ext))
     }
     path
+}
+
+/// Check if the given path is a special file. On Linux this is probably a pipe and on Windows
+/// ¯\_(ツ)_/¯
+pub fn is_special_file<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().exists() && !path.as_ref().is_file() && !path.as_ref().is_dir()
 }

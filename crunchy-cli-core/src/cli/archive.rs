@@ -3,7 +3,7 @@ use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
-use crate::utils::os::{free_file, has_ffmpeg, tempfile};
+use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
 use crate::Execute;
@@ -133,6 +133,7 @@ impl Execute for Archive {
             .unwrap_or_default()
             .to_string_lossy()
             != "mkv"
+            && !is_special_file(PathBuf::from(&self.output))
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
@@ -251,7 +252,11 @@ impl Execute for Archive {
                 info!(
                     "Downloading {} to '{}'",
                     primary.title,
-                    path.to_str().unwrap()
+                    if is_special_file(&path) {
+                        path.to_str().unwrap()
+                    } else {
+                        path.file_name().unwrap().to_str().unwrap()
+                    }
                 );
                 tab_info!(
                     "Episode: S{:02}E{:02}",

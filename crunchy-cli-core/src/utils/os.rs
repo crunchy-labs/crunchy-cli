@@ -41,8 +41,8 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
     while path.exists() {
         i += 1;
 
-        let ext = path.extension().unwrap().to_string_lossy();
-        let mut filename = path.file_stem().unwrap().to_str().unwrap();
+        let ext = path.extension().unwrap_or_default().to_string_lossy();
+        let mut filename = path.file_stem().unwrap_or_default().to_str().unwrap();
 
         if filename.ends_with(&format!(" ({})", i - 1)) {
             filename = filename.strip_suffix(&format!(" ({})", i - 1)).unwrap();

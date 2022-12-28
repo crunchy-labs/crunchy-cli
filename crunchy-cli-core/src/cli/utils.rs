@@ -7,6 +7,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -76,8 +77,31 @@ pub async fn download_segments(
         let thread_count = count.clone();
         join_set.spawn(async move {
             for (i, segment) in thread_segments.into_iter().enumerate() {
-                let response = thread_client.get(&segment.url).send().await?;
-                let mut buf = response.bytes().await?.to_vec();
+                let mut retry_count = 0;
+                let mut buf = loop {
+                    let response = thread_client
+                        .get(&segment.url)
+                        .timeout(Duration::from_secs(60))
+                        .send()
+                        .await
+                        .unwrap();
+
+                    match response.bytes().await {
+                        Ok(b) => break b.to_vec(),
+                        Err(e) => {
+                            if e.is_body() {
+                                if retry_count == 5 {
+                                    panic!("Max retry count reached ({}), multiple errors occured while receiving segment {}: {}", retry_count, num + (i * cpus), e)
+                                }
+                                debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), e, 5 - retry_count)
+                            } else {
+                                panic!("{}", e)
+                            }
+                        }
+                    }
+
+                    retry_count += 1;
+                };
 
                 buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
                 debug!(

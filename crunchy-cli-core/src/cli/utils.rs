@@ -4,10 +4,10 @@ use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 use log::{debug, LevelFilter};
 use std::borrow::{Borrow, BorrowMut};
-use std::time::Duration;
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -77,54 +77,30 @@ pub async fn download_segments(
         let thread_count = count.clone();
         join_set.spawn(async move {
             for (i, segment) in thread_segments.into_iter().enumerate() {
-                let response_res = thread_client
-                    .get(&segment.url)
-                    .timeout(Duration::from_secs(60u64))
-                    .send()
-                    .await;
-                let verfified_response = match response_res {
-                    Ok(x) => x,
-                    Err(y) => panic!("This is likely a netowrking error: {}", y),
-                };
-                let possible_error_in_response = verfified_response.bytes().await;
-                let mut buf = if let Ok(r) = possible_error_in_response {
-                    r.to_vec()
-                } else {
-                    debug!(
-                        "Segment Failed to download: {}, retrying.",
-                        num + (i * cpus)
-                    );
-                    let mut resp = thread_client
+                let mut retry_count = 0;
+                let mut buf = loop {
+                    let response = thread_client
                         .get(&segment.url)
-                        .timeout(Duration::from_secs(60u64))
+                        .timeout(Duration::from_secs(10))
                         .send()
                         .await
-                        .unwrap()
-                        .bytes()
-                        .await;
-                    if resp.is_err() {
-                        let mut retry_ctr = 1;
-                        loop {
-                            debug!(
-                                "Segment Failed to download: {}, retry {}.",
-                                num + (i * cpus),
-                                retry_ctr
-                            );
-                            resp = thread_client
-                                .get(&segment.url)
-                                .timeout(Duration::from_secs(60u64))
-                                .send()
-                                .await
-                                .unwrap()
-                                .bytes()
-                                .await;
-                            if resp.is_ok() {
-                                break;
+                        .unwrap();
+
+                    match response.bytes().await {
+                        Ok(b) => break b.to_vec(),
+                        Err(e) => {
+                            if e.is_body() {
+                                if retry_count == 5 {
+                                    panic!("Max retry count reached ({}), multiple errors occured while receiving segment {}: {}", retry_count, num + (i * cpus), e)
+                                }
+                                debug!("Failed to download segment {}. Retrying ({} out of 5 retries left)", num + (i * cpus), 5 - retry_count)
+                            } else {
+                                panic!("{}", e)
                             }
-                            retry_ctr += 1;
                         }
                     }
-                    resp.unwrap().to_vec()
+
+                    retry_count += 1;
                 };
 
                 buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();

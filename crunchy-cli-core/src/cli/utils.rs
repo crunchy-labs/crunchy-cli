@@ -93,7 +93,7 @@ pub async fn download_segments(
                                 if retry_count == 5 {
                                     panic!("Max retry count reached ({}), multiple errors occured while receiving segment {}: {}", retry_count, num + (i * cpus), e)
                                 }
-                                debug!("Failed to download segment {}. Retrying ({} out of 5 retries left)", num + (i * cpus), 5 - retry_count)
+                                debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), e, 5 - retry_count)
                             } else {
                                 panic!("{}", e)
                             }

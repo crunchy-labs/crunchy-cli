@@ -3,7 +3,7 @@ use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 use log::{debug, LevelFilter};
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::time::Duration;
 use std::collections::BTreeMap;
 use std::io::Write;

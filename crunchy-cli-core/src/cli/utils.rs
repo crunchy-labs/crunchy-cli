@@ -81,7 +81,7 @@ pub async fn download_segments(
                 let mut buf = loop {
                     let response = thread_client
                         .get(&segment.url)
-                        .timeout(Duration::from_secs(10))
+                        .timeout(Duration::from_secs(60))
                         .send()
                         .await
                         .unwrap();

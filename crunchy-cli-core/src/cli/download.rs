@@ -3,7 +3,7 @@ use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
-use crate::utils::os::{free_file, has_ffmpeg};
+use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
 use crate::Execute;
@@ -219,7 +219,11 @@ impl Execute for Download {
                 info!(
                     "Downloading {} to '{}'",
                     format.title,
-                    path.file_name().unwrap().to_str().unwrap()
+                    if is_special_file(&path) {
+                        path.to_str().unwrap()
+                    } else {
+                        path.file_name().unwrap().to_str().unwrap()
+                    }
                 );
                 tab_info!("Episode: S{:02}E{:02}", format.season_number, format.number);
                 tab_info!("Audio: {}", format.audio);
@@ -232,14 +236,20 @@ impl Execute for Download {
                 tab_info!("Resolution: {}", format.stream.resolution);
                 tab_info!("FPS: {:.2}", format.stream.fps);
 
-                if path.extension().unwrap_or_default().to_string_lossy() != "ts"
-                    || !self.ffmpeg_preset.is_empty()
-                {
+                let extension = path.extension().unwrap_or_default().to_string_lossy();
+
+                if (!extension.is_empty() && extension != "ts") || !self.ffmpeg_preset.is_empty() {
                     download_ffmpeg(&ctx, &self, format.stream, path.as_path()).await?;
                 } else if path.to_str().unwrap() == "-" {
                     let mut stdout = std::io::stdout().lock();
                     download_segments(&ctx, &mut stdout, None, format.stream).await?;
                 } else {
+                    // create parent directory if it does not exist
+                    if let Some(parent) = path.parent() {
+                        if !parent.exists() {
+                            std::fs::create_dir_all(parent)?
+                        }
+                    }
                     let mut file = File::options().create(true).write(true).open(&path)?;
                     download_segments(&ctx, &mut file, None, format.stream).await?
                 }
@@ -259,6 +269,13 @@ async fn download_ffmpeg(
     let (input_presets, output_presets) =
         FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
 
+    // create parent directory if it does not exist
+    if let Some(parent) = target.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?
+        }
+    }
+
     let mut ffmpeg = Command::new("ffmpeg")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -266,6 +283,19 @@ async fn download_ffmpeg(
         .arg("-y")
         .args(input_presets)
         .args(["-f", "mpegts", "-i", "pipe:"])
+        .args(
+            if target
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .is_empty()
+            {
+                vec!["-f", "mpegts"]
+            } else {
+                vec![]
+            }
+            .as_slice(),
+        )
         .args(output_presets)
         .arg(target.to_str().unwrap())
         .spawn()?;

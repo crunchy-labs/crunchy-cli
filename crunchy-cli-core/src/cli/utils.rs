@@ -80,14 +80,18 @@ pub async fn download_segments(
                 let mut buf = response.bytes().await?.to_vec();
 
                 buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
+
+                let mut c = thread_count.lock().unwrap();
                 debug!(
-                    "Downloaded and decrypted segment {} ({})",
+                    "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
                     num + (i * cpus),
+                    total_segments,
+                    ((*c + 1) as f64 / total_segments as f64) * 100f64,
                     segment.url
                 );
                 thread_sender.send((num + (i * cpus), buf))?;
 
-                *thread_count.lock().unwrap() += 1;
+                *c += 1;
             }
 
             Ok(())

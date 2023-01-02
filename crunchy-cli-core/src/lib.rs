@@ -189,8 +189,9 @@ async fn create_ctx(cli: &Cli) -> Result<Context> {
 }
 
 async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
-    let mut builder = Crunchyroll::builder();
-    builder.locale(cli.lang.clone().unwrap_or_else(system_locale));
+    let mut builder = Crunchyroll::builder()
+        .locale(cli.lang.clone().unwrap_or_else(system_locale))
+        .stabilization_locales(true);
 
     let login_methods_count = cli.login_method.credentials.is_some() as u8
         + cli.login_method.etp_rt.is_some() as u8

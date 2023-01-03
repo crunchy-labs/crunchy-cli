@@ -7,6 +7,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -75,40 +76,85 @@ pub async fn download_segments(
         let thread_segments = segs.remove(0);
         let thread_count = count.clone();
         join_set.spawn(async move {
-            for (i, segment) in thread_segments.into_iter().enumerate() {
-                let response = thread_client.get(&segment.url).send().await?;
-                let mut buf = response.bytes().await?.to_vec();
+            let after_download_sender = thread_sender.clone();
 
-                buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
+            // the download process is encapsulated in its own function. this is done to easily
+            // catch errors which get returned with `...?` and `bail!(...)` and that the thread
+            // itself can report that an error has occured
+            let download = || async move {
+                for (i, segment) in thread_segments.into_iter().enumerate() {
+                    let mut retry_count = 0;
+                    let mut buf = loop {
+                        let response = thread_client
+                            .get(&segment.url)
+                            .timeout(Duration::from_secs(60))
+                            .send()
+                            .await?;
 
-                let mut c = thread_count.lock().unwrap();
-                debug!(
-                    "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
-                    num + (i * cpus),
-                    total_segments,
-                    ((*c + 1) as f64 / total_segments as f64) * 100f64,
-                    segment.url
-                );
-                thread_sender.send((num + (i * cpus), buf))?;
+                        match response.bytes().await {
+                            Ok(b) => break b.to_vec(),
+                            Err(e) => {
+                                if e.is_body() {
+                                    if retry_count == 5 {
+                                        bail!("Max retry count reached ({}), multiple errors occured while receiving segment {}: {}", retry_count, num + (i * cpus), e)
+                                    }
+                                    debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), e, 5 - retry_count)
+                                } else {
+                                    bail!("{}", e)
+                                }
+                            }
+                        }
 
-                *c += 1;
+                        retry_count += 1;
+                    };
+
+                    buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
+                    
+                    let mut c = thread_count.lock().unwrap();
+                    debug!(
+                        "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
+                        num + (i * cpus),
+                        total_segments,
+                        ((*c + 1) as f64 / total_segments as f64) * 100f64,
+                        segment.url
+                    );
+                    
+                    thread_sender.send((num as i32 + (i * cpus) as i32, buf))?;
+                    
+                    *c += 1;
+                }
+                Ok(())
+            };
+            
+
+            let result = download().await;
+            if result.is_err() {
+                after_download_sender.send((-1 as i32, vec![]))?;
             }
 
-            Ok(())
+            result
         });
     }
+    // drop the sender already here so it does not outlive all (download) threads which are the only
+    // real consumers of it
+    drop(sender);
 
-    let mut data_pos = 0usize;
-    let mut buf: BTreeMap<usize, Vec<u8>> = BTreeMap::new();
-    loop {
-        // is always `Some` because `sender` does not get dropped when all threads are finished
-        let (pos, bytes) = receiver.recv().unwrap();
+    // this is the main loop which writes the data. it uses a BTreeMap as a buffer as the write
+    // happens synchronized. the download consist of multiple segments. the map keys are representing
+    // the segment number and the values the corresponding bytes
+    let mut data_pos = 0;
+    let mut buf: BTreeMap<i32, Vec<u8>> = BTreeMap::new();
+    for (pos, bytes) in receiver.iter() {
+        // if the position is lower than 0, an error occured in the sending download thread
+        if pos < 0 {
+            break
+        }
 
         if let Some(p) = &progress {
             let progress_len = p.length().unwrap();
             let estimated_segment_len = (variant_data.bandwidth / 8)
                 * segments
-                    .get(pos)
+                    .get(pos as usize)
                     .unwrap()
                     .length
                     .unwrap_or_default()
@@ -119,24 +165,41 @@ pub async fn download_segments(
             p.inc(bytes_len)
         }
 
+        // check if the currently sent bytes are the next in the buffer. if so, write them directly
+        // to the target without first adding them to the buffer.
+        // if not, add them to the buffer
         if data_pos == pos {
             writer.write_all(bytes.borrow())?;
             data_pos += 1;
         } else {
             buf.insert(pos, bytes);
         }
+        // check if the buffer contains the next segment(s)
         while let Some(b) = buf.remove(&data_pos) {
             writer.write_all(b.borrow())?;
             data_pos += 1;
         }
-
-        if *count.lock().unwrap() >= total_segments && buf.is_empty() {
-            break;
-        }
     }
 
+    // if any error has occured while downloading it gets returned here
     while let Some(joined) = join_set.join_next().await {
         joined??
+    }
+
+    // write the remaining buffer, if existent
+    while let Some(b) = buf.remove(&data_pos) {
+        writer.write_all(b.borrow())?;
+        data_pos += 1;
+    }
+
+    if !buf.is_empty() {
+        bail!(
+            "Download buffer is not empty. Remaining segments: {}",
+            buf.into_keys()
+                .map(|k| k.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 
     Ok(())

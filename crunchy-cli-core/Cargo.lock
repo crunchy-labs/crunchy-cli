@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.5"
+version = "3.0.0-dev.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -286,9 +286,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8ec300b509afbd8977f71cd7feb7d0f20d38d8e38976b7fcd51f6128cbdefe6"
+checksum = "dd742baacdfbf9caca8656262ac2397c334928ccd65fb332c95ee8e8b8d9223d"
 dependencies = [
  "aes",
  "async-trait",
@@ -311,9 +311,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d4b870818d5ce0993d70271bf803dbfbcc8a3a0fa7398b182f5f4b4e88509d"
+checksum = "aadb66f2b5cdcc8b82f095aec6ca92ca4abb30016a13916f2358cf7bfd8a1997"
 dependencies = [
  "darling",
  "quote",

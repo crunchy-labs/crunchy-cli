@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli-core"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.0-dev.5"
+version = "3.0.0-dev.6"
 edition = "2021"
 
 [dependencies]
@@ -15,7 +15,7 @@ ctrlc = "3.2"
 dirs = "4.0"
 indicatif = "0.17"
 log = { version = "0.4", features = ["std"] }
-num_cpus = "1.14"
+num_cpus = "1.15"
 regex = "1.7"
 sanitize-filename = "0.4"
 serde = "1.0"

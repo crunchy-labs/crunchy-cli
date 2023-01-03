@@ -214,9 +214,9 @@ dependencies = [
 
 [[package]]
 name = "console"
-version = "0.15.3"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5556015fe3aad8b968e5d4124980fbe2f6aaee7aeec6b749de1faaa2ca5d0a4c"
+checksum = "c9b6515d269224923b26b5febea2ed42b2d5f2ce37284a4dd670fedd6cb8347a"
 dependencies = [
  "encode_unicode",
  "lazy_static",
@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli"
-version = "3.0.0-dev.4"
+version = "3.0.0-dev.5"
 dependencies = [
  "chrono",
  "clap",
@@ -291,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.4"
+version = "3.0.0-dev.5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -317,9 +317,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ea0bc79ecd9fafc95c6049d0b38e0e00c8d4665314ae3ee675db67b622ce3b7"
+checksum = "f8ec300b509afbd8977f71cd7feb7d0f20d38d8e38976b7fcd51f6128cbdefe6"
 dependencies = [
  "aes",
  "async-trait",
@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66be957a34f7498e4bc324af67c58bb7ace299c214c9353281545f92dbc45d78"
+checksum = "10d4b870818d5ce0993d70271bf803dbfbcc8a3a0fa7398b182f5f4b4e88509d"
 dependencies = [
  "darling",
  "quote",

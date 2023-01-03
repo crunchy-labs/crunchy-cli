@@ -189,7 +189,7 @@ async fn create_ctx(cli: &Cli) -> Result<Context> {
 }
 
 async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
-    let mut builder = Crunchyroll::builder()
+    let builder = Crunchyroll::builder()
         .locale(cli.lang.clone().unwrap_or_else(system_locale))
         .stabilization_locales(true);
 

@@ -74,6 +74,7 @@ pub async fn download_segments(
         let thread_client = client.clone();
         let thread_sender = sender.clone();
         let thread_segments = segs.remove(0);
+        let thread_count = count.clone();
         join_set.spawn(async move {
             let after_download_sender = thread_sender.clone();
 
@@ -108,15 +109,23 @@ pub async fn download_segments(
                     };
 
                     buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
+                    
+                    let mut c = thread_count.lock().unwrap();
                     debug!(
-                        "Downloaded and decrypted segment {} ({})",
+                        "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
                         num + (i * cpus),
+                        total_segments,
+                        ((*c + 1) as f64 / total_segments as f64) * 100f64,
                         segment.url
                     );
+                    
                     thread_sender.send((num as i32 + (i * cpus) as i32, buf))?;
+                    
+                    *c += 1;
                 }
                 Ok(())
             };
+            
 
             let result = download().await;
             if result.is_err() {

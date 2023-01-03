@@ -75,8 +75,9 @@ impl CliLogger {
             // replace the 'progress' prefix if this function is invoked via 'progress!'
             record
                 .target()
-                .replacen("progress", "crunchy_cli", 1)
-                .replacen("progress_end", "crunchy_cli", 1),
+                .replacen("crunchy_cli_core", "crunchy_cli", 1)
+                .replacen("progress_end", "crunchy_cli", 1)
+                .replacen("progress", "crunchy_cli", 1),
             format!("{:?}", thread::current().id())
                 .replace("ThreadId(", "")
                 .replace(')', ""),

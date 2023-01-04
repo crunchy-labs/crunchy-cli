@@ -6,6 +6,7 @@ use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
+use crate::utils::subtitle::Subtitle;
 use crate::Execute;
 use anyhow::{bail, Result};
 use chrono::NaiveTime;
@@ -232,7 +233,7 @@ impl Execute for Archive {
                 }
             }
 
-            for (formats, subtitles) in archive_formats {
+            for (formats, mut subtitles) in archive_formats {
                 let (primary, additionally) = formats.split_first().unwrap();
 
                 let mut path = PathBuf::from(&self.output);
@@ -276,13 +277,14 @@ impl Execute for Archive {
                     "Subtitle: {}",
                     subtitles
                         .iter()
+                        .filter(|s| s.primary) // Don't print subtitles of non-primary streams. They might get removed depending on the merge behavior.
                         .map(|s| {
                             if let Some(default) = &self.default_subtitle {
-                                if default == &s.locale {
+                                if default == &s.stream_subtitle.locale {
                                     return format!("{} (primary)", default);
                                 }
                             }
-                            s.locale.to_string()
+                            s.stream_subtitle.locale.to_string()
                         })
                         .collect::<Vec<String>>()
                         .join(", ")
@@ -309,13 +311,23 @@ impl Execute for Archive {
                     } else {
                         video_paths.push((path, additional))
                     }
+
+                    // Remove subtitles of deleted video
+                    if only_audio {
+                        subtitles.retain(|s| s.episode_id != additional.id);
+                    }
                 }
 
                 let (primary_video, _) = video_paths.get(0).unwrap();
                 let primary_video_length = get_video_length(primary_video.to_path_buf()).unwrap();
                 for subtitle in subtitles {
                     subtitle_paths.push((
-                        download_subtitle(&self, subtitle.clone(), primary_video_length).await?,
+                        download_subtitle(
+                            &self,
+                            subtitle.stream_subtitle.clone(),
+                            primary_video_length,
+                        )
+                        .await?,
                         subtitle,
                     ))
                 }
@@ -334,7 +346,7 @@ async fn formats_from_series(
     archive: &Archive,
     series: Media<Series>,
     url_filter: &UrlFilter,
-) -> Result<Vec<(Vec<Format>, Vec<StreamSubtitle>)>> {
+) -> Result<Vec<(Vec<Format>, Vec<Subtitle>)>> {
     let mut seasons = series.seasons().await?;
 
     // filter any season out which does not contain the specified audio languages
@@ -367,8 +379,8 @@ async fn formats_from_series(
     }
 
     #[allow(clippy::type_complexity)]
-    let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<StreamSubtitle>)>> =
-        BTreeMap::new();
+    let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
+    let mut primary_season = true;
     for season in series.seasons().await? {
         if !url_filter.is_season_valid(season.metadata.season_number)
             || !archive
@@ -402,20 +414,26 @@ async fn formats_from_series(
                 )
             };
 
-            let (ref mut formats, _) = result
+            let (ref mut formats, subtitles) = result
                 .entry(season.metadata.season_number)
                 .or_insert_with(BTreeMap::new)
                 .entry(episode.metadata.episode_number)
-                .or_insert_with(|| {
-                    let subtitles: Vec<StreamSubtitle> = archive
-                        .subtitle
-                        .iter()
-                        .filter_map(|l| streams.subtitles.get(l).cloned())
-                        .collect();
-                    (vec![], subtitles)
-                });
+                .or_insert_with(|| (vec![], vec![]));
+            subtitles.extend(archive.subtitle.iter().filter_map(|l| {
+                let stream_subtitle = streams.subtitles.get(l).cloned()?;
+                let subtitle = Subtitle {
+                    stream_subtitle,
+                    audio_locale: episode.metadata.audio_locale.clone(),
+                    episode_id: episode.id.clone(),
+                    forced: !episode.metadata.is_subbed,
+                    primary: primary_season,
+                };
+                Some(subtitle)
+            }));
             formats.push(Format::new_from_episode(episode, stream));
         }
+
+        primary_season = false;
     }
 
     Ok(result.into_values().flat_map(|v| v.into_values()).collect())
@@ -562,11 +580,12 @@ fn generate_mkv(
     target: PathBuf,
     video_paths: Vec<(TempPath, &Format)>,
     audio_paths: Vec<(TempPath, &Format)>,
-    subtitle_paths: Vec<(TempPath, StreamSubtitle)>,
+    subtitle_paths: Vec<(TempPath, Subtitle)>,
 ) -> Result<()> {
     let mut input = vec![];
     let mut maps = vec![];
     let mut metadata = vec![];
+    let mut dispositions = vec![vec![]; subtitle_paths.len()];
 
     for (i, (video_path, format)) in video_paths.iter().enumerate() {
         input.extend(["-i".to_string(), video_path.to_string_lossy().to_string()]);
@@ -611,12 +630,26 @@ fn generate_mkv(
         ]);
         metadata.extend([
             format!("-metadata:s:s:{}", i),
-            format!("language={}", subtitle.locale),
+            format!("language={}", subtitle.stream_subtitle.locale),
         ]);
         metadata.extend([
             format!("-metadata:s:s:{}", i),
-            format!("title={}", subtitle.locale.to_human_readable()),
+            format!(
+                "title={}",
+                subtitle.stream_subtitle.locale.to_human_readable()
+                    + if !subtitle.primary {
+                        format!(" [Video: {}]", subtitle.audio_locale.to_human_readable())
+                    } else {
+                        "".to_string()
+                    }
+                    .as_str()
+            ),
         ]);
+
+        // mark forced subtitles
+        if subtitle.forced {
+            dispositions[i].push("forced");
+        }
     }
 
     let (input_presets, output_presets) =
@@ -633,15 +666,27 @@ fn generate_mkv(
         // if `--default_subtitle <locale>` is given set the default subtitle to the given locale
         if let Some(position) = subtitle_paths
             .iter()
-            .position(|(_, subtitle)| &subtitle.locale == default_subtitle)
+            .position(|(_, subtitle)| &subtitle.stream_subtitle.locale == default_subtitle)
         {
-            command_args.extend([format!("-disposition:s:{}", position), "default".to_string()])
-        } else {
-            command_args.extend(["-disposition:s:0".to_string(), "0".to_string()])
+            dispositions[position].push("default");
         }
-    } else {
-        command_args.extend(["-disposition:s:0".to_string(), "0".to_string()])
     }
+
+    let disposition_args: Vec<String> = dispositions
+        .iter()
+        .enumerate()
+        .flat_map(|(i, d)| {
+            vec![
+                format!("-disposition:s:{}", i),
+                if !d.is_empty() {
+                    d.join("+")
+                } else {
+                    "0".to_string()
+                },
+            ]
+        })
+        .collect();
+    command_args.extend(disposition_args);
 
     command_args.extend(output_presets);
     command_args.extend([

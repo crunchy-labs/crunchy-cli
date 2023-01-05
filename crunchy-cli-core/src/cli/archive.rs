@@ -481,7 +481,7 @@ fn fix_subtitle_look_and_feel(raw: Vec<u8>) -> Vec<u8> {
 
     for line in String::from_utf8_lossy(raw.as_slice()).split('\n') {
         if line.trim().starts_with('[') && script_info {
-            new.push_str("ScaledBorderAndShadows: yes\n");
+            new.push_str("ScaledBorderAndShadow: yes\n");
             script_info = false
         } else if line.trim() == "[Script Info]" {
             script_info = true

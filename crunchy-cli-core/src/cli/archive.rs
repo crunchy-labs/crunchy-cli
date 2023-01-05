@@ -632,10 +632,10 @@ fn generate_mkv(
     if let Some(default_subtitle) = &archive.default_subtitle {
         // if `--default_subtitle <locale>` is given set the default subtitle to the given locale
         if let Some(position) = subtitle_paths
-            .into_iter()
-            .position(|s| &s.1.locale == default_subtitle)
+            .iter()
+            .position(|(_, subtitle)| &subtitle.locale == default_subtitle)
         {
-            command_args.push(format!("-disposition:s:{}", position))
+            command_args.extend([format!("-disposition:s:{}", position), "default".to_string()])
         } else {
             command_args.extend(["-disposition:s:0".to_string(), "0".to_string()])
         }

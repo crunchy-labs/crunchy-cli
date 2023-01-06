@@ -6,3 +6,4 @@ pub mod log;
 pub mod os;
 pub mod parse;
 pub mod sort;
+pub mod subtitle;

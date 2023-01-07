@@ -1,5 +1,5 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset};
+use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset, interactive_season_choosing, find_multiple_seasons_with_same_number};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
@@ -70,6 +70,10 @@ pub struct Download {
     #[arg(long)]
     #[arg(value_parser = FFmpegPreset::parse)]
     ffmpeg_preset: Vec<FFmpegPreset>,
+
+    #[arg(help = "Ignore interactive input")]
+    #[arg(short, long, default_value_t = false)]
+    yes: bool,
 
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     urls: Vec<String>,
@@ -346,6 +350,12 @@ async fn formats_from_series(
             s.metadata.season_number != season.first().unwrap().metadata.season_number
                 || s.metadata.audio_locales.contains(&download.audio)
         })
+    }
+
+    if !download.yes && !find_multiple_seasons_with_same_number(&seasons).is_empty() {
+        info!(target: "progress_end", "Fetched seasons");
+        seasons = interactive_season_choosing(seasons);
+        info!(target: "progress", "Fetching series details")
     }
 
     let mut formats = vec![];

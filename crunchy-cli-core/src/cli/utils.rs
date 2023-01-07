@@ -5,9 +5,11 @@ use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 use log::{debug, LevelFilter};
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
+use crunchyroll_rs::{Media, Season};
+use regex::Regex;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -327,3 +329,105 @@ impl FFmpegPreset {
         ))
     }
 }
+
+pub(crate) fn find_multiple_seasons_with_same_number(seasons: &Vec<Media<Season>>) -> Vec<u32> {
+    let mut seasons_map: BTreeMap<u32, u32> = BTreeMap::new();
+    for season in seasons {
+        if let Some(s) = seasons_map.get_mut(&season.metadata.season_number) {
+            *s += 1;
+        } else {
+            seasons_map.insert(season.metadata.season_number, 1);
+        }
+    }
+
+    seasons_map
+        .into_iter()
+        .filter_map(|(k, v)| if v > 1 { Some(k) } else { None })
+        .collect()
+}
+
+pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Media<Season>> {
+    let input_regex =
+        Regex::new(r"((?P<single>\d+)|(?P<range_from>\d+)-(?P<range_to>\d+)?)(\s|$)").unwrap();
+
+    let mut seasons_map: BTreeMap<u32, Vec<Media<Season>>> = BTreeMap::new();
+    for season in seasons {
+        if let Some(s) = seasons_map.get_mut(&season.metadata.season_number) {
+            s.push(season);
+        } else {
+            seasons_map.insert(season.metadata.season_number, vec![season]);
+        }
+    }
+
+    for (num, season_vec) in seasons_map.iter_mut() {
+        if season_vec.len() == 1 {
+            continue;
+        }
+        println!(":: Found multiple seasons for season number {}", num);
+        println!(":: Select the number of the seasons you want to download (eg \"1 2 4\", \"1-3\", \"1-3 5\"):");
+        for (i, season) in season_vec.iter().enumerate() {
+            println!(":: \t{}. {}", i + 1, season.title)
+        }
+        let mut stdout = std::io::stdout();
+        let _ = write!(stdout, ":: => ");
+        let _ = stdout.flush();
+        let mut user_input = String::new();
+        std::io::stdin().lock()
+            .read_line(&mut user_input)
+            .expect("cannot open stdin");
+
+        let mut nums = vec![];
+        for capture in input_regex.captures_iter(&user_input) {
+            if let Some(single) = capture.name("single") {
+                nums.push(single.as_str().parse().unwrap());
+            } else {
+                let range_from = capture.name("range_from");
+                let range_to = capture.name("range_to");
+
+                // input is '-' which means use all seasons
+                if range_from.is_none() && range_to.is_none() {
+                    nums = vec![];
+                    break;
+                }
+                let from = range_from
+                    .map(|f| f.as_str().parse::<usize>().unwrap() - 1)
+                    .unwrap_or(usize::MIN);
+                let to = range_from
+                    .map(|f| f.as_str().parse::<usize>().unwrap() - 1)
+                    .unwrap_or(usize::MAX);
+
+                nums.extend(
+                    season_vec
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, _)| {
+                            if i >= from && i <= to {
+                                Some(i)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<usize>>(),
+                )
+            }
+        }
+        nums.dedup();
+
+        if !nums.is_empty() {
+            let mut remove_count = 0;
+            for i in 0..season_vec.len() - 1 {
+                if !nums.contains(&i) {
+                    season_vec.remove(i - remove_count);
+                    remove_count += 1
+                }
+            }
+        }
+    }
+
+    seasons_map
+        .into_values()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<Media<Season>>>()
+}
+

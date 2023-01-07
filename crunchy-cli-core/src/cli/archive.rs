@@ -1,5 +1,5 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset};
+use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset, find_multiple_seasons_with_same_number, interactive_season_choosing};
 use crate::utils::context::Context;
 use crate::utils::format::{format_string, Format};
 use crate::utils::log::progress;
@@ -119,6 +119,10 @@ pub struct Archive {
     )]
     #[arg(long)]
     no_subtitle_optimizations: bool,
+
+    #[arg(help = "Ignore interactive input")]
+    #[arg(short, long, default_value_t = false)]
+    yes: bool,
 
     #[arg(help = "Crunchyroll series url(s)")]
     urls: Vec<String>,
@@ -378,10 +382,16 @@ async fn formats_from_series(
         })
     }
 
+    if !archive.yes && !find_multiple_seasons_with_same_number(&seasons).is_empty() {
+        info!(target: "progress_end", "Fetched seasons");
+        seasons = interactive_season_choosing(seasons);
+        info!(target: "progress", "Fetching series details")
+    }
+
     #[allow(clippy::type_complexity)]
     let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
     let mut primary_season = true;
-    for season in series.seasons().await? {
+    for season in seasons {
         if !url_filter.is_season_valid(season.metadata.season_number)
             || !archive
                 .locale

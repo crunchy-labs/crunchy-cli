@@ -30,8 +30,11 @@ pub fn sort_formats_after_seasons(formats: Vec<Format>) -> Vec<Vec<Format>> {
     let mut as_map = BTreeMap::new();
 
     for format in formats {
-        as_map.entry(format.season_number).or_insert_with(Vec::new);
-        as_map.get_mut(&format.season_number).unwrap().push(format);
+        // the season title is used as key instead of season number to distinguish duplicated season
+        // numbers which are actually two different seasons; season id is not used as this somehow
+        // messes up ordering when duplicated seasons exist
+        as_map.entry(format.season_title.clone()).or_insert_with(Vec::new);
+        as_map.get_mut(&format.season_title).unwrap().push(format);
     }
 
     let mut sorted = as_map
@@ -41,7 +44,7 @@ pub fn sort_formats_after_seasons(formats: Vec<Format>) -> Vec<Vec<Format>> {
             values
         })
         .collect::<Vec<Vec<Format>>>();
-    sorted.sort_by(|a, b| a[0].series_id.cmp(&b[0].series_id));
+    sorted.sort_by(|a, b| a[0].season_number.cmp(&b[0].season_number));
 
     sorted
 }

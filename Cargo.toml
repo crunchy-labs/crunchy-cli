@@ -1,11 +1,11 @@
 [package]
 name = "crunchy-cli"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.0-dev.6"
+version = "3.0.0-dev.7"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.23", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.24", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 

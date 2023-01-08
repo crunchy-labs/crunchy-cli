@@ -379,7 +379,10 @@ async fn formats_from_series(
                     .locale
                     .iter()
                     .any(|l| s.metadata.audio_locales.contains(l))
-        })
+        });
+        // remove seasons which match the url filter. this is mostly done to not trigger the
+        // interactive season choosing when dupilcated seasons are excluded by the filter
+        seasons.retain(|s| url_filter.is_season_valid(s.metadata.season_number))
     }
 
     if !archive.yes && !find_multiple_seasons_with_same_number(&seasons).is_empty() {

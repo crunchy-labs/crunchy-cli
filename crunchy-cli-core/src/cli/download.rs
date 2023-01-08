@@ -349,7 +349,10 @@ async fn formats_from_series(
         seasons.retain(|s| {
             s.metadata.season_number != season.first().unwrap().metadata.season_number
                 || s.metadata.audio_locales.contains(&download.audio)
-        })
+        });
+        // remove seasons which match the url filter. this is mostly done to not trigger the
+        // interactive season choosing when dupilcated seasons are excluded by the filter
+        seasons.retain(|s| url_filter.is_season_valid(s.metadata.season_number))
     }
 
     if !download.yes && !find_multiple_seasons_with_same_number(&seasons).is_empty() {
@@ -373,13 +376,13 @@ async fn formats_from_season(
     season: Media<Season>,
     url_filter: &UrlFilter,
 ) -> Result<Option<Vec<Format>>> {
-    if !season.metadata.audio_locales.contains(&download.audio) {
+    if !url_filter.is_season_valid(season.metadata.season_number) {
+        return Ok(None);
+    } else if !season.metadata.audio_locales.contains(&download.audio) {
         error!(
             "Season {} ({}) is not available with {} audio",
             season.metadata.season_number, season.title, download.audio
         );
-        return Ok(None);
-    } else if !url_filter.is_season_valid(season.metadata.season_number) {
         return Ok(None);
     }
 

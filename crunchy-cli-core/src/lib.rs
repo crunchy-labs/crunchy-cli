@@ -6,7 +6,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use crunchyroll_rs::{Crunchyroll, Locale};
-use log::{debug, error, LevelFilter};
+use log::{debug, error, warn, LevelFilter};
 use std::{env, fs};
 
 mod cli;
@@ -189,8 +189,41 @@ async fn create_ctx(cli: &Cli) -> Result<Context> {
 }
 
 async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
+    let supported_langs = vec![
+        Locale::ar_ME,
+        Locale::de_DE,
+        Locale::en_US,
+        Locale::es_ES,
+        Locale::es_419,
+        Locale::fr_FR,
+        Locale::it_IT,
+        Locale::pt_BR,
+        Locale::pt_PT,
+        Locale::ru_RU,
+    ];
+    let locale = if let Some(lang) = &cli.lang {
+        if !supported_langs.contains(lang) {
+            bail!(
+                "Via `--lang` specified language is not supported. Supported languages: {}",
+                supported_langs
+                    .iter()
+                    .map(|l| format!("`{}` ({})", l.to_string(), l.to_human_readable()))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        }
+        lang.clone()
+    } else {
+        let mut lang = system_locale();
+        if !supported_langs.contains(&lang) {
+            warn!("Recognized system locale is not supported. Using en-US as default. Use `--lang` to overwrite the used language");
+            lang = Locale::en_US
+        }
+        lang
+    };
+
     let builder = Crunchyroll::builder()
-        .locale(cli.lang.clone().unwrap_or_else(system_locale))
+        .locale(locale)
         .stabilization_locales(true);
 
     let login_methods_count = cli.login_method.credentials.is_some() as u8

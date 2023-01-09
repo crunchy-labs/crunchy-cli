@@ -182,7 +182,7 @@ impl Execute for Download {
                             format.stream.resolution,
                             format.stream.fps,
                             format.season_number,
-                            format.number,
+                            format.episode_number,
                         )
                     }
                 }
@@ -202,7 +202,7 @@ impl Execute for Download {
                             format.stream.resolution,
                             format.stream.fps,
                             format.season_number,
-                            format.number
+                            format.episode_number
                         )
                     }
                 }
@@ -229,7 +229,11 @@ impl Execute for Download {
                         path.file_name().unwrap().to_str().unwrap()
                     }
                 );
-                tab_info!("Episode: S{:02}E{:02}", format.season_number, format.number);
+                tab_info!(
+                    "Episode: S{:02}E{:02}",
+                    format.season_number,
+                    format.episode_number
+                );
                 tab_info!("Audio: {}", format.audio);
                 tab_info!(
                     "Subtitles: {}",

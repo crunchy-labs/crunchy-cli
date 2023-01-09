@@ -208,7 +208,7 @@ impl Execute for Archive {
                             format.stream.resolution,
                             format.stream.fps,
                             format.season_number,
-                            format.number,
+                            format.episode_number,
                         )
                     }
                 }
@@ -234,7 +234,7 @@ impl Execute for Archive {
                             format.stream.resolution,
                             format.stream.fps,
                             format.season_number,
-                            format.number
+                            format.episode_number
                         )
                     }
                 }
@@ -266,7 +266,7 @@ impl Execute for Archive {
                 tab_info!(
                     "Episode: S{:02}E{:02}",
                     primary.season_number,
-                    primary.number
+                    primary.episode_number
                 );
                 tab_info!(
                     "Audio: {} (primary), {}",
@@ -318,7 +318,7 @@ impl Execute for Archive {
 
                     // Remove subtitles of deleted video
                     if only_audio {
-                        subtitles.retain(|s| s.episode_id != additional.id);
+                        subtitles.retain(|s| s.episode_id != additional.episode_id);
                     }
                 }
 

@@ -5,10 +5,9 @@ use std::time::Duration;
 
 #[derive(Clone)]
 pub struct Format {
-    pub id: String,
     pub title: String,
     pub description: String,
-    pub number: u32,
+
     pub audio: Locale,
 
     pub duration: Duration,
@@ -20,15 +19,17 @@ pub struct Format {
     pub season_id: String,
     pub season_title: String,
     pub season_number: u32,
+
+    pub episode_id: String,
+    pub episode_number: f32,
 }
 
 impl Format {
     pub fn new_from_episode(episode: Media<Episode>, stream: VariantData) -> Self {
         Self {
-            id: episode.id,
             title: episode.title,
             description: episode.description,
-            number: episode.metadata.episode_number,
+
             audio: episode.metadata.audio_locale,
 
             duration: episode.metadata.duration.to_std().unwrap(),
@@ -40,15 +41,17 @@ impl Format {
             season_id: episode.metadata.season_id,
             season_title: episode.metadata.season_title,
             season_number: episode.metadata.season_number,
+
+            episode_id: episode.id,
+            episode_number: episode.metadata.episode.parse().unwrap_or(episode.metadata.sequence_number),
         }
     }
 
     pub fn new_from_movie(movie: Media<Movie>, stream: VariantData) -> Self {
         Self {
-            id: movie.id,
             title: movie.title,
             description: movie.description,
-            number: 1,
+
             audio: Locale::ja_JP,
 
             duration: movie.metadata.duration.to_std().unwrap(),
@@ -60,6 +63,9 @@ impl Format {
             season_id: movie.metadata.movie_listing_id,
             season_title: movie.metadata.movie_listing_title,
             season_number: 1,
+
+            episode_id: movie.id,
+            episode_number: 1.0,
         }
     }
 }
@@ -79,31 +85,28 @@ pub fn format_path(path: PathBuf, format: &Format, sanitize: bool) -> PathBuf {
     PathBuf::from(
         as_string
             .replace("{title}", &sanitize_func(&format.title))
-            .replace("{series_name}", &sanitize_func(&format.series_name))
-            .replace("{season_name}", &sanitize_func(&format.season_title))
             .replace("{audio}", &sanitize_func(&format.audio.to_string()))
             .replace(
                 "{resolution}",
                 &sanitize_func(&format.stream.resolution.to_string()),
             )
-            .replace(
-                "{padded_season_number}",
-                &sanitize_func(&format!("{:0>2}", format.season_number.to_string())),
-            )
+            .replace("{series_id}", &sanitize_func(&format.series_id))
+            .replace("{series_name}", &sanitize_func(&format.series_name))
+            .replace("{season_id}", &sanitize_func(&format.season_id))
+            .replace("{season_name}", &sanitize_func(&format.season_title))
             .replace(
                 "{season_number}",
                 &sanitize_func(&format.season_number.to_string()),
             )
             .replace(
-                "{padded_episode_number}",
-                &sanitize_func(&format!("{:0>2}", format.number.to_string())),
+                "{padded_season_number}",
+                &sanitize_func(&format!("{:0>2}", format.season_number.to_string())),
             )
+            .replace("{episode_id}", &sanitize_func(&format.episode_id))
+            .replace("{episode_number}", &sanitize_func(&format.episode_number.to_string()))
             .replace(
-                "{episode_number}",
-                &sanitize_func(&format.number.to_string()),
-            )
-            .replace("{series_id}", &sanitize_func(&format.series_id))
-            .replace("{season_id}", &sanitize_func(&format.season_id))
-            .replace("{episode_id}", &sanitize_func(&format.id)),
+                "{padded_episode_number}",
+                &sanitize_func(&format!("{:0>2}", format.episode_number.to_string())),
+            ),
     )
 }

@@ -1,7 +1,10 @@
 use crate::cli::log::tab_info;
-use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset, find_multiple_seasons_with_same_number, interactive_season_choosing};
+use crate::cli::utils::{
+    download_segments, find_multiple_seasons_with_same_number, find_resolution,
+    interactive_season_choosing, FFmpegPreset,
+};
 use crate::utils::context::Context;
-use crate::utils::format::{Format, format_path};
+use crate::utils::format::{format_path, Format};
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
@@ -240,11 +243,16 @@ impl Execute for Archive {
             for (formats, mut subtitles) in archive_formats {
                 let (primary, additionally) = formats.split_first().unwrap();
 
-                let path = free_file(format_path(if self.output.is_empty() {
-                    "{title}.mkv"
-                } else {
-                    &self.output
-                }.into(), &primary, true));
+                let path = free_file(format_path(
+                    if self.output.is_empty() {
+                        "{title}.mkv"
+                    } else {
+                        &self.output
+                    }
+                    .into(),
+                    &primary,
+                    true,
+                ));
 
                 info!(
                     "Downloading {} to '{}'",
@@ -387,15 +395,6 @@ async fn formats_from_series(
     let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
     let mut primary_season = true;
     for season in seasons {
-        if !url_filter.is_season_valid(season.metadata.season_number)
-            || !archive
-                .locale
-                .iter()
-                .any(|l| season.metadata.audio_locales.contains(l))
-        {
-            continue;
-        }
-
         for episode in season.episodes().await? {
             if !url_filter.is_episode_valid(
                 episode.metadata.episode_number,

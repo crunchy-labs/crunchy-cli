@@ -33,7 +33,9 @@ pub fn sort_formats_after_seasons(formats: Vec<Format>) -> Vec<Vec<Format>> {
         // the season title is used as key instead of season number to distinguish duplicated season
         // numbers which are actually two different seasons; season id is not used as this somehow
         // messes up ordering when duplicated seasons exist
-        as_map.entry(format.season_title.clone()).or_insert_with(Vec::new);
+        as_map
+            .entry(format.season_title.clone())
+            .or_insert_with(Vec::new);
         as_map.get_mut(&format.season_title).unwrap().push(format);
     }
 

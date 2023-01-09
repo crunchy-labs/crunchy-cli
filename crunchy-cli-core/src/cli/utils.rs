@@ -1,15 +1,16 @@
 use crate::utils::context::Context;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
+use crunchyroll_rs::{Media, Season};
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
+use lazy_static::lazy_static;
 use log::{debug, LevelFilter};
+use regex::Regex;
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
 use std::io::{BufRead, Write};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
-use crunchyroll_rs::{Media, Season};
-use regex::Regex;
 use tokio::task::JoinSet;
 
 pub fn find_resolution(
@@ -111,7 +112,7 @@ pub async fn download_segments(
                     };
 
                     buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
-                    
+
                     let mut c = thread_count.lock().unwrap();
                     debug!(
                         "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
@@ -120,14 +121,14 @@ pub async fn download_segments(
                         ((*c + 1) as f64 / total_segments as f64) * 100f64,
                         segment.url
                     );
-                    
+
                     thread_sender.send((num as i32 + (i * cpus) as i32, buf))?;
-                    
+
                     *c += 1;
                 }
                 Ok(())
             };
-            
+
 
             let result = download().await;
             if result.is_err() {
@@ -149,7 +150,7 @@ pub async fn download_segments(
     for (pos, bytes) in receiver.iter() {
         // if the position is lower than 0, an error occured in the sending download thread
         if pos < 0 {
-            break
+            break;
         }
 
         if let Some(p) = &progress {
@@ -330,6 +331,10 @@ impl FFmpegPreset {
     }
 }
 
+lazy_static! {
+    static ref DUPLICATED_SEASONS_MULTILANG_REGEX: Regex = Regex::new(r"(-castilian|-english|-english-in|-french|-german|-hindi|-italian|-portuguese|-russian|-spanish)$").unwrap();
+}
+
 pub(crate) fn find_multiple_seasons_with_same_number(seasons: &Vec<Media<Season>>) -> Vec<u32> {
     let mut seasons_map: BTreeMap<u32, u32> = BTreeMap::new();
     for season in seasons {
@@ -342,7 +347,25 @@ pub(crate) fn find_multiple_seasons_with_same_number(seasons: &Vec<Media<Season>
 
     seasons_map
         .into_iter()
-        .filter_map(|(k, v)| if v > 1 { Some(k) } else { None })
+        .filter_map(|(k, v)| {
+            if v > 1 {
+                // check if the different seasons are actual the same but with different dub languages
+                let mut multilang_season_vec: Vec<String> = seasons
+                    .iter()
+                    .map(|s| {
+                        DUPLICATED_SEASONS_MULTILANG_REGEX
+                            .replace(s.slug_title.trim_end_matches("-dub"), "")
+                            .to_string()
+                    })
+                    .collect();
+                multilang_season_vec.dedup();
+
+                if multilang_season_vec.len() > 1 {
+                    return Some(k);
+                }
+            }
+            None
+        })
         .collect()
 }
 
@@ -363,6 +386,22 @@ pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Me
         if season_vec.len() == 1 {
             continue;
         }
+
+        // check if the different seasons are actual the same but with different dub languages
+        let mut multilang_season_vec: Vec<String> = season_vec
+            .iter()
+            .map(|s| {
+                DUPLICATED_SEASONS_MULTILANG_REGEX
+                    .replace(s.slug_title.trim_end_matches("-dub"), "")
+                    .to_string()
+            })
+            .collect();
+        multilang_season_vec.dedup();
+
+        if multilang_season_vec.len() == 1 {
+            continue;
+        }
+
         println!(":: Found multiple seasons for season number {}", num);
         println!(":: Select the number of the seasons you want to download (eg \"1 2 4\", \"1-3\", \"1-3 5\"):");
         for (i, season) in season_vec.iter().enumerate() {
@@ -372,7 +411,8 @@ pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Me
         let _ = write!(stdout, ":: => ");
         let _ = stdout.flush();
         let mut user_input = String::new();
-        std::io::stdin().lock()
+        std::io::stdin()
+            .lock()
             .read_line(&mut user_input)
             .expect("cannot open stdin");
 
@@ -400,13 +440,7 @@ pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Me
                     season_vec
                         .iter()
                         .enumerate()
-                        .filter_map(|(i, _)| {
-                            if i >= from && i <= to {
-                                Some(i)
-                            } else {
-                                None
-                            }
-                        })
+                        .filter_map(|(i, _)| if i >= from && i <= to { Some(i) } else { None })
                         .collect::<Vec<usize>>(),
                 )
             }
@@ -430,4 +464,3 @@ pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Me
         .flatten()
         .collect::<Vec<Media<Season>>>()
 }
-

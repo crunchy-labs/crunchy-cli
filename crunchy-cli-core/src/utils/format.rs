@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use crunchyroll_rs::media::VariantData;
 use crunchyroll_rs::{Episode, Locale, Media, Movie};
+use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -76,31 +76,34 @@ pub fn format_path(path: PathBuf, format: &Format, sanitize: bool) -> PathBuf {
 
     let as_string = path.to_string_lossy().to_string();
 
-    PathBuf::from(as_string.replace("{title}", &sanitize_func(&format.title))
-        .replace("{series_name}", &sanitize_func(&format.series_name))
-        .replace("{season_name}", &sanitize_func(&format.season_title))
-        .replace("{audio}", &sanitize_func(&format.audio.to_string()))
-        .replace(
-            "{resolution}",
-            &sanitize_func(&format.stream.resolution.to_string()),
-        )
-        .replace(
-            "{padded_season_number}",
-            &sanitize_func(&format!("{:0>2}", format.season_number.to_string())),
-        )
-        .replace(
-            "{season_number}",
-            &sanitize_func(&format.season_number.to_string()),
-        )
-        .replace(
-            "{padded_episode_number}",
-            &sanitize_func(&format!("{:0>2}", format.number.to_string())),
-        )
-        .replace(
-            "{episode_number}",
-            &sanitize_func(&format.number.to_string()),
-        )
-        .replace("{series_id}", &sanitize_func(&format.series_id))
-        .replace("{season_id}", &sanitize_func(&format.season_id))
-        .replace("{episode_id}", &sanitize_func(&format.id)))
+    PathBuf::from(
+        as_string
+            .replace("{title}", &sanitize_func(&format.title))
+            .replace("{series_name}", &sanitize_func(&format.series_name))
+            .replace("{season_name}", &sanitize_func(&format.season_title))
+            .replace("{audio}", &sanitize_func(&format.audio.to_string()))
+            .replace(
+                "{resolution}",
+                &sanitize_func(&format.stream.resolution.to_string()),
+            )
+            .replace(
+                "{padded_season_number}",
+                &sanitize_func(&format!("{:0>2}", format.season_number.to_string())),
+            )
+            .replace(
+                "{season_number}",
+                &sanitize_func(&format.season_number.to_string()),
+            )
+            .replace(
+                "{padded_episode_number}",
+                &sanitize_func(&format!("{:0>2}", format.number.to_string())),
+            )
+            .replace(
+                "{episode_number}",
+                &sanitize_func(&format.number.to_string()),
+            )
+            .replace("{series_id}", &sanitize_func(&format.series_id))
+            .replace("{season_id}", &sanitize_func(&format.season_id))
+            .replace("{episode_id}", &sanitize_func(&format.id)),
+    )
 }

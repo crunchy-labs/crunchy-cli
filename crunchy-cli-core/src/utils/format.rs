@@ -118,19 +118,11 @@ impl Format {
                 .replace("{season_name}", &sanitize_func(&self.season_title))
                 .replace(
                     "{season_number}",
-                    &sanitize_func(&self.season_number.to_string()),
-                )
-                .replace(
-                    "{padded_season_number}",
                     &sanitize_func(&format!("{:0>2}", self.season_number.to_string())),
                 )
                 .replace("{episode_id}", &sanitize_func(&self.episode_id))
                 .replace(
                     "{episode_number}",
-                    &sanitize_func(&self.episode_number.to_string()),
-                )
-                .replace(
-                    "{padded_episode_number}",
                     &sanitize_func(&format!("{:0>2}", self.episode_number.to_string())),
                 )
                 .replace(

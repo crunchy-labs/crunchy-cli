@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use crunchyroll_rs::media::VariantData;
 use crunchyroll_rs::{Episode, Locale, Media, Movie};
 use std::time::Duration;
@@ -65,7 +66,7 @@ impl Format {
 
 /// Formats the given string if it has specific pattern in it. It's possible to sanitize it which
 /// removes characters which can cause failures if the output string is used as a file name.
-pub fn format_string(s: String, format: &Format, sanitize: bool) -> String {
+pub fn format_path(path: PathBuf, format: &Format, sanitize: bool) -> PathBuf {
     let sanitize_func = if sanitize {
         |s: &str| sanitize_filename::sanitize(s)
     } else {
@@ -73,7 +74,9 @@ pub fn format_string(s: String, format: &Format, sanitize: bool) -> String {
         |s: &str| s.to_string()
     };
 
-    s.replace("{title}", &sanitize_func(&format.title))
+    let as_string = path.to_string_lossy().to_string();
+
+    PathBuf::from(as_string.replace("{title}", &sanitize_func(&format.title))
         .replace("{series_name}", &sanitize_func(&format.series_name))
         .replace("{season_name}", &sanitize_func(&format.season_title))
         .replace("{audio}", &sanitize_func(&format.audio.to_string()))
@@ -99,5 +102,5 @@ pub fn format_string(s: String, format: &Format, sanitize: bool) -> String {
         )
         .replace("{series_id}", &sanitize_func(&format.series_id))
         .replace("{season_id}", &sanitize_func(&format.season_id))
-        .replace("{episode_id}", &sanitize_func(&format.id))
+        .replace("{episode_id}", &sanitize_func(&format.id)))
 }

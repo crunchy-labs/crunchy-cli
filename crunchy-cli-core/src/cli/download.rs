@@ -1,7 +1,7 @@
 use crate::cli::log::tab_info;
 use crate::cli::utils::{download_segments, find_resolution, FFmpegPreset, interactive_season_choosing, find_multiple_seasons_with_same_number};
 use crate::utils::context::Context;
-use crate::utils::format::{format_string, Format};
+use crate::utils::format::{Format, format_path};
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::{parse_url, UrlFilter};
@@ -206,19 +206,11 @@ impl Execute for Download {
             }
 
             for format in formats {
-                let mut path = PathBuf::from(&self.output);
-                path = free_file(
-                    path.with_file_name(format_string(
-                        if let Some(fname) = path.file_name() {
-                            fname.to_str().unwrap()
-                        } else {
-                            "{title}.ts"
-                        }
-                        .to_string(),
-                        &format,
-                        true,
-                    )),
-                );
+                let path = free_file(format_path(if self.output.is_empty() {
+                    "{title}.mkv"
+                } else {
+                    &self.output
+                }.into(), &format, true));
 
                 info!(
                     "Downloading {} to '{}'",

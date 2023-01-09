@@ -4,7 +4,7 @@ use crate::cli::utils::{
     interactive_season_choosing, FFmpegPreset,
 };
 use crate::utils::context::Context;
-use crate::utils::format::{format_path, Format};
+use crate::utils::format::Format;
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
@@ -243,16 +243,17 @@ impl Execute for Archive {
             for (formats, mut subtitles) in archive_formats {
                 let (primary, additionally) = formats.split_first().unwrap();
 
-                let path = free_file(format_path(
-                    if self.output.is_empty() {
-                        "{title}.mkv"
-                    } else {
-                        &self.output
-                    }
-                    .into(),
-                    &primary,
-                    true,
-                ));
+                let path = free_file(
+                    primary.format_path(
+                        if self.output.is_empty() {
+                            "{title}.mkv"
+                        } else {
+                            &self.output
+                        }
+                        .into(),
+                        true,
+                    ),
+                );
 
                 info!(
                     "Downloading {} to '{}'",
@@ -395,7 +396,9 @@ async fn formats_from_series(
     let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
     let mut primary_season = true;
     for season in seasons {
-        for episode in season.episodes().await? {
+        let episodes = season.episodes().await?;
+
+        for episode in episodes.iter() {
             if !url_filter.is_episode_valid(
                 episode.metadata.episode_number,
                 episode.metadata.season_number,
@@ -434,7 +437,7 @@ async fn formats_from_series(
                 };
                 Some(subtitle)
             }));
-            formats.push(Format::new_from_episode(episode, stream));
+            formats.push(Format::new_from_episode(episode, &episodes, stream));
         }
 
         primary_season = false;

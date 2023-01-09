@@ -4,7 +4,7 @@ use crate::cli::utils::{
     interactive_season_choosing, FFmpegPreset,
 };
 use crate::utils::context::Context;
-use crate::utils::format::{format_path, Format};
+use crate::utils::format::Format;
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::{parse_url, UrlFilter};
@@ -16,6 +16,7 @@ use crunchyroll_rs::{
     Episode, Locale, Media, MediaCollection, Movie, MovieListing, Season, Series,
 };
 use log::{debug, error, info, warn};
+use std::borrow::Cow;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -148,7 +149,7 @@ impl Execute for Download {
                         episode.metadata.season_title,
                         episode.metadata.series_title
                     );
-                    format_from_episode(&self, episode, &url_filter, false)
+                    format_from_episode(&self, &episode, &url_filter, None, false)
                         .await?
                         .map(|fmt| vec![fmt])
                 }
@@ -209,16 +210,17 @@ impl Execute for Download {
             }
 
             for format in formats {
-                let path = free_file(format_path(
-                    if self.output.is_empty() {
-                        "{title}.mkv"
-                    } else {
-                        &self.output
-                    }
-                    .into(),
-                    &format,
-                    true,
-                ));
+                let path = free_file(
+                    format.format_path(
+                        if self.output.is_empty() {
+                            "{title}.mkv"
+                        } else {
+                            &self.output
+                        }
+                        .into(),
+                        true,
+                    ),
+                );
 
                 info!(
                     "Downloading {} to '{}'",
@@ -392,8 +394,11 @@ async fn formats_from_season(
 
     let mut formats = vec![];
 
-    for episode in season.episodes().await? {
-        if let Some(fmt) = format_from_episode(download, episode, url_filter, true).await? {
+    let episodes = season.episodes().await?;
+    for episode in episodes.iter() {
+        if let Some(fmt) =
+            format_from_episode(download, &episode, url_filter, Some(&episodes), true).await?
+        {
             formats.push(fmt)
         }
     }
@@ -403,8 +408,9 @@ async fn formats_from_season(
 
 async fn format_from_episode(
     download: &Download,
-    episode: Media<Episode>,
+    episode: &Media<Episode>,
     url_filter: &UrlFilter,
+    season_episodes: Option<&Vec<Media<Episode>>>,
     filter_audio: bool,
 ) -> Result<Option<Format>> {
     if filter_audio && episode.metadata.audio_locale != download.audio {
@@ -457,7 +463,21 @@ async fn format_from_episode(
         )
     };
 
-    Ok(Some(Format::new_from_episode(episode, stream)))
+    let season_eps = if Format::has_relative_episodes_fmt(&download.output) {
+        if let Some(eps) = season_episodes {
+            Cow::from(eps)
+        } else {
+            Cow::from(episode.season().await?.episodes().await?)
+        }
+    } else {
+        Cow::from(vec![])
+    };
+
+    Ok(Some(Format::new_from_episode(
+        episode,
+        &season_eps.to_vec(),
+        stream,
+    )))
 }
 
 async fn format_from_movie_listing(
@@ -515,7 +535,7 @@ async fn format_from_movie(
         }
     };
 
-    Ok(Some(Format::new_from_movie(movie, stream)))
+    Ok(Some(Format::new_from_movie(&movie, stream)))
 }
 
 fn some_vec_or_none<T>(v: Vec<T>) -> Option<Vec<T>> {

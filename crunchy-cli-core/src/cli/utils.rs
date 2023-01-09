@@ -332,7 +332,7 @@ impl FFmpegPreset {
 }
 
 lazy_static! {
-    static ref DUPLICATED_SEASONS_MULTILANG_REGEX: Regex = Regex::new(r"(-castilian|-english|-english-in|-french|-german|-hindi|-italian|-portuguese|-russian|-spanish)$").unwrap();
+    static ref DUPLICATED_SEASONS_MULTILANG_REGEX: Regex = Regex::new(r"(-arabic|-castilian|-english|-english-in|-french|-german|-hindi|-italian|-portuguese|-russian|-spanish)$").unwrap();
 }
 
 pub(crate) fn find_multiple_seasons_with_same_number(seasons: &Vec<Media<Season>>) -> Vec<u32> {

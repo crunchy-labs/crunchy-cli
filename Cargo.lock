@@ -61,6 +61,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -279,7 +285,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli"
-version = "3.0.0-dev.7"
+version = "3.0.0-dev.8"
 dependencies = [
  "chrono",
  "clap",
@@ -291,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.7"
+version = "3.0.0-dev.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -318,9 +324,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "184d0c725a09aec815316cbf41a2f362008ecb0e8c8e3b6b9930d01a89b5df21"
+checksum = "f3770cda4c67e68c689c8e361af46bb9d017caf82263905358fd0751d10657a0"
 dependencies = [
  "aes",
  "async-trait",
@@ -343,9 +349,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f3c82e1766339727fc2c10d66d0c4f001b1cf42e2993f9d93997b610f408776"
+checksum = "4a260a73e733bb0ce30343caaed5e968d3c1cc2ea0ab27c601481e9ef22a2fd7"
 dependencies = [
  "darling",
  "quote",
@@ -1268,7 +1274,7 @@ version = "0.11.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bytes",
  "cookie",
  "cookie_store",
@@ -1356,11 +1362,11 @@ dependencies = [
 
 [[package]]
 name = "rustls-pemfile"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0864aeff53f8c05aa08d86e5ef839d3dfcf07aeba2db32f12db0ef716e87bd55"
+checksum = "d194b56d58803a43635bdc398cd17e383d6f71f9182b9a192c127ca42494a59b"
 dependencies = [
- "base64",
+ "base64 0.21.0",
 ]
 
 [[package]]

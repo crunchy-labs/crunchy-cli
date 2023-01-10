@@ -42,7 +42,7 @@ pub fn sort_formats_after_seasons(formats: Vec<Format>) -> Vec<Vec<Format>> {
     let mut sorted = as_map
         .into_iter()
         .map(|(_, mut values)| {
-            values.sort_by(|a, b| a.number.cmp(&b.number));
+            values.sort_by(|a, b| a.episode_number.total_cmp(&b.episode_number));
             values
         })
         .collect::<Vec<Vec<Format>>>();

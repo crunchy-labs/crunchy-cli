@@ -45,10 +45,9 @@ pub struct Download {
       {season_name}             → Name of the season\n  \
       {audio}                   → Audio language of the video\n  \
       {resolution}              → Resolution of the video\n  \
-      {padded_season_number}    → Number of the season padded to double digits\n  \
       {season_number}           → Number of the season\n  \
-      {padded_episode_number}   → Number of the episode padded to double digits\n  \
       {episode_number}          → Number of the episode\n  \
+      {relative_episode_number} → Number of the episode relative to its season\
       {series_id}               → ID of the series\n  \
       {season_id}               → ID of the season\n  \
       {episode_id}              → ID of the episode")]

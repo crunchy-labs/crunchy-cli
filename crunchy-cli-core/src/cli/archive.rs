@@ -9,16 +9,14 @@ use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
-use crate::utils::subtitle::Subtitle;
+use crate::utils::subtitle::{download_subtitle, Subtitle};
+use crate::utils::video::get_video_length;
 use crate::Execute;
 use anyhow::{bail, Result};
-use chrono::NaiveTime;
-use crunchyroll_rs::media::{Resolution, StreamSubtitle};
+use crunchyroll_rs::media::Resolution;
 use crunchyroll_rs::{Locale, Media, MediaCollection, Series};
 use log::{debug, error, info, warn};
-use regex::Regex;
 use std::collections::BTreeMap;
-use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tempfile::TempPath;
@@ -113,14 +111,6 @@ pub struct Archive {
     )]
     #[arg(long)]
     default_subtitle: Option<Locale>,
-    #[arg(help = "Disable subtitle optimizations")]
-    #[arg(
-        long_help = "By default, Crunchyroll delivers subtitles in a format which may cause issues in some video players. \
-    These issues are fixed internally by setting a flag which is not part of the official specification of the subtitle format. \
-    If you do not want this fixes or they cause more trouble than they solve (for you), it can be disabled with this flag"
-    )]
-    #[arg(long)]
-    no_subtitle_optimizations: bool,
 
     #[arg(help = "Ignore interactive input")]
     #[arg(short, long, default_value_t = false)]
@@ -326,12 +316,8 @@ impl Execute for Archive {
                 let primary_video_length = get_video_length(primary_video.to_path_buf()).unwrap();
                 for subtitle in subtitles {
                     subtitle_paths.push((
-                        download_subtitle(
-                            &self,
-                            subtitle.stream_subtitle.clone(),
-                            primary_video_length,
-                        )
-                        .await?,
+                        download_subtitle(subtitle.stream_subtitle.clone(), primary_video_length)
+                            .await?,
                         subtitle,
                     ))
                 }
@@ -436,7 +422,7 @@ async fn formats_from_series(
                 };
                 Some(subtitle)
             }));
-            formats.push(Format::new_from_episode(episode, &episodes, stream));
+            formats.push(Format::new_from_episode(episode, &episodes, stream, vec![]));
         }
 
         primary_season = false;
@@ -474,111 +460,6 @@ async fn download_video(ctx: &Context, format: &Format, only_audio: bool) -> Res
     .await?;
 
     Ok(path)
-}
-
-async fn download_subtitle(
-    archive: &Archive,
-    subtitle: StreamSubtitle,
-    max_length: NaiveTime,
-) -> Result<TempPath> {
-    let tempfile = tempfile(".ass")?;
-    let (mut file, path) = tempfile.into_parts();
-
-    let mut buf = vec![];
-    subtitle.write_to(&mut buf).await?;
-    if !archive.no_subtitle_optimizations {
-        buf = fix_subtitle_look_and_feel(buf)
-    }
-    buf = fix_subtitle_length(buf, max_length);
-
-    file.write_all(buf.as_slice())?;
-
-    Ok(path)
-}
-
-/// Add `ScaledBorderAndShadows: yes` to subtitles; without it they look very messy on some video
-/// players. See [crunchy-labs/crunchy-cli#66](https://github.com/crunchy-labs/crunchy-cli/issues/66)
-/// for more information.
-fn fix_subtitle_look_and_feel(raw: Vec<u8>) -> Vec<u8> {
-    let mut script_info = false;
-    let mut new = String::new();
-
-    for line in String::from_utf8_lossy(raw.as_slice()).split('\n') {
-        if line.trim().starts_with('[') && script_info {
-            new.push_str("ScaledBorderAndShadow: yes\n");
-            script_info = false
-        } else if line.trim() == "[Script Info]" {
-            script_info = true
-        }
-        new.push_str(line);
-        new.push('\n')
-    }
-
-    new.into_bytes()
-}
-
-/// Fix the length of subtitles to a specified maximum amount. This is required because sometimes
-/// subtitles have an unnecessary entry long after the actual video ends with artificially extends
-/// the video length on some video players. To prevent this, the video length must be hard set. See
-/// [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32) for more
-/// information.
-fn fix_subtitle_length(raw: Vec<u8>, max_length: NaiveTime) -> Vec<u8> {
-    let re =
-        Regex::new(r#"^Dialogue:\s\d+,(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),"#)
-            .unwrap();
-
-    // chrono panics if we try to format NaiveTime with `%2f` and the nano seconds has more than 2
-    // digits so them have to be reduced manually to avoid the panic
-    fn format_naive_time(native_time: NaiveTime) -> String {
-        let formatted_time = native_time.format("%f").to_string();
-        format!(
-            "{}.{}",
-            native_time.format("%T"),
-            if formatted_time.len() <= 2 {
-                native_time.format("%2f").to_string()
-            } else {
-                formatted_time.split_at(2).0.parse().unwrap()
-            }
-        )
-    }
-
-    let length_as_string = format_naive_time(max_length);
-    let mut new = String::new();
-
-    for line in String::from_utf8_lossy(raw.as_slice()).split('\n') {
-        if let Some(capture) = re.captures(line) {
-            let start = capture.name("start").map_or(NaiveTime::default(), |s| {
-                NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
-            });
-            let end = capture.name("end").map_or(NaiveTime::default(), |s| {
-                NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
-            });
-
-            if start > max_length {
-                continue;
-            } else if end > max_length {
-                new.push_str(
-                    re.replace(
-                        line,
-                        format!(
-                            "Dialogue: {},{},",
-                            format_naive_time(start),
-                            &length_as_string
-                        ),
-                    )
-                    .to_string()
-                    .as_str(),
-                )
-            } else {
-                new.push_str(line)
-            }
-        } else {
-            new.push_str(line)
-        }
-        new.push('\n')
-    }
-
-    new.into_bytes()
 }
 
 fn generate_mkv(
@@ -720,24 +601,4 @@ fn generate_mkv(
     }
 
     Ok(())
-}
-
-/// Get the length of a video. This is required because sometimes subtitles have an unnecessary entry
-/// long after the actual video ends with artificially extends the video length on some video players.
-/// To prevent this, the video length must be hard set. See
-/// [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32) for more
-/// information.
-fn get_video_length(path: PathBuf) -> Result<NaiveTime> {
-    let video_length = Regex::new(r"Duration:\s(?P<time>\d+:\d+:\d+\.\d+),")?;
-
-    let ffmpeg = Command::new("ffmpeg")
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .arg("-y")
-        .args(["-i", path.to_str().unwrap()])
-        .output()?;
-    let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
-    let caps = video_length.captures(ffmpeg_output.as_str()).unwrap();
-
-    Ok(NaiveTime::parse_from_str(caps.name("time").unwrap().as_str(), "%H:%M:%S%.f").unwrap())
 }

@@ -19,8 +19,7 @@ use crunchyroll_rs::{
 };
 use log::{debug, error, info, warn};
 use std::borrow::Cow;
-use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 #[derive(Debug, clap::Parser)]
@@ -93,8 +92,17 @@ impl Execute for Download {
             .extension()
             .unwrap_or_default()
             .is_empty()
+            && self.output != "-"
         {
             bail!("No file extension found. Please specify a file extension (via `-o`) for the output file")
+        }
+
+        if self.subtitle.is_some() {
+            if let Some(ext) = Path::new(&self.output).extension() {
+                if ext.to_string_lossy() != "mp4" {
+                    warn!("Detected a non mp4 output container. Adding subtitles may take a while")
+                }
+            }
         }
 
         let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
@@ -249,7 +257,7 @@ impl Execute for Download {
                     &self,
                     format.stream,
                     format.subtitles.get(0).cloned(),
-                    path.as_path(),
+                    path.to_path_buf(),
                 )
                 .await?;
             }
@@ -264,7 +272,7 @@ async fn download_ffmpeg(
     download: &Download,
     variant_data: VariantData,
     subtitle: Option<StreamSubtitle>,
-    target: &Path,
+    mut target: PathBuf,
 ) -> Result<()> {
     let (input_presets, mut output_presets) =
         FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
@@ -273,12 +281,6 @@ async fn download_ffmpeg(
     if let Some(parent) = target.parent() {
         if !parent.exists() {
             std::fs::create_dir_all(parent)?
-        }
-    }
-
-    if let Some(ext) = target.extension() {
-        if ext.to_string_lossy() != "mp4" && subtitle.is_some() {
-            warn!("Detected a non mp4 output container. Adding subtitles may take a while")
         }
     }
 
@@ -291,11 +293,22 @@ async fn download_ffmpeg(
         None
     };
 
-    let subtitle_preset = if let Some(sub_file) = &subtitle_file {
+    let stdout_tempfile = if target.to_string_lossy() == "-" {
+        let file = tempfile(".mp4")?;
+        target = file.path().to_path_buf();
+
+        Some(file)
+    } else {
+        None
+    };
+
+    let subtitle_presets = if let Some(sub_file) = &subtitle_file {
         if target.extension().unwrap_or_default().to_string_lossy() == "mp4" {
             vec![
                 "-i".to_string(),
                 sub_file.to_string_lossy().to_string(),
+                "-movflags".to_string(),
+                "faststart".to_string(),
                 "-c:s".to_string(),
                 "mov_text".to_string(),
                 "-disposition:s:s:0".to_string(),
@@ -331,7 +344,7 @@ async fn download_ffmpeg(
         .arg("-y")
         .args(input_presets)
         .args(["-i", video_file.path().to_string_lossy().as_ref()])
-        .args(subtitle_preset)
+        .args(subtitle_presets)
         .args(output_presets)
         .arg(target.to_str().unwrap())
         .spawn()?;
@@ -339,6 +352,12 @@ async fn download_ffmpeg(
     let _progress_handler = progress!("Generating output file");
     ffmpeg.wait()?;
     info!("Output file generated");
+
+    if let Some(mut stdout_file) = stdout_tempfile {
+        let mut stdout = std::io::stdout();
+
+        std::io::copy(&mut stdout_file, &mut stdout)?;
+    }
 
     Ok(())
 }

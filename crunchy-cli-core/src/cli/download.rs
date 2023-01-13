@@ -350,11 +350,11 @@ async fn download_ffmpeg(
         .arg(target.to_str().unwrap())
         .spawn()?;
 
-    let _progress_handler = progress!("Generating output file");
+    let progress_handler = progress!("Generating output file");
     if !ffmpeg.wait()?.success() {
         bail!("{}", std::io::read_to_string(ffmpeg.stderr.unwrap())?)
     }
-    info!("Output file generated");
+    progress_handler.stop("Output file generated");
 
     if let Some(mut stdout_file) = stdout_tempfile {
         let mut stdout = std::io::stdout();

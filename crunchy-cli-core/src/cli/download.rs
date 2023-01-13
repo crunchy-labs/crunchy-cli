@@ -340,6 +340,7 @@ async fn download_ffmpeg(
     };
 
     let mut ffmpeg = Command::new("ffmpeg")
+        .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .arg("-y")
         .args(input_presets)
@@ -350,7 +351,9 @@ async fn download_ffmpeg(
         .spawn()?;
 
     let _progress_handler = progress!("Generating output file");
-    ffmpeg.wait()?;
+    if !ffmpeg.wait()?.success() {
+        bail!("{}", std::io::read_to_string(ffmpeg.stderr.unwrap())?)
+    }
     info!("Output file generated");
 
     if let Some(mut stdout_file) = stdout_tempfile {

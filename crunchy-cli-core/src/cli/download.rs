@@ -6,19 +6,21 @@ use crate::cli::utils::{
 use crate::utils::context::Context;
 use crate::utils::format::Format;
 use crate::utils::log::progress;
-use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
+use crate::utils::os::{free_file, has_ffmpeg, is_special_file, tempfile};
 use crate::utils::parse::{parse_url, UrlFilter};
 use crate::utils::sort::{sort_formats_after_seasons, sort_seasons_after_number};
+use crate::utils::subtitle::download_subtitle;
+use crate::utils::video::get_video_length;
 use crate::Execute;
 use anyhow::{bail, Result};
-use crunchyroll_rs::media::{Resolution, VariantData};
+use crunchyroll_rs::media::{Resolution, StreamSubtitle, VariantData};
 use crunchyroll_rs::{
     Episode, Locale, Media, MediaCollection, Movie, MovieListing, Season, Series,
 };
 use log::{debug, error, info, warn};
 use std::borrow::Cow;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::io::Read;
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 #[derive(Debug, clap::Parser)]
@@ -51,7 +53,7 @@ pub struct Download {
       {series_id}               → ID of the series\n  \
       {season_id}               → ID of the season\n  \
       {episode_id}              → ID of the episode")]
-    #[arg(short, long, default_value = "{title}.ts")]
+    #[arg(short, long, default_value = "{title}.mp4")]
     output: String,
 
     #[arg(help = "Video resolution")]
@@ -85,17 +87,14 @@ pub struct Download {
 #[async_trait::async_trait(?Send)]
 impl Execute for Download {
     fn pre_check(&self) -> Result<()> {
-        if has_ffmpeg() {
-            debug!("FFmpeg detected")
-        } else if PathBuf::from(&self.output)
+        if !has_ffmpeg() {
+            bail!("FFmpeg is needed to run this command")
+        } else if Path::new(&self.output)
             .extension()
             .unwrap_or_default()
-            .to_string_lossy()
-            != "ts"
+            .is_empty()
         {
-            bail!("File extension is not '.ts'. If you want to use a custom file format, please install ffmpeg")
-        } else if !self.ffmpeg_preset.is_empty() {
-            bail!("FFmpeg is required to use (ffmpeg) presets")
+            bail!("No file extension found. Please specify a file extension (via `-o`) for the output file")
         }
 
         let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
@@ -245,23 +244,14 @@ impl Execute for Download {
                 tab_info!("Resolution: {}", format.stream.resolution);
                 tab_info!("FPS: {:.2}", format.stream.fps);
 
-                let extension = path.extension().unwrap_or_default().to_string_lossy();
-
-                if (!extension.is_empty() && extension != "ts") || !self.ffmpeg_preset.is_empty() {
-                    download_ffmpeg(&ctx, &self, format.stream, path.as_path()).await?;
-                } else if path.to_str().unwrap() == "-" {
-                    let mut stdout = std::io::stdout().lock();
-                    download_segments(&ctx, &mut stdout, None, format.stream).await?;
-                } else {
-                    // create parent directory if it does not exist
-                    if let Some(parent) = path.parent() {
-                        if !parent.exists() {
-                            std::fs::create_dir_all(parent)?
-                        }
-                    }
-                    let mut file = File::options().create(true).write(true).open(&path)?;
-                    download_segments(&ctx, &mut file, None, format.stream).await?
-                }
+                download_ffmpeg(
+                    &ctx,
+                    &self,
+                    format.stream,
+                    format.subtitles.get(0).cloned(),
+                    path.as_path(),
+                )
+                .await?;
             }
         }
 
@@ -273,9 +263,10 @@ async fn download_ffmpeg(
     ctx: &Context,
     download: &Download,
     variant_data: VariantData,
+    subtitle: Option<StreamSubtitle>,
     target: &Path,
 ) -> Result<()> {
-    let (input_presets, output_presets) =
+    let (input_presets, mut output_presets) =
         FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
 
     // create parent directory if it does not exist
@@ -285,31 +276,65 @@ async fn download_ffmpeg(
         }
     }
 
+    if let Some(ext) = target.extension() {
+        if ext.to_string_lossy() != "mp4" && subtitle.is_some() {
+            warn!("Detected a non mp4 output container. Adding subtitles may take a while")
+        }
+    }
+
+    let mut video_file = tempfile(".ts")?;
+    download_segments(ctx, &mut video_file, None, variant_data).await?;
+    let subtitle_file = if let Some(ref sub) = subtitle {
+        let video_len = get_video_length(video_file.path().to_path_buf())?;
+        Some(download_subtitle(sub.clone(), video_len).await?)
+    } else {
+        None
+    };
+
+    let subtitle_preset = if let Some(sub_file) = &subtitle_file {
+        if target.extension().unwrap_or_default().to_string_lossy() == "mp4" {
+            vec![
+                "-i".to_string(),
+                sub_file.to_string_lossy().to_string(),
+                "-c:s".to_string(),
+                "mov_text".to_string(),
+                "-disposition:s:s:0".to_string(),
+                "forced".to_string(),
+            ]
+        } else {
+            // remove '-c:v copy' and '-c:a copy' from output presets as its causes issues with
+            // burning subs into the video
+            let mut last = String::new();
+            let mut remove_count = 0;
+            for (i, s) in output_presets.clone().iter().enumerate() {
+                if (last == "-c:v" || last == "-c:a") && s == "copy" {
+                    // remove last
+                    output_presets.remove(i - remove_count - 1);
+                    remove_count += 1;
+                    output_presets.remove(i - remove_count);
+                    remove_count += 1;
+                }
+                last = s.clone();
+            }
+
+            vec![
+                "-vf".to_string(),
+                format!("subtitles={}", sub_file.to_string_lossy()),
+            ]
+        }
+    } else {
+        vec![]
+    };
+
     let mut ffmpeg = Command::new("ffmpeg")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .arg("-y")
         .args(input_presets)
-        .args(["-f", "mpegts", "-i", "pipe:"])
-        .args(
-            if target
-                .extension()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .is_empty()
-            {
-                vec!["-f", "mpegts"]
-            } else {
-                vec![]
-            }
-            .as_slice(),
-        )
+        .args(["-i", video_file.path().to_string_lossy().as_ref()])
+        .args(subtitle_preset)
         .args(output_presets)
         .arg(target.to_str().unwrap())
         .spawn()?;
-
-    download_segments(ctx, &mut ffmpeg.stdin.take().unwrap(), None, variant_data).await?;
 
     let _progress_handler = progress!("Generating output file");
     ffmpeg.wait()?;
@@ -431,8 +456,11 @@ async fn format_from_episode(
     }
 
     let streams = episode.streams().await?;
-    let streaming_data = if let Some(subtitle) = &download.subtitle {
-        if !streams.subtitles.keys().cloned().any(|x| &x == subtitle) {
+    let streaming_data = streams.hls_streaming_data(None).await?;
+    let subtitle = if let Some(subtitle) = &download.subtitle {
+        if let Some(sub) = streams.subtitles.get(subtitle) {
+            Some(sub.clone())
+        } else {
             error!(
                 "Episode {} ({}) of season {} ({}) of {} has no {} subtitles",
                 episode.metadata.episode_number,
@@ -444,9 +472,8 @@ async fn format_from_episode(
             );
             return Ok(None);
         }
-        streams.hls_streaming_data(Some(subtitle.clone())).await?
     } else {
-        streams.hls_streaming_data(None).await?
+        None
     };
 
     let Some(stream) = find_resolution(streaming_data, &download.resolution) else {
@@ -476,6 +503,7 @@ async fn format_from_episode(
         episode,
         &season_eps.to_vec(),
         stream,
+        subtitle.map_or_else(|| vec![], |s| vec![s]),
     )))
 }
 

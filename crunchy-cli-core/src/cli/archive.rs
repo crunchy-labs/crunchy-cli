@@ -366,12 +366,12 @@ async fn formats_from_series(
             .into_iter()
             .filter(|l| !season.iter().any(|s| s.metadata.audio_locales.contains(l)))
             .collect::<Vec<Locale>>();
-        for not_present in not_present_audio {
+        if !not_present_audio.is_empty() {
             error!(
                 "Season {} of series {} is not available with {} audio",
                 season.first().unwrap().metadata.season_number,
                 series.title,
-                not_present
+                not_present_audio.into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")
             )
         }
 

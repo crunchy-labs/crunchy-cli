@@ -213,15 +213,7 @@ impl Execute for Download {
             }
 
             for format in formats {
-                let formatted_path = format.format_path(
-                    if self.output.is_empty() {
-                        "{title}.mkv"
-                    } else {
-                        &self.output
-                    }
-                    .into(),
-                    true,
-                );
+                let formatted_path = format.format_path((&self.output).into(), true);
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

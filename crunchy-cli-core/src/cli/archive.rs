@@ -246,15 +246,7 @@ impl Execute for Archive {
             for (formats, mut subtitles) in archive_formats {
                 let (primary, additionally) = formats.split_first().unwrap();
 
-                let formatted_path = primary.format_path(
-                    if self.output.is_empty() {
-                        "{title}.mkv"
-                    } else {
-                        &self.output
-                    }
-                    .into(),
-                    true,
-                );
+                let formatted_path = primary.format_path((&self.output).into(), true);
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

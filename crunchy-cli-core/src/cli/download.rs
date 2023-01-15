@@ -1,7 +1,7 @@
 use crate::cli::log::tab_info;
 use crate::cli::utils::{
-    download_segments, find_multiple_seasons_with_same_number, find_resolution,
-    interactive_season_choosing, FFmpegPreset,
+    download_segments, find_multiple_seasons_with_same_number,
+    find_resolution, interactive_season_choosing, FFmpegPreset,
 };
 use crate::utils::context::Context;
 use crate::utils::format::Format;
@@ -84,7 +84,7 @@ pub struct Download {
 
 #[async_trait::async_trait(?Send)]
 impl Execute for Download {
-    fn pre_check(&self) -> Result<()> {
+    fn pre_check(&mut self) -> Result<()> {
         if has_ffmpeg() {
             debug!("FFmpeg detected")
         } else if PathBuf::from(&self.output)

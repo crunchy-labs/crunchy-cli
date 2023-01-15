@@ -1,7 +1,7 @@
 use crate::utils::context::Context;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, VariantData, VariantSegment};
-use crunchyroll_rs::{Media, Season};
+use crunchyroll_rs::{Locale, Media, Season};
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 use lazy_static::lazy_static;
 use log::{debug, LevelFilter};
@@ -367,6 +367,20 @@ pub(crate) fn find_multiple_seasons_with_same_number(seasons: &Vec<Media<Season>
             None
         })
         .collect()
+}
+
+/// Check if [`Locale::Custom("all")`] is in the provided locale list and return [`Locale::all`] if
+/// so. If not, just return the provided locale list.
+pub(crate) fn all_locale_in_locales(locales: Vec<Locale>) -> Vec<Locale> {
+    if locales
+        .iter()
+        .find(|l| l.to_string().to_lowercase().trim() == "all")
+        .is_some()
+    {
+        Locale::all()
+    } else {
+        locales
+    }
 }
 
 pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Media<Season>> {

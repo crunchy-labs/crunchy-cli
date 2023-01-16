@@ -1,4 +1,4 @@
-use crunchyroll_rs::media::VariantData;
+use crunchyroll_rs::media::{StreamSubtitle, VariantData};
 use crunchyroll_rs::{Episode, Locale, Media, Movie};
 use log::warn;
 use std::path::PathBuf;
@@ -10,6 +10,7 @@ pub struct Format {
     pub description: String,
 
     pub audio: Locale,
+    pub subtitles: Vec<StreamSubtitle>,
 
     pub duration: Duration,
     pub stream: VariantData,
@@ -31,12 +32,14 @@ impl Format {
         episode: &Media<Episode>,
         season_episodes: &Vec<Media<Episode>>,
         stream: VariantData,
+        subtitles: Vec<StreamSubtitle>,
     ) -> Self {
         Self {
             title: episode.title.clone(),
             description: episode.description.clone(),
 
             audio: episode.metadata.audio_locale.clone(),
+            subtitles,
 
             duration: episode.metadata.duration.to_std().unwrap(),
             stream,
@@ -78,6 +81,7 @@ impl Format {
 
             duration: movie.metadata.duration.to_std().unwrap(),
             stream,
+            subtitles: vec![],
 
             series_id: movie.metadata.movie_listing_id.clone(),
             series_name: movie.metadata.movie_listing_title.clone(),

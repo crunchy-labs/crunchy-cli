@@ -36,10 +36,10 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
 }
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.
-pub fn free_file(mut path: PathBuf) -> PathBuf {
+pub fn free_file(mut path: PathBuf) -> (PathBuf, bool) {
     // if it's a special file does not rename it
     if is_special_file(&path) {
-        return path;
+        return (path, false);
     }
 
     let mut i = 0;
@@ -55,7 +55,7 @@ pub fn free_file(mut path: PathBuf) -> PathBuf {
 
         path.set_file_name(format!("{} ({}).{}", filename, i, ext))
     }
-    path
+    (path, i != 0)
 }
 
 /// Check if the given path is a special file. On Linux this is probably a pipe and on Windows

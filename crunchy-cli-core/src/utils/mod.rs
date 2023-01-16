@@ -7,3 +7,4 @@ pub mod os;
 pub mod parse;
 pub mod sort;
 pub mod subtitle;
+pub mod video;

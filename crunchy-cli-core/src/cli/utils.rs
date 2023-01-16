@@ -290,38 +290,32 @@ impl FFmpegPreset {
                     FFmpegPreset::Av1 => bail!("'nvidia' hardware acceleration preset is not available in combination with the 'av1' codec preset"),
                     FFmpegPreset::H265 => {
                         input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "hevc_nvenc"]);
+                        output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"]);
                     }
                     FFmpegPreset::H264 => {
                         input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "h264_nvenc"]);
+                        output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"]);
                     }
                     _ => ()
                 }
             } else {
                 match preset {
                     FFmpegPreset::Av1 => {
-                        output.extend(["-c:v", "libaom-av1"]);
+                        output.extend(["-c:v", "libaom-av1", "-c:a", "copy"]);
                     }
                     FFmpegPreset::H265 => {
-                        output.extend(["-c:v", "libx265"]);
+                        output.extend(["-c:v", "libx265", "-c:a", "copy"]);
                     }
                     FFmpegPreset::H264 => {
-                        output.extend(["-c:v", "libx264"]);
+                        output.extend(["-c:v", "libx264", "-c:a", "copy"]);
                     }
                     _ => (),
                 }
             }
         }
 
-        if input.is_empty() && output.is_empty() {
-            output.extend(["-c", "copy"])
-        } else {
-            if output.is_empty() {
-                output.extend(["-c", "copy"])
-            } else {
-                output.extend(["-c:a", "copy", "-c:s", "copy"])
-            }
+        if output.is_empty() {
+            output.extend(["-c:v", "copy", "-c:a", "copy"])
         }
 
         Ok((

@@ -112,6 +112,10 @@ pub struct Archive {
     #[arg(long)]
     default_subtitle: Option<Locale>,
 
+    #[arg(help = "Skip files which are already existing")]
+    #[arg(long, default_value_t = false)]
+    skip_existing: bool,
+
     #[arg(help = "Ignore interactive input")]
     #[arg(short, long, default_value_t = false)]
     yes: bool,
@@ -232,17 +236,16 @@ impl Execute for Archive {
             for (formats, mut subtitles) in archive_formats {
                 let (primary, additionally) = formats.split_first().unwrap();
 
-                let path = free_file(
-                    primary.format_path(
-                        if self.output.is_empty() {
-                            "{title}.mkv"
-                        } else {
-                            &self.output
-                        }
-                        .into(),
-                        true,
-                    ),
-                );
+                let formatted_path = primary.format_path((&self.output).into(), true);
+                let (path, changed) = free_file(formatted_path.clone());
+
+                if changed && self.skip_existing {
+                    debug!(
+                        "Skipping already existing file '{}'",
+                        formatted_path.to_string_lossy()
+                    );
+                    continue;
+                }
 
                 info!(
                     "Downloading {} to '{}'",

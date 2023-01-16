@@ -1,7 +1,7 @@
 use crate::cli::log::tab_info;
 use crate::cli::utils::{
-    download_segments, find_multiple_seasons_with_same_number, find_resolution,
-    interactive_season_choosing, FFmpegPreset,
+    all_locale_in_locales, download_segments, find_multiple_seasons_with_same_number,
+    find_resolution, interactive_season_choosing, FFmpegPreset,
 };
 use crate::utils::context::Context;
 use crate::utils::format::Format;
@@ -126,7 +126,7 @@ pub struct Archive {
 
 #[async_trait::async_trait(?Send)]
 impl Execute for Archive {
-    fn pre_check(&self) -> Result<()> {
+    fn pre_check(&mut self) -> Result<()> {
         if !has_ffmpeg() {
             bail!("FFmpeg is needed to run this command")
         } else if PathBuf::from(&self.output)
@@ -144,6 +144,9 @@ impl Execute for Archive {
         {
             warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }
+
+        self.locale = all_locale_in_locales(self.locale.clone());
+        self.subtitle = all_locale_in_locales(self.subtitle.clone());
 
         Ok(())
     }
@@ -352,12 +355,12 @@ async fn formats_from_series(
             .into_iter()
             .filter(|l| !season.iter().any(|s| s.metadata.audio_locales.contains(l)))
             .collect::<Vec<Locale>>();
-        for not_present in not_present_audio {
+        if !not_present_audio.is_empty() {
             error!(
                 "Season {} of series {} is not available with {} audio",
                 season.first().unwrap().metadata.season_number,
                 series.title,
-                not_present
+                not_present_audio.into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")
             )
         }
 

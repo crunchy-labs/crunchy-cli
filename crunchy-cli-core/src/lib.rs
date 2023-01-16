@@ -16,10 +16,10 @@ pub use cli::{archive::Archive, download::Download, login::Login};
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
-    fn pre_check(&self) -> Result<()> {
+    fn pre_check(&mut self) -> Result<()> {
         Ok(())
     }
-    async fn execute(self, ctx: Context) -> Result<()>;
+    async fn execute(mut self, ctx: Context) -> Result<()>;
 }
 
 #[derive(Debug, Parser)]
@@ -171,7 +171,7 @@ pub async fn cli_entrypoint() {
 
 /// Cannot be done in the main function. I wanted to return `dyn` [`Execute`] from the match but had to
 /// box it which then conflicts with [`Execute::execute`] which consumes `self`
-async fn execute_executor(executor: impl Execute, ctx: Context) {
+async fn execute_executor(mut executor: impl Execute, ctx: Context) {
     if let Err(err) = executor.pre_check() {
         error!("Misconfigurations detected: {}", err);
         std::process::exit(1)

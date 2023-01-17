@@ -301,7 +301,7 @@ impl FFmpegPreset {
             } else {
                 match preset {
                     FFmpegPreset::Av1 => {
-                        output.extend(["-c:v", "libaom-av1", "-c:a", "copy"]);
+                        output.extend(["-c:v", "libsvtav1", "-c:a", "copy"]);
                     }
                     FFmpegPreset::H265 => {
                         output.extend(["-c:v", "libx265", "-c:a", "copy"]);

@@ -298,10 +298,11 @@ impl Execute for Archive {
 
                 video_paths.push((download_video(&ctx, primary, false).await?, primary));
                 for additional in additionally {
+                    let identical_video = additionally
+                        .iter()
+                        .all(|a| a.stream.bandwidth == primary.stream.bandwidth);
                     let only_audio = match self.merge {
-                        MergeBehavior::Auto => additionally
-                            .iter()
-                            .all(|a| a.stream.bandwidth == primary.stream.bandwidth),
+                        MergeBehavior::Auto => identical_video,
                         MergeBehavior::Audio => true,
                         MergeBehavior::Video => false,
                     };
@@ -312,8 +313,8 @@ impl Execute for Archive {
                         video_paths.push((path, additional))
                     }
 
-                    // Remove subtitles of deleted video
-                    if only_audio {
+                    // Remove subtitles of forcibly deleted video
+                    if matches!(self.merge, MergeBehavior::Audio) && !identical_video {
                         subtitles.retain(|s| s.episode_id != additional.episode_id);
                     }
                 }

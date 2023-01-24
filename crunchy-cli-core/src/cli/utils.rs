@@ -8,7 +8,9 @@ use log::{debug, LevelFilter};
 use regex::Regex;
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::BTreeMap;
+use std::env;
 use std::io::{BufRead, Write};
+use std::str::FromStr;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 use tokio::task::JoinSet;
@@ -210,118 +212,335 @@ pub async fn download_segments(
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FFmpegPreset {
-    Nvidia,
-
-    Av1,
-    H265,
-    H264,
+    Predefined(FFmpegCodec, Option<FFmpegHwAccel>, FFmpegQuality),
+    Custom(Option<String>, Option<String>),
 }
 
-impl ToString for FFmpegPreset {
-    fn to_string(&self) -> String {
-        match self {
-            &FFmpegPreset::Nvidia => "nvidia",
-            &FFmpegPreset::Av1 => "av1",
-            &FFmpegPreset::H265 => "h265",
-            &FFmpegPreset::H264 => "h264",
+lazy_static! {
+    static ref PREDEFINED_PRESET: Regex = Regex::new(r"^\w+(-\w+)*?$").unwrap();
+}
+
+macro_rules! FFmpegEnum {
+    (enum $name:ident { $($field:ident),* }) => {
+        #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+        pub enum $name {
+            $(
+                $field
+            ),*,
         }
-        .to_string()
+
+        impl $name {
+            fn all() -> Vec<$name> {
+                vec![
+                    $(
+                        $name::$field
+                    ),*,
+                ]
+            }
+        }
+
+        impl ToString for $name {
+            fn to_string(&self) -> String {
+                match self {
+                    $(
+                        &$name::$field => stringify!($field).to_string().to_lowercase()
+                    ),*
+                }
+            }
+        }
+
+        impl FromStr for $name {
+            type Err = anyhow::Error;
+
+            fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+                match s {
+                    $(
+                        stringify!($field) => Ok($name::$field)
+                    ),*,
+                    _ => bail!("{} is not a valid {}", s, stringify!($name).to_lowercase())
+                }
+            }
+        }
+    }
+}
+
+FFmpegEnum! {
+    enum FFmpegCodec {
+        H264,
+        H265,
+        Av1
+    }
+}
+
+FFmpegEnum! {
+    enum FFmpegHwAccel {
+        Nvidia
+    }
+}
+
+FFmpegEnum! {
+    enum FFmpegQuality {
+        Lossless,
+        Normal,
+        Low
     }
 }
 
 impl FFmpegPreset {
-    pub(crate) fn all() -> Vec<FFmpegPreset> {
-        vec![
-            FFmpegPreset::Nvidia,
-            FFmpegPreset::Av1,
-            FFmpegPreset::H265,
-            FFmpegPreset::H264,
-        ]
+    pub(crate) fn available_matches(
+    ) -> Vec<(FFmpegCodec, Option<FFmpegHwAccel>, Option<FFmpegQuality>)> {
+        let codecs = vec![
+            (
+                FFmpegCodec::H264,
+                FFmpegHwAccel::all(),
+                FFmpegQuality::all(),
+            ),
+            (
+                FFmpegCodec::H265,
+                FFmpegHwAccel::all(),
+                FFmpegQuality::all(),
+            ),
+            (FFmpegCodec::Av1, vec![], FFmpegQuality::all()),
+        ];
+
+        let mut return_values = vec![];
+
+        for (codec, hwaccels, qualities) in codecs {
+            return_values.push((codec.clone(), None, None));
+            for hwaccel in hwaccels.clone() {
+                return_values.push((codec.clone(), Some(hwaccel), None));
+            }
+            for quality in qualities.clone() {
+                return_values.push((codec.clone(), None, Some(quality)))
+            }
+            for hwaccel in hwaccels {
+                for quality in qualities.clone() {
+                    return_values.push((codec.clone(), Some(hwaccel.clone()), Some(quality)))
+                }
+            }
+        }
+
+        return_values
     }
 
-    pub(crate) fn description(self) -> String {
-        match self {
-            FFmpegPreset::Nvidia => "If you're have a nvidia card, use hardware / gpu accelerated video processing if available",
-            FFmpegPreset::Av1 => "Encode the video(s) with the av1 codec. Hardware acceleration is currently not possible with this",
-            FFmpegPreset::H265 => "Encode the video(s) with the h265 codec",
-            FFmpegPreset::H264 => "Encode the video(s) with the h264 codec"
-        }.to_string()
+    pub(crate) fn available_matches_human_readable() -> Vec<String> {
+        let mut return_values = vec![];
+
+        for (codec, hwaccel, quality) in FFmpegPreset::available_matches() {
+            let mut description_details = vec![];
+            if let Some(h) = &hwaccel {
+                description_details.push(format!("{} hardware acceleration", h.to_string()))
+            }
+            if let Some(q) = &quality {
+                description_details.push(format!("{} video quality/compression", q.to_string()))
+            }
+
+            let description = if description_details.len() == 0 {
+                format!(
+                    "{} encoded with default video quality/compression",
+                    codec.to_string()
+                )
+            } else if description_details.len() == 1 {
+                format!(
+                    "{} encoded with {}",
+                    codec.to_string(),
+                    description_details[0]
+                )
+            } else {
+                let first = description_details.remove(0);
+                let last = description_details.remove(description_details.len() - 1);
+                let mid = if !description_details.is_empty() {
+                    format!(", {} ", description_details.join(", "))
+                } else {
+                    "".to_string()
+                };
+
+                format!(
+                    "{} encoded with {}{} and {}",
+                    codec.to_string(),
+                    first,
+                    mid,
+                    last
+                )
+            };
+
+            return_values.push(format!(
+                "{} ({})",
+                vec![
+                    Some(codec.to_string()),
+                    hwaccel.map(|h| h.to_string()),
+                    quality.map(|q| q.to_string())
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<String>>()
+                .join("-"),
+                description
+            ))
+        }
+        return_values
     }
 
     pub(crate) fn parse(s: &str) -> Result<FFmpegPreset, String> {
-        Ok(match s.to_lowercase().as_str() {
-            "nvidia" => FFmpegPreset::Nvidia,
-            "av1" => FFmpegPreset::Av1,
-            "h265" | "h.265" | "hevc" => FFmpegPreset::H265,
-            "h264" | "h.264" => FFmpegPreset::H264,
-            _ => return Err(format!("'{}' is not a valid ffmpeg preset", s)),
-        })
+        let env_ffmpeg_input_args = env::var("FFMPEG_INPUT_ARGS").ok();
+        let env_ffmpeg_output_args = env::var("FFMPEG_OUTPUT_ARGS").ok();
+
+        if env_ffmpeg_input_args.is_some() || env_ffmpeg_output_args.is_some() {
+            if let Some(input) = &env_ffmpeg_input_args {
+                if shlex::split(input).is_none() {
+                    return Err(format!("Failed to parse custom ffmpeg input '{}' (`FFMPEG_INPUT_ARGS` env variable)", input));
+                }
+            }
+            if let Some(output) = &env_ffmpeg_output_args {
+                if shlex::split(output).is_none() {
+                    return Err(format!("Failed to parse custom ffmpeg output '{}' (`FFMPEG_INPUT_ARGS` env variable)", output));
+                }
+            }
+
+            return Ok(FFmpegPreset::Custom(
+                env_ffmpeg_input_args,
+                env_ffmpeg_output_args,
+            ));
+        } else if !PREDEFINED_PRESET.is_match(s) {
+            return Ok(FFmpegPreset::Custom(None, Some(s.to_string())));
+        }
+
+        let mut codec: Option<FFmpegCodec> = None;
+        let mut hwaccel: Option<FFmpegHwAccel> = None;
+        let mut quality: Option<FFmpegQuality> = None;
+        for token in s.split('-') {
+            if let Some(c) = FFmpegCodec::all()
+                .into_iter()
+                .find(|p| p.to_string() == token.to_lowercase())
+            {
+                if let Some(cc) = codec {
+                    return Err(format!(
+                        "cannot use multiple codecs (found {} and {})",
+                        cc.to_string(),
+                        c.to_string()
+                    ));
+                }
+                codec = Some(c)
+            } else if let Some(h) = FFmpegHwAccel::all()
+                .into_iter()
+                .find(|p| p.to_string() == token.to_lowercase())
+            {
+                if let Some(hh) = hwaccel {
+                    return Err(format!(
+                        "cannot use multiple hardware accelerations (found {} and {})",
+                        hh.to_string(),
+                        h.to_string()
+                    ));
+                }
+                hwaccel = Some(h)
+            } else if let Some(q) = FFmpegQuality::all()
+                .into_iter()
+                .find(|p| p.to_string() == token.to_lowercase())
+            {
+                if let Some(qq) = quality {
+                    return Err(format!(
+                        "cannot use multiple ffmpeg preset qualities (found {} and {})",
+                        qq.to_string(),
+                        q.to_string()
+                    ));
+                }
+                quality = Some(q)
+            } else {
+                return Err(format!(
+                    "'{}' is not a valid ffmpeg preset (unknown token '{}'",
+                    s, token
+                ));
+            }
+        }
+
+        if let Some(c) = codec {
+            if !FFmpegPreset::available_matches().contains(&(
+                c.clone(),
+                hwaccel.clone(),
+                quality.clone(),
+            )) {
+                return Err(format!("ffmpeg preset is not supported"));
+            }
+            Ok(FFmpegPreset::Predefined(
+                c,
+                hwaccel,
+                quality.unwrap_or(FFmpegQuality::Normal),
+            ))
+        } else {
+            Err(format!("cannot use ffmpeg preset with without a codec"))
+        }
     }
 
-    pub(crate) fn ffmpeg_presets(
-        mut presets: Vec<FFmpegPreset>,
-    ) -> Result<(Vec<String>, Vec<String>)> {
-        fn preset_check_remove(presets: &mut Vec<FFmpegPreset>, preset: FFmpegPreset) -> bool {
-            if let Some(i) = presets.iter().position(|p| p == &preset) {
-                presets.remove(i);
-                true
-            } else {
-                false
-            }
-        }
+    pub(crate) fn to_input_output_args(self) -> (Vec<String>, Vec<String>) {
+        match self {
+            FFmpegPreset::Custom(input, output) => (
+                input.map_or(vec![], |i| shlex::split(&i).unwrap_or_default()),
+                output.map_or(vec![], |o| shlex::split(&o).unwrap_or_default()),
+            ),
+            FFmpegPreset::Predefined(codec, hwaccel_opt, quality) => {
+                let mut input = vec![];
+                let mut output = vec![];
 
-        let nvidia = preset_check_remove(&mut presets, FFmpegPreset::Nvidia);
-        if presets.len() > 1 {
-            bail!(
-                "Can only use one video codec, {} found: {}",
-                presets.len(),
-                presets
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        }
+                match codec {
+                    FFmpegCodec::H264 => {
+                        if let Some(hwaccel) = hwaccel_opt {
+                            match hwaccel {
+                                FFmpegHwAccel::Nvidia => {
+                                    input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                                    output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
+                                }
+                            }
+                        } else {
+                            output.extend(["-c:v", "libx264", "-c:a", "copy"])
+                        }
 
-        let (mut input, mut output) = (vec![], vec![]);
-        for preset in presets {
-            if nvidia {
-                match preset {
-                    FFmpegPreset::Av1 => bail!("'nvidia' hardware acceleration preset is not available in combination with the 'av1' codec preset"),
-                    FFmpegPreset::H265 => {
-                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"]);
+                        match quality {
+                            FFmpegQuality::Lossless => output.extend(["-crf", "18"]),
+                            FFmpegQuality::Normal => (),
+                            FFmpegQuality::Low => output.extend(["-crf", "35"]),
+                        }
                     }
-                    FFmpegPreset::H264 => {
-                        input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
-                        output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"]);
+                    FFmpegCodec::H265 => {
+                        if let Some(hwaccel) = hwaccel_opt {
+                            match hwaccel {
+                                FFmpegHwAccel::Nvidia => {
+                                    input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                                    output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"])
+                                }
+                            }
+                        } else {
+                            output.extend(["-c:v", "libx265", "-c:a", "copy"])
+                        }
+
+                        match quality {
+                            FFmpegQuality::Lossless => output.extend(["-crf", "20"]),
+                            FFmpegQuality::Normal => (),
+                            FFmpegQuality::Low => output.extend(["-crf", "35"]),
+                        }
                     }
-                    _ => ()
-                }
-            } else {
-                match preset {
-                    FFmpegPreset::Av1 => {
+                    FFmpegCodec::Av1 => {
                         output.extend(["-c:v", "libsvtav1", "-c:a", "copy"]);
+
+                        match quality {
+                            FFmpegQuality::Lossless => output.extend(["-crf", "22"]),
+                            FFmpegQuality::Normal => (),
+                            FFmpegQuality::Low => output.extend(["-crf", "35"]),
+                        }
                     }
-                    FFmpegPreset::H265 => {
-                        output.extend(["-c:v", "libx265", "-c:a", "copy"]);
-                    }
-                    FFmpegPreset::H264 => {
-                        output.extend(["-c:v", "libx264", "-c:a", "copy"]);
-                    }
-                    _ => (),
                 }
+
+                (
+                    input
+                        .into_iter()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>(),
+                    output
+                        .into_iter()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>(),
+                )
             }
         }
-
-        if output.is_empty() {
-            output.extend(["-c:v", "copy", "-c:a", "copy"])
-        }
-
-        Ok((
-            input.into_iter().map(|i| i.to_string()).collect(),
-            output.into_iter().map(|o| o.to_string()).collect(),
-        ))
     }
 }
 

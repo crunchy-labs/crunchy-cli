@@ -1,7 +1,7 @@
 use crate::cli::log::tab_info;
 use crate::cli::utils::{
-    download_segments, find_multiple_seasons_with_same_number,
-    find_resolution, interactive_season_choosing, FFmpegPreset,
+    download_segments, find_multiple_seasons_with_same_number, find_resolution,
+    interactive_season_choosing, FFmpegPreset,
 };
 use crate::utils::context::Context;
 use crate::utils::format::Format;
@@ -66,14 +66,14 @@ pub struct Download {
     resolution: Resolution,
 
     #[arg(help = format!("Presets for video converting. Can be used multiple times. \
-    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
     #[arg(long_help = format!("Presets for video converting. Can be used multiple times. \
     Generally used to minify the file size with keeping (nearly) the same quality. \
     It is recommended to only use this if you download videos with high resolutions since low resolution videos tend to result in a larger file with any of the provided presets. \
-    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
     #[arg(long)]
     #[arg(value_parser = FFmpegPreset::parse)]
-    ffmpeg_preset: Vec<FFmpegPreset>,
+    ffmpeg_preset: Option<FFmpegPreset>,
 
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
@@ -107,13 +107,6 @@ impl Execute for Download {
                     warn!("Detected a non mp4 output container. Adding subtitles may take a while")
                 }
             }
-        }
-
-        let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
-        if self.ffmpeg_preset.len() == 1
-            && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia
-        {
-            warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }
 
         Ok(())
@@ -277,8 +270,19 @@ async fn download_ffmpeg(
     subtitle: Option<StreamSubtitle>,
     mut target: PathBuf,
 ) -> Result<()> {
-    let (input_presets, mut output_presets) =
-        FFmpegPreset::ffmpeg_presets(download.ffmpeg_preset.clone())?;
+    let (input_presets, mut output_presets) = if let Some(preset) = download.ffmpeg_preset.clone() {
+        preset.to_input_output_args()
+    } else {
+        (
+            vec![],
+            vec![
+                "-c:v".to_string(),
+                "copy".to_string(),
+                "-c:a".to_string(),
+                "copy".to_string(),
+            ],
+        )
+    };
 
     // create parent directory if it does not exist
     if let Some(parent) = target.parent() {

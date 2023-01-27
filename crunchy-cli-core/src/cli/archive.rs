@@ -15,7 +15,7 @@ use crate::Execute;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::Resolution;
 use crunchyroll_rs::{Locale, Media, MediaCollection, Series};
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -97,14 +97,14 @@ pub struct Archive {
     merge: MergeBehavior,
 
     #[arg(help = format!("Presets for video converting. Can be used multiple times. \
-    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
     #[arg(long_help = format!("Presets for video converting. Can be used multiple times. \
     Generally used to minify the file size with keeping (nearly) the same quality. \
     It is recommended to only use this if you archive videos with high resolutions since low resolution videos tend to result in a larger file with any of the provided presets. \
-    Available presets: \n  {}", FFmpegPreset::all().into_iter().map(|p| format!("{}: {}", p.to_string(), p.description())).collect::<Vec<String>>().join("\n  ")))]
+    Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
     #[arg(long)]
     #[arg(value_parser = FFmpegPreset::parse)]
-    ffmpeg_preset: Vec<FFmpegPreset>,
+    ffmpeg_preset: Option<FFmpegPreset>,
 
     #[arg(
         help = "Set which subtitle language should be set as default / auto shown when starting a video"
@@ -137,12 +137,6 @@ impl Execute for Archive {
             && !is_special_file(PathBuf::from(&self.output))
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
-        }
-        let _ = FFmpegPreset::ffmpeg_presets(self.ffmpeg_preset.clone())?;
-        if self.ffmpeg_preset.len() == 1
-            && self.ffmpeg_preset.get(0).unwrap() == &FFmpegPreset::Nvidia
-        {
-            warn!("Skipping 'nvidia' hardware acceleration preset since no other codec preset was specified")
         }
 
         self.locale = all_locale_in_locales(self.locale.clone());
@@ -361,7 +355,11 @@ async fn formats_from_series(
                 "Season {} of series {} is not available with {} audio",
                 season.first().unwrap().metadata.season_number,
                 series.title,
-                not_present_audio.into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")
+                not_present_audio
+                    .into_iter()
+                    .map(|l| l.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
             )
         }
 
@@ -546,8 +544,19 @@ fn generate_mkv(
         }
     }
 
-    let (input_presets, output_presets) =
-        FFmpegPreset::ffmpeg_presets(archive.ffmpeg_preset.clone())?;
+    let (input_presets, output_presets) = if let Some(preset) = archive.ffmpeg_preset.clone() {
+        preset.to_input_output_args()
+    } else {
+        (
+            vec![],
+            vec![
+                "-c:v".to_string(),
+                "copy".to_string(),
+                "-c:a".to_string(),
+                "copy".to_string(),
+            ],
+        )
+    };
 
     let mut command_args = vec!["-y".to_string()];
     command_args.extend(input_presets);

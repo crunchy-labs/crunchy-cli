@@ -25,7 +25,7 @@ shlex = "1.1"
 signal-hook = "0.3"
 tempfile = "3.3"
 terminal_size = "0.2"
-tokio = { version = "1.24", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.25", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.2"
 
 [build-dependencies]

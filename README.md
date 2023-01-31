@@ -61,6 +61,25 @@ $ cargo build --release
 ```
 After the binary has built successfully it is available in `target/release`.
 
+### Final steps
+
+In order to make the binary globally accessible you will need to add it to `PATH` so it's recommended you move it to a general folder.
+
+
+Examples:
+
+- Linux/MacOS
+  - ```shell
+    mkdir ~/crunchy-cli
+    mv /path/to/repo/target/release/crunchy-cli ~/crunchy-cli/crunchy # OR
+    mv /path/to/downloaded/file/crunchy-cli(rest of filename here) ~/crunchy-cli/crunchy
+    export PATH=$PATH:~/crunchy-cli
+    ```
+    
+    For persistent usage you should add the above export to your `.shellrc`(.bashrc, .zshrc ,etc. file)
+- Windows
+  - Download the `.exe` file or build it yourself. Rename it to the way you will be calling it (ex: `crunchy.exe`) and move it into a folder where it's easily accessible. Afterwards follow a [guide](https://www.wikihow.com/Change-the-PATH-Environment-Variable-on-Windows) for adding that folder to the `PATH` variable. A restart of `CMD` or `powershell` might be required for the changes to take effect.
+
 ## 🖥️ Usage
 
 > All shown command are just examples

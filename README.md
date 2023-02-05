@@ -61,25 +61,6 @@ $ cargo build --release
 ```
 After the binary has built successfully it is available in `target/release`.
 
-### Final steps
-
-In order to make the binary globally accessible you will need to add it to `PATH` so it's recommended you move it to a general folder.
-
-
-Examples:
-
-- Linux/MacOS
-  - ```shell
-    mkdir ~/crunchy-cli
-    mv /path/to/repo/target/release/crunchy-cli ~/crunchy-cli/crunchy # OR
-    mv /path/to/downloaded/file/crunchy-cli(rest of filename here) ~/crunchy-cli/crunchy
-    export PATH=$PATH:~/crunchy-cli
-    ```
-    
-    For persistent usage you should add the above export to your `.shellrc`(.bashrc, .zshrc ,etc. file)
-- Windows
-  - Download the `.exe` file or build it yourself. Rename it to the way you will be calling it (ex: `crunchy.exe`) and move it into a folder where it's easily accessible. Afterwards follow a [guide](https://www.wikihow.com/Change-the-PATH-Environment-Variable-on-Windows) for adding that folder to the `PATH` variable. A restart of `CMD` or `powershell` might be required for the changes to take effect.
-
 ## 🖥️ Usage
 
 > All shown command are just examples
@@ -89,7 +70,7 @@ It doesn't matter if this account is premium or not, both works (but as free use
 You can pass your account via credentials (username & password) or refresh token.
 
 - Refresh Token
-  - To get the token you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie. 
+  - To get the token you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie.
     The easiest way to get it is via a browser extension with lets you view your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox Store](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/); [Chrome Store](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
     If installed, search the `etp_rt` entry and extract the value.
   - ```shell
@@ -126,18 +107,11 @@ This does not work if you've using this with `--anonymous`.
   ```shell
   $ crunchy download https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
-- Episode range
-  
-  If you want only specific episodes / seasons of an anime you can easily provide the series url along with a _filter_.
-  The filter has to be attached to the url. See the [wiki](https://github.com/crunchy-labs/crunchy-cli/wiki/Cli#filter) for more information
-  ```shell
-  $ crunchy download https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1]
-  ```
 - Series
   ```shell
   $ crunchy download https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  
+
 **Options**
 - Audio language
 
@@ -183,7 +157,7 @@ This does not work if you've using this with `--anonymous`.
   ```shell
   $ crunchy archive https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  
+
 **Options**
 - Audio languages
 
@@ -242,13 +216,38 @@ This does not work if you've using this with `--anonymous`.
 
 - No subtitle optimizations
 
-  Subtitles, as Crunchyroll delivers them, look weird in some video players (#66). 
+  Subtitles, as Crunchyroll delivers them, look weird in some video players (#66).
   This can be fixed by adding a specific entry to the subtitles.
   But since this entry is only a de-factor standard and not represented in the official specification of the subtitle format ([`.ass`](https://en.wikipedia.org/wiki/SubStation_Alpha)) it could cause issues with some video players (but no issue got reported so far, so it's relatively safe to use).
   `--no_subtitle_optimizations` can disable these optimizations.
   ```shell
   $ crunchy archive --no_subtitle_optimizations https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
+### Url Filtering
+
+If you want to download only specific episode of a series, you could either pass every single episode url to the downloader (which is fine for 1 - 3 episodes) or use _filtering_.
+
+It works pretty simple, just put a specific pattern surrounded by square brackets at the end of the url from the anime you want to download.
+A season and / or episode as well as a range from where to where episodes should be downloaded can be specified.
+Use the list below to get a better overview what is possible
+- `...[E5]` - Download the fifth episode.
+- `...[S1]` - Download the full first season.
+- `...[-S2]` - Download all seasons up to and including season 2.
+- `...[S3E4-]` - Download all episodes from and including season 3, episode 4.
+- `...[S1E4-S3]` - Download all episodes from and including season 1, episode 4, until and including season 3.
+- `...[S3,S5]` - Download episode 3 and 5.
+- `...[S1-S3,S4E2-S4E6]` - Download season 1 to 3 and episode 2 to episode 6 of season 4.
+
+In practice, it would look like this: `https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E5]`.
+
+The `S`, followed by the number indicates the _season_ number, `E`, followed by the number indicates an _episode_ number.
+It doesn't matter if `S`, `E` or both are missing.
+Note that `S` must always stay before `E` when used.
+
+There is also a regex available at [regex101.com](https://regex101.com/r/SDZyZM) where you can test if your pattern is correct.
+Just put in your pattern without square brackets into the big empty field and if the full pattern is highlighted this means it is valid.
+If none or only some parts are highlighted, it's not valid not.
 
 # ☝️ Disclaimer
 

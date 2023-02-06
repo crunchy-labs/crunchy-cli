@@ -414,7 +414,7 @@ async fn formats_from_series(
             let (ref mut formats, subtitles) = result
                 .entry(season.metadata.season_number)
                 .or_insert_with(BTreeMap::new)
-                .entry(episode.metadata.episode.clone())
+                .entry(episode.id.clone())
                 .or_insert_with(|| (vec![], vec![]));
             subtitles.extend(archive.subtitle.iter().filter_map(|l| {
                 let stream_subtitle = streams.subtitles.get(l).cloned()?;

@@ -383,7 +383,7 @@ async fn formats_from_series(
     }
 
     #[allow(clippy::type_complexity)]
-    let mut result: BTreeMap<u32, BTreeMap<String, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
+    let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
     let mut primary_season = true;
     for season in seasons {
         let episodes = season.episodes().await?;
@@ -414,7 +414,7 @@ async fn formats_from_series(
             let (ref mut formats, subtitles) = result
                 .entry(season.metadata.season_number)
                 .or_insert_with(BTreeMap::new)
-                .entry(episode.id.clone())
+                .entry((episode.metadata.sequence_number * 100.0) as u32)
                 .or_insert_with(|| (vec![], vec![]));
             subtitles.extend(archive.subtitle.iter().filter_map(|l| {
                 let stream_subtitle = streams.subtitles.get(l).cloned()?;

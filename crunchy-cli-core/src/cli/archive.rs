@@ -16,7 +16,6 @@ use anyhow::{bail, Result};
 use crunchyroll_rs::media::Resolution;
 use crunchyroll_rs::{Locale, Media, MediaCollection, Series};
 use log::{debug, error, info};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tempfile::TempPath;
@@ -383,7 +382,7 @@ async fn formats_from_series(
     }
 
     #[allow(clippy::type_complexity)]
-    let mut result: BTreeMap<u32, BTreeMap<u32, (Vec<Format>, Vec<Subtitle>)>> = BTreeMap::new();
+    let mut result: Vec<(Vec<Format>, Vec<Subtitle>)> = Vec::new();
     let mut primary_season = true;
     for season in seasons {
         let episodes = season.episodes().await?;
@@ -411,11 +410,8 @@ async fn formats_from_series(
                 )
             };
 
-            let (ref mut formats, subtitles) = result
-                .entry(season.metadata.season_number)
-                .or_insert_with(BTreeMap::new)
-                .entry(episode.metadata.episode_number)
-                .or_insert_with(|| (vec![], vec![]));
+            let mut formats: Vec<Format> = Vec::new();
+            let mut subtitles: Vec<Subtitle> = Vec::new();
             subtitles.extend(archive.subtitle.iter().filter_map(|l| {
                 let stream_subtitle = streams.subtitles.get(l).cloned()?;
                 let subtitle = Subtitle {
@@ -428,12 +424,14 @@ async fn formats_from_series(
                 Some(subtitle)
             }));
             formats.push(Format::new_from_episode(episode, &episodes, stream, vec![]));
+
+            result.push((formats, subtitles));
         }
 
         primary_season = false;
     }
 
-    Ok(result.into_values().flat_map(|v| v.into_values()).collect())
+    Ok(result)
 }
 
 async fn download_video(ctx: &Context, format: &Format, only_audio: bool) -> Result<TempPath> {

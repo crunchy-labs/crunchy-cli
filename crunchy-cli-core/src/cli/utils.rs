@@ -646,7 +646,7 @@ pub(crate) fn interactive_season_choosing(seasons: Vec<Media<Season>>) -> Vec<Me
         let mut nums = vec![];
         for capture in input_regex.captures_iter(&user_input) {
             if let Some(single) = capture.name("single") {
-                nums.push(single.as_str().parse().unwrap());
+                nums.push(single.as_str().parse::<usize>().unwrap() - 1);
             } else {
                 let range_from = capture.name("range_from");
                 let range_to = capture.name("range_to");

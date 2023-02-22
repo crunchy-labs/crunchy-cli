@@ -35,5 +35,5 @@ impl Execute for Login {
 }
 
 pub fn login_file_path() -> Option<PathBuf> {
-    dirs::config_dir().map(|config_dir| config_dir.join(".crunchy-cli-core"))
+    dirs::config_dir().map(|config_dir| config_dir.join("crunchy-labs").join("session"))
 }

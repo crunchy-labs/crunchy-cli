@@ -117,7 +117,7 @@ impl CliLogger {
             pb.set_style(
                 ProgressStyle::with_template(":: {spinner} {msg}")
                     .unwrap()
-                    .tick_strings(&["-", "\\", "|", "/", finish_str]),
+                    .tick_strings(&["—", "\\", "|", "/", finish_str]),
             );
             pb.enable_steady_tick(Duration::from_millis(200));
             pb.set_message(msg);

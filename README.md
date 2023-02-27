@@ -1,6 +1,6 @@
 # crunchy-cli
 
-A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https://www.crunchyroll.com).
+A pure [Rust](https://www.rust-lang.org/) CLI for [Crunchyroll](https://www.crunchyroll.com).
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">
@@ -26,13 +26,13 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
 <p align="center">
   <a href="#%EF%B8%8F-usage">Usage 🖥️</a>
   •
-  <a href="#%EF%B8%8F-disclaimer">Disclaimer ☝️</a>
+  <a href="#%EF%B8%8F-disclaimer">Disclaimer 📜</a>
   •
   <a href="#-license">License ⚖</a>
 </p>
 
 > We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
-> The official Crunchyroll website can be found at https://crunchyroll.com/.
+> The official Crunchyroll website can be found at [crunchyroll.com](https://crunchyroll.com/).
 
 > This README belongs to the _master_ branch which is currently under heavy development towards the next major version (3.0).
 > It is mostly stable but some issues may still occur.
@@ -41,14 +41,14 @@ A [Rust](https://www.rust-lang.org/) written cli client for [Crunchyroll](https:
 ## ✨ Features
 
 - Download single videos and entire series from [Crunchyroll](https://www.crunchyroll.com).
-- Archive episode or seasons in an `.mkv` file with multiple subtitles and audios.
-- Specify a range which episodes to download from an anime.
+- Archive episodes or seasons in an `.mkv` file with multiple subtitles and audios.
+- Specify a range of episodes to download from an anime.
 
 ## 💾 Get the executable
 
 ### 📥 Download the latest binaries
 
-Checkout the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the newest (pre-)release.
+Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the latest (pre-)release.
 
 ### 🛠 Build it yourself
 
@@ -58,47 +58,46 @@ This requires [git](https://git-scm.com/) and [Cargo](https://doc.rust-lang.org/
 $ git clone https://github.com/crunchy-labs/crunchy-cli
 $ cd crunchy-cli
 $ cargo build --release
+$ cargo install --force --path .
 ```
-After the binary has built successfully it is available in `target/release`.
+After the binary has been built successfully it is available in `target/release`.
 
 ## 🖥️ Usage
 
-> All shown command are just examples
+> All shown commands are examples 🧑🏼‍🍳
 
-Every command requires you to be logged in with an account.
-It doesn't matter if this account is premium or not, both works (but as free user you do not have access to premium content).
-You can pass your account via credentials (username & password) or refresh token.
+crunchy-cli requires you to log in.
+Though you can use a non-premium account, you will not have access to premium content without a subscription.
+You can authenticate with your credentials (username:password) or by using a refresh token.
 
-- Refresh Token
-  - To get the token you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie.
-    The easiest way to get it is via a browser extension with lets you view your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox Store](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/); [Chrome Store](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
-    If installed, search the `etp_rt` entry and extract the value.
-  - ```shell
-    $ crunchy --etp-rt "abcd1234-zyxw-9876-98zy-a1b2c3d4e5f6"
-    ```
 - Credentials
-  - Credentials must be provided as one single expression.
-    Username and password must be separated by a `:`.
   - ```shell
     $ crunchy --credentials "user:password"
     ```
-- Anonymous
-  - Login without an account at all is also possible.
+- Refresh Token
+  - To obtain a refresh token, you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie.
+    The easiest way to get it is via a browser extension which lets you export your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) / [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
+    When installed, look for the `etp_rt` entry and extract its value.
+  - ```shell
+    $ crunchy --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d"
+    ```
+- Stay Anonymous
+  - Skip the login check:
   - ```shell 
     $ crunchy --anonymous
     ```
 
 ### Login
 
-If you do not want to provide your credentials every time you execute a command, they can be stored permanently on disk.
-This can be done with the `login` subcommand.
+crunchy-cli can store your session, so you don't have to authenticate every time you execute a command.
+
+Note that the `login` keyword has to be used *last*.
 
 ```shell
-$ crunchy --etp-rt "abcd1234-zyxw-9876-98zy-a1b2c3d4e5f6" login
+$ crunchy --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d" login
 ```
 
-Once set, you do not need to provide `--etp-rt` / `--credentials` anymore when using the cli.
-This does not work if you've using this with `--anonymous`.
+With the session stored, you do not need to use `--credentials` / `--etp-rt` anymore. This does not work with `--anonymous`.
 
 ### Download
 
@@ -115,25 +114,25 @@ This does not work if you've using this with `--anonymous`.
 **Options**
 - Audio language
 
-  Which audio the episode(s) should be can be set via the `-a` / `--audio` flag.
+  Set the audio language with the `-a` / `--audio` flag.
   This only works if the url points to a series since episode urls are language specific.
   ```shell
   $ crunchy download -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  Default is your system language. If not supported by Crunchyroll, `en-US` (American English) is the default.
+  Default is your system locale. If not supported by Crunchyroll, `en-US` (American English) is the default.
 
 - Subtitle language
 
-  Besides the audio, it's also possible to specify which language the subtitles should have with the `-s` / `--subtitle` flag.
-  The subtitle will be hardsubbed (burned into the video) and thus, can't be turned off or on.
+  Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
+  The subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
   ```shell
   $ crunchy download -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  Default is no subtitle.
+  Default is none.
 
-- Output filename
+- Output template
 
-  You can specify the name of the output file with the `-o` / `--output` flag.
+  Define an output template by using the `-o` / `--output` flag.
   If you want to use any other file format than [`.ts`](https://en.wikipedia.org/wiki/MPEG_transport_stream) you need [ffmpeg](https://ffmpeg.org/).
   ```shell
   $ crunchy download -o "ditf.ts" https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
@@ -153,7 +152,7 @@ This does not work if you've using this with `--anonymous`.
 **Supported urls**
 - Series
 
-  Only series urls are supported since single episode urls are (audio) language locked.
+  Only series urls are supported, because episode urls are locked to a single audio language.
   ```shell
   $ crunchy archive https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -161,25 +160,24 @@ This does not work if you've using this with `--anonymous`.
 **Options**
 - Audio languages
 
-  Which audios the episode(s) should be can be set via the `-a` / `--audio` flag.
+  Set the audio language with the `-a` / `--audio` flag. Can be used multiple times.
   ```shell
   $ crunchy archive -a ja-JP -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  Can be used multiple times.
-  Default is your system language (if not supported by Crunchyroll, `en-US` (American English) is the default) + `ja-JP` (Japanese).
+  Default is your system locale (if not supported by Crunchyroll, `en-US` (American English) and `ja-JP` (Japanese) are used).
 
 - Subtitle languages
 
-  Besides the audio, it's also possible to specify which languages the subtitles should have with the `-s` / `--subtitle` flag.
+  Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
   ```shell
   $ crunchy archive -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  Default is all subtitles.
+  Default is `all` subtitles.
 
-- Output filename
+- Output template
 
-  You can specify the name of the output file with the `-o` / `--output` flag.
-  The only supported file / container format is [`.mkv`](https://en.wikipedia.org/wiki/Matroska) since it stores / can store multiple audio, video and subtitle streams.
+  Define an output template by using the `-o` / `--output` flag.
+  crunchy-cli uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of it's ability to store multiple audio, video and subtitle tracks at once.
   ```shell
   $ crunchy archive -o "{title}.mkv" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -195,12 +193,12 @@ This does not work if you've using this with `--anonymous`.
 
 - Merge behavior
 
-  Because of local restrictions (or other reasons) some episodes with different languages does not have the same length (e.g. when some scenes were cut out).
-  The ideal state, when multiple audios & subtitles used, would be if only one _video_ has to be stored and all other languages can be stored as audio-only.
+  Due to censorship, some episodes have multiple lengths for different languages.
+  In the best case, when multiple audio & subtitle tracks are used, there is only one *video* track and all other languages can be stored as audio-only.
   But, as said, this is not always the case.
-  With the `-m` / `--merge` flag you can set what you want to do if some video lengths differ.
-  Valid options are `audio` - store one video and all other languages as audio only; `video` - store the video + audio for every language; `auto` - detect if videos differ in length: if so, behave like `video` else like `audio`.
-  Subtitles will always match to the first / primary audio and video.
+  With the `-m` / `--merge` flag you can define the behaviour when an episodes' video tracks differ in length.
+  Valid options are `audio` - store one video and all other languages as audio only; `video` - store the video + audio for every language; `auto` - detect if videos differ in length: if so, behave like `video` - otherwise like `audio`.
+  Subtitles will always match the primary audio and video.
   ```shell
   $ crunchy archive -m audio https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -208,52 +206,45 @@ This does not work if you've using this with `--anonymous`.
 
 - Default subtitle
 
-  `--default_subtitle` set which subtitle language should be set as default / auto appear when starting the downloaded video(s).
+  `--default_subtitle` Set which subtitle language is to be flagged as **default** and **forced**.
   ```shell
   $ crunchy archive --default_subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
   Default is none.
 
-- No subtitle optimizations
+- Subtitle optimizations
 
-  Subtitles, as Crunchyroll delivers them, look weird in some video players (#66).
+  Crunchyroll's subtitles look weird in some players (#66).
   This can be fixed by adding a specific entry to the subtitles.
-  But since this entry is only a de-factor standard and not represented in the official specification of the subtitle format ([`.ass`](https://en.wikipedia.org/wiki/SubStation_Alpha)) it could cause issues with some video players (but no issue got reported so far, so it's relatively safe to use).
-  `--no_subtitle_optimizations` can disable these optimizations.
+  Even though this entry is a de facto standard, it is not defined in the official specification for the `.ass` format (cf. [Advanced SubStation Subtitles](https://wiki.videolan.org/SubStation_Alpha)). This could cause compatibility issues, but no issues have been reported yet.
+  `--no_subtitle_optimizations` disables these optimizations.
   ```shell
   $ crunchy archive --no_subtitle_optimizations https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
-### Url Filtering
+### Episode filtering
 
-If you want to download only specific episode of a series, you could either pass every single episode url to the downloader (which is fine for 1 - 3 episodes) or use _filtering_.
+Filters patterns can be used to download a specific range of episodes from a single series.
 
-It works pretty simple, just put a specific pattern surrounded by square brackets at the end of the url from the anime you want to download.
-A season and / or episode as well as a range from where to where episodes should be downloaded can be specified.
-Use the list below to get a better overview what is possible
+A filter pattern may consist of either a season, an episode, or a combination of the two.
+When used in combination, seasons `S` must be defined before episodes `E`.
+
+There are many possible patterns, for example:
 - `...[E5]` - Download the fifth episode.
-- `...[S1]` - Download the full first season.
-- `...[-S2]` - Download all seasons up to and including season 2.
-- `...[S3E4-]` - Download all episodes from and including season 3, episode 4.
-- `...[S1E4-S3]` - Download all episodes from and including season 1, episode 4, until and including season 3.
-- `...[S3,S5]` - Download episode 3 and 5.
-- `...[S1-S3,S4E2-S4E6]` - Download season 1 to 3 and episode 2 to episode 6 of season 4.
+- `...[S1]` - Download the whole first season.
+- `...[-S2]` - Download the first two seasons.
+- `...[S3E4-]` - Download everything from season three, episode four, onwards.
+- `...[S1E4-S3]` - Download season one, starting at episode four, then download season two and three.
+- `...[S3,S5]` - Download season three and five.
+- `...[S1-S3,S4E2-S4E6]` - Download season one to three, then episodes two to six from season four.
 
-In practice, it would look like this: `https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E5]`.
+In practice, it would look like this: `https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E5]`
 
-The `S`, followed by the number indicates the _season_ number, `E`, followed by the number indicates an _episode_ number.
-It doesn't matter if `S`, `E` or both are missing.
-Note that `S` must always stay before `E` when used.
+# 📜 Disclaimer
 
-There is also a regex available at [regex101.com](https://regex101.com/r/SDZyZM) where you can test if your pattern is correct.
-Just put in your pattern without square brackets into the big empty field and if the full pattern is highlighted this means it is valid.
-If none or only some parts are highlighted, it's not valid not.
+This tool is **ONLY** meant for private use. You will need a subscription to [`💳 Crunchyroll Premium 💳`](https://www.crunchyroll.com/welcome#plans) to download premium content.
 
-# ☝️ Disclaimer
-
-This tool is **ONLY** meant to be used for private purposes. To use this tool you need crunchyroll premium anyway, so there is no reason why rip and share the episodes.
-
-**The responsibility for what happens to the downloaded videos lies entirely with the user who downloaded them.**
+**You are entirely responsible for what happens to files you downloaded through crunchy-cli.**
 
 # ⚖ License
 

@@ -60,7 +60,6 @@ $ cd crunchy-cli
 $ cargo build --release
 $ cargo install --force --path .
 ```
-After the binary has been built successfully it is available in `target/release`.
 
 ## 🖥️ Usage
 

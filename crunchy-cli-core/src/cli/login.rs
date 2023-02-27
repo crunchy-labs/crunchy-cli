@@ -18,6 +18,8 @@ pub struct Login {
 impl Execute for Login {
     async fn execute(self, ctx: Context) -> Result<()> {
         if let Some(login_file_path) = login_file_path() {
+            fs::create_dir_all(login_file_path.parent().unwrap())?;
+
             match ctx.crunchy.session_token().await {
                 SessionToken::RefreshToken(refresh_token) => Ok(fs::write(
                     login_file_path,

@@ -241,7 +241,7 @@ In practice, it would look like this: `https://www.crunchyroll.com/series/GY8VEQ
 
 # 📜 Disclaimer
 
-This tool is **ONLY** meant for private use. You will need a subscription to [`💳 Crunchyroll Premium 💳`](https://www.crunchyroll.com/welcome#plans) to download premium content.
+This tool is **ONLY** meant for private use. You need a subscription to [`💳 Crunchyroll Premium 💳`](https://www.crunchyroll.com/welcome#plans) to download premium content.
 
 **You are entirely responsible for what happens to files you downloaded through crunchy-cli.**
 

@@ -10,7 +10,7 @@ async-trait = "0.1"
 clap = { version = "4.0", features = ["derive", "string"] }
 chrono = "0.4"
 crunchyroll-rs = "0.2"
-csv = "1.1"
+csv = "1.2"
 ctrlc = "3.2"
 dirs = "4.0"
 indicatif = "0.17"

@@ -11,7 +11,7 @@ crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [build-dependencies]
 chrono = "0.4"
-clap = { version = "4.0", features = ["string"] }
+clap = { version = "4.1", features = ["string"] }
 clap_complete = "4.0"
 clap_mangen = "0.2"
 

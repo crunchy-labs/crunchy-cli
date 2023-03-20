@@ -12,7 +12,7 @@ crunchy-cli-core = { path = "./crunchy-cli-core" }
 [build-dependencies]
 chrono = "0.4"
 clap = { version = "4.0", features = ["string"] }
-clap_complete = "4.0"
+clap_complete = "4.1"
 clap_mangen = "0.2"
 
 # The static-* features must be used here since build dependency features cannot be manipulated from the features

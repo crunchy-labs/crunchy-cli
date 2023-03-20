@@ -12,7 +12,7 @@ chrono = "0.4"
 crunchyroll-rs = "0.2"
 csv = "1.1"
 ctrlc = "3.2"
-dirs = "4.0"
+dirs = "5.0"
 indicatif = "0.17"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }

@@ -223,12 +223,12 @@ impl Format {
 
     pub fn visual_output(&self, dst: &Path) {
         info!(
-            "Downloading {} to '{}'",
+            "Downloading {} to {}",
             self.title,
-            if is_special_file(&dst) {
-                dst.to_str().unwrap()
+            if is_special_file(&dst) || dst.to_str().unwrap() == "-" {
+                dst.to_string_lossy().to_string()
             } else {
-                dst.file_name().unwrap().to_str().unwrap()
+                format!("'{}'", dst.to_str().unwrap())
             }
         );
         tab_info!(

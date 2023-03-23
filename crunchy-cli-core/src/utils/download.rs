@@ -317,7 +317,12 @@ impl Downloader {
         let progress_handler = progress!("Generating output file");
 
         let ffmpeg = Command::new("ffmpeg")
-            .stdout(Stdio::null())
+            // pass ffmpeg stdout to real stdout only if output file is stdout
+            .stdout(if dst.to_str().unwrap() == "-" {
+                Stdio::inherit()
+            } else {
+                Stdio::null()
+            })
             .stderr(Stdio::piped())
             .args(command_args)
             .output()?;

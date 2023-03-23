@@ -333,9 +333,15 @@ impl Filter for DownloadFilter {
                 .total_cmp(&b.format.sequence_number)
         });
         for data in input {
-            let mut downloader = DownloadBuilder::new()
-                .default_subtitle(self.download.subtitle.clone())
-                .build();
+            let mut download_builder =
+                DownloadBuilder::new().default_subtitle(self.download.subtitle.clone());
+            // set the output format to mpegts / mpeg transport stream if the output file is stdout.
+            // mp4 isn't used here as the output file must be readable which isn't possible when
+            // writing to stdout
+            if self.download.output == "-" {
+                download_builder = download_builder.output_format(Some("mpegts".to_string()))
+            }
+            let mut downloader = download_builder.build();
             downloader.add_format(DownloadFormat {
                 video: (data.video, data.format.audio.clone()),
                 audios: vec![(data.audio, data.format.audio.clone())],

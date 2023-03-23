@@ -446,7 +446,15 @@ impl Filter for ArchiveFilter {
                         .iter()
                         .map(|d| (d.audio.clone(), d.format.audio.clone()))
                         .collect(),
-                    subtitles: data.iter().map(|d| d.subtitles.clone()).flatten().collect(),
+                    // mix all subtitles together and then reduce them via a map so that only one
+                    // subtitle per language exists
+                    subtitles: data
+                        .iter()
+                        .flat_map(|d| d.subtitles.clone())
+                        .map(|s| (s.locale.clone(), s))
+                        .collect::<HashMap<Locale, Subtitle>>()
+                        .into_values()
+                        .collect(),
                 }),
                 MergeBehavior::Auto => {
                     let mut download_formats: HashMap<Duration, DownloadFormat> = HashMap::new();

@@ -167,6 +167,9 @@ impl Filter for ArchiveFilter {
 
         let mut episodes = vec![];
         if !matches!(self.visited, Visited::Series) && !matches!(self.visited, Visited::Season) {
+            if self.archive.locale.contains(&episode.audio_locale) {
+                episodes.push(episode.clone())
+            }
             episodes.extend(episode.version(self.archive.locale.clone()).await?);
             let audio_locales: Vec<Locale> =
                 episodes.iter().map(|e| e.audio_locale.clone()).collect();

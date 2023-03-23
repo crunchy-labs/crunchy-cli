@@ -38,6 +38,15 @@ pub struct Cli {
     #[arg(long)]
     lang: Option<Locale>,
 
+    #[arg(help = "Enable experimental fixes which may resolve some unexpected errors")]
+    #[arg(
+        long_help = "Enable experimental fixes which may resolve some unexpected errors. \
+            If everything works as intended this option isn't needed, but sometimes Crunchyroll mislabels \
+            the audio of a series/season or episode or returns a wrong season number. This is when using this option might help to solve the issue"
+    )]
+    #[arg(long, default_value_t = false)]
+    experimental_fixes: bool,
+
     #[clap(flatten)]
     login_method: LoginMethod,
 
@@ -227,8 +236,8 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
 
     let mut builder = Crunchyroll::builder()
         .locale(locale)
-        .stabilization_locales(true)
-        .stabilization_season_number(true);
+        .stabilization_locales(cli.experimental_fixes)
+        .stabilization_season_number(cli.experimental_fixes);
 
     if let Command::Download(download) = &cli.command {
         builder = builder.preferred_audio_locale(download.audio.clone())

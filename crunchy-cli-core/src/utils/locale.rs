@@ -13,3 +13,17 @@ pub fn system_locale() -> Locale {
         Locale::en_US
     }
 }
+
+/// Check if [`Locale::Custom("all")`] is in the provided locale list and return [`Locale::all`] if
+/// so. If not, just return the provided locale list.
+pub fn all_locale_in_locales(locales: Vec<Locale>) -> Vec<Locale> {
+    if locales
+        .iter()
+        .find(|l| l.to_string().to_lowercase().trim() == "all")
+        .is_some()
+    {
+        Locale::all()
+    } else {
+        locales
+    }
+}

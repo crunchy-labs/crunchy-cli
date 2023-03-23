@@ -1,25 +1,25 @@
 use anyhow::Result;
-use chrono::NaiveTime;
-use regex::Regex;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use crunchyroll_rs::media::{Resolution, Stream, VariantData};
 
-/// Get the length of a video. This is required because sometimes subtitles have an unnecessary entry
-/// long after the actual video ends with artificially extends the video length on some video players.
-/// To prevent this, the video length must be hard set. See
-/// [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32) for more
-/// information.
-pub fn get_video_length(path: PathBuf) -> Result<NaiveTime> {
-    let video_length = Regex::new(r"Duration:\s(?P<time>\d+:\d+:\d+\.\d+),")?;
+pub async fn variant_data_from_stream(
+    stream: &Stream,
+    resolution: &Resolution,
+) -> Result<Option<(VariantData, VariantData)>> {
+    let mut streaming_data = stream.dash_streaming_data(None).await?;
+    streaming_data
+        .0
+        .sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
+    streaming_data
+        .1
+        .sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
 
-    let ffmpeg = Command::new("ffmpeg")
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .arg("-y")
-        .args(["-i", path.to_str().unwrap()])
-        .output()?;
-    let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
-    let caps = video_length.captures(ffmpeg_output.as_str()).unwrap();
-
-    Ok(NaiveTime::parse_from_str(caps.name("time").unwrap().as_str(), "%H:%M:%S%.f").unwrap())
+    let video_variant = match resolution.height {
+        u64::MAX => Some(streaming_data.0.into_iter().next().unwrap()),
+        u64::MIN => Some(streaming_data.0.into_iter().last().unwrap()),
+        _ => streaming_data
+            .0
+            .into_iter()
+            .find(|v| resolution.height == v.resolution.height),
+    };
+    Ok(video_variant.map(|v| (v, streaming_data.1.first().unwrap().clone())))
 }

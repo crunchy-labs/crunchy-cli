@@ -1,7 +1,6 @@
-use crate::cli::log::CliLogger;
 use crate::utils::context::Context;
 use crate::utils::locale::system_locale;
-use crate::utils::log::progress;
+use crate::utils::log::{progress, CliLogger};
 use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -9,10 +8,14 @@ use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
 use std::{env, fs};
 
-mod cli;
+mod archive;
+mod download;
+mod login;
 mod utils;
 
-pub use cli::{archive::Archive, download::Download, login::Login};
+pub use archive::Archive;
+pub use download::Download;
+pub use login::Login;
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
@@ -34,6 +37,15 @@ pub struct Cli {
     )]
     #[arg(long)]
     lang: Option<Locale>,
+
+    #[arg(help = "Enable experimental fixes which may resolve some unexpected errors")]
+    #[arg(
+        long_help = "Enable experimental fixes which may resolve some unexpected errors. \
+            If everything works as intended this option isn't needed, but sometimes Crunchyroll mislabels \
+            the audio of a series/season or episode or returns a wrong season number. This is when using this option might help to solve the issue"
+    )]
+    #[arg(long, default_value_t = false)]
+    experimental_fixes: bool,
 
     #[clap(flatten)]
     login_method: LoginMethod,
@@ -222,9 +234,14 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         lang
     };
 
-    let builder = Crunchyroll::builder()
+    let mut builder = Crunchyroll::builder()
         .locale(locale)
-        .stabilization_locales(true);
+        .stabilization_locales(cli.experimental_fixes)
+        .stabilization_season_number(cli.experimental_fixes);
+
+    if let Command::Download(download) = &cli.command {
+        builder = builder.preferred_audio_locale(download.audio.clone())
+    }
 
     let login_methods_count = cli.login_method.credentials.is_some() as u8
         + cli.login_method.etp_rt.is_some() as u8
@@ -232,7 +249,7 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
 
     let progress_handler = progress!("Logging in");
     if login_methods_count == 0 {
-        if let Some(login_file_path) = cli::login::login_file_path() {
+        if let Some(login_file_path) = login::login_file_path() {
             if login_file_path.exists() {
                 let session = fs::read_to_string(login_file_path)?;
                 if let Some((token_type, token)) = session.split_once(':') {

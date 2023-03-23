@@ -37,7 +37,7 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.
 pub fn free_file(mut path: PathBuf) -> (PathBuf, bool) {
-    // if it's a special file does not rename it
+    // do not rename it if it exists but is a special file
     if is_special_file(&path) {
         return (path, false);
     }

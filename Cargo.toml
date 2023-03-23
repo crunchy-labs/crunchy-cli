@@ -5,18 +5,16 @@ version = "3.0.0-dev.8"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.24", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.26", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [build-dependencies]
 chrono = "0.4"
-clap = { version = "4.0", features = ["string"] }
-clap_complete = "4.0"
+clap = { version = "4.1", features = ["string"] }
+clap_complete = "4.1"
 clap_mangen = "0.2"
 
-# The static-* features must be used here since build dependency features cannot be manipulated from the features
-# specified in this Cargo.toml [features].
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [profile.release]

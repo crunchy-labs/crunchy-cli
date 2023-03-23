@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: ''
+labels: bug
 assignees: ''
 
 ---
@@ -24,7 +24,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Client (please complete the following information):**
  - OS: [e.g. Windows]
- - Version [e.g. v2.2.2]
+ - Version [e.g. 3.0.0-dev.8 (17233f2 2023-01-10)] <!-- Version 1 or 2 aren't actively supported anymore. Make sure that the bug occurs on the master branch or a version 3 pre-release -->
 
 **Additional context**
 Add any other context about the problem here.

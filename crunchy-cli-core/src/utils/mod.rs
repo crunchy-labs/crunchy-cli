@@ -1,10 +1,11 @@
 pub mod clap;
 pub mod context;
+pub mod download;
+pub mod ffmpeg;
+pub mod filter;
 pub mod format;
 pub mod locale;
 pub mod log;
 pub mod os;
 pub mod parse;
-pub mod sort;
-pub mod subtitle;
 pub mod video;

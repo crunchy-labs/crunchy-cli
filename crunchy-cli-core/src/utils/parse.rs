@@ -4,8 +4,8 @@ use crunchyroll_rs::{Crunchyroll, MediaCollection, UrlType};
 use log::debug;
 use regex::Regex;
 
-/// Define a filter, based on season and episode number to filter episodes / movies.
-/// If a struct instance equals the [`Default::default()`] it's considered that no filter is applied.
+/// Define a find, based on season and episode number to find episodes / movies.
+/// If a struct instance equals the [`Default::default()`] it's considered that no find is applied.
 /// If `from_*` is [`None`] they're set to [`u32::MIN`].
 /// If `to_*` is [`None`] they're set to [`u32::MAX`].
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl UrlFilter {
 /// - `...[S3,S5]` - Download episode 3 and 5.
 /// - `...[S1-S3,S4E2-S4E6]` - Download season 1 to 3 and episode 2 to episode 6 of season 4.
 
-/// In practice, it would look like this: `https://beta.crunchyroll.com/series/12345678/example[S1E5-S3E2]`.
+/// In practice, it would look like this: `https://crunchyroll.com/series/12345678/example[S1E5-S3E2]`.
 pub async fn parse_url(
     crunchy: &Crunchyroll,
     mut url: String,
@@ -115,7 +115,7 @@ pub async fn parse_url(
 
         let url_filter = UrlFilter { inner: filters };
 
-        debug!("Url filter: {:?}", url_filter);
+        debug!("Url find: {:?}", url_filter);
 
         url_filter
     } else {
@@ -125,9 +125,11 @@ pub async fn parse_url(
     let parsed_url = crunchyroll_rs::parse_url(url).map_or(Err(anyhow!("Invalid url")), Ok)?;
     debug!("Url type: {:?}", parsed_url);
     let media_collection = match parsed_url {
-        UrlType::Series(id) | UrlType::MovieListing(id) | UrlType::EpisodeOrMovie(id) => {
-            crunchy.media_collection_from_id(id).await?
-        }
+        UrlType::Series(id)
+        | UrlType::MovieListing(id)
+        | UrlType::EpisodeOrMovie(id)
+        | UrlType::MusicVideo(id)
+        | UrlType::Concert(id) => crunchy.media_collection_from_id(id).await?,
     };
 
     Ok((media_collection, url_filter))
@@ -150,7 +152,7 @@ pub fn parse_resolution(mut resolution: String) -> Result<Resolution> {
     } else if resolution.ends_with('p') {
         let without_p = resolution.as_str()[0..resolution.len() - 1]
             .parse()
-            .map_err(|_| anyhow!("Could not parse resolution"))?;
+            .map_err(|_| anyhow!("Could not find resolution"))?;
         Ok(Resolution {
             width: without_p * 16 / 9,
             height: without_p,
@@ -159,12 +161,12 @@ pub fn parse_resolution(mut resolution: String) -> Result<Resolution> {
         Ok(Resolution {
             width: w
                 .parse()
-                .map_err(|_| anyhow!("Could not parse resolution"))?,
+                .map_err(|_| anyhow!("Could not find resolution"))?,
             height: h
                 .parse()
-                .map_err(|_| anyhow!("Could not parse resolution"))?,
+                .map_err(|_| anyhow!("Could not find resolution"))?,
         })
     } else {
-        bail!("Could not parse resolution")
+        bail!("Could not find resolution")
     }
 }

@@ -285,7 +285,7 @@ impl FFmpegPreset {
                         if let Some(hwaccel) = hwaccel_opt {
                             match hwaccel {
                                 FFmpegHwAccel::Nvidia => {
-                                    input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                                    input.extend(["-hwaccel", "cuda", "-hwaccel_output_format", "cuda", "-c:v", "h264_cuvid"]);
                                     output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
                                 }
                             }
@@ -303,7 +303,7 @@ impl FFmpegPreset {
                         if let Some(hwaccel) = hwaccel_opt {
                             match hwaccel {
                                 FFmpegHwAccel::Nvidia => {
-                                    input.extend(["-hwaccel", "cuvid", "-c:v", "h264_cuvid"]);
+                                    input.extend(["-hwaccel", "cuda", "-hwaccel_output_format", "cuda", "-c:v", "h264_cuvid"]);
                                     output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"])
                                 }
                             }

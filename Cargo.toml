@@ -5,7 +5,7 @@ version = "3.0.0-dev.8"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.26", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.27", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 

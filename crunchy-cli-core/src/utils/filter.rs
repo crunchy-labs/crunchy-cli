@@ -18,7 +18,7 @@ pub trait Filter {
     async fn visit_music_video(&mut self, music_video: MusicVideo) -> Result<Option<Self::T>>;
     async fn visit_concert(&mut self, concert: Concert) -> Result<Option<Self::T>>;
 
-    async fn visit(mut self, media_collection: MediaCollection) -> Result<Vec<Self::Output>>
+    async fn visit(mut self, media_collection: MediaCollection) -> Result<Self::Output>
     where
         Self: Send + Sized,
     {
@@ -80,7 +80,7 @@ pub trait Filter {
         self.finish(result).await
     }
 
-    async fn finish(self, input: Vec<Self::T>) -> Result<Vec<Self::Output>>;
+    async fn finish(self, input: Vec<Self::T>) -> Result<Self::Output>;
 }
 
 /// Remove all duplicates from a [`Vec`].

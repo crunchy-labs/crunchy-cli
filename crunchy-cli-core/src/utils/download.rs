@@ -38,7 +38,7 @@ impl MergeBehavior {
     }
 }
 
-#[derive(derive_setters::Setters)]
+#[derive(Clone, derive_setters::Setters)]
 pub struct DownloadBuilder {
     ffmpeg_preset: FFmpegPreset,
     default_subtitle: Option<Locale>,

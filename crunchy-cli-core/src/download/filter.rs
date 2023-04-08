@@ -174,7 +174,8 @@ impl Filter for DownloadFilter {
                 .get(&episode.season_number)
                 .unwrap()
                 .iter()
-                .position(|id| id == &episode.id);
+                .position(|id| id == &episode.id)
+                .map(|index| index + 1);
             if relative_episode_number.is_none() {
                 warn!(
                     "Failed to get relative episode number for episode {} ({}) of {} season {}",

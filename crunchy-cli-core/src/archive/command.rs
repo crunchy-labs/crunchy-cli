@@ -1,19 +1,22 @@
 use crate::archive::filter::ArchiveFilter;
 use crate::utils::context::Context;
-use crate::utils::download::MergeBehavior;
+use crate::utils::download::{DownloadBuilder, DownloadFormat, MergeBehavior};
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::Filter;
-use crate::utils::format::formats_visual_output;
+use crate::utils::format::{Format, SingleFormat};
 use crate::utils::locale::all_locale_in_locales;
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::parse_url;
+use crate::utils::video::variant_data_from_stream;
 use crate::Execute;
 use anyhow::bail;
 use anyhow::Result;
-use crunchyroll_rs::media::Resolution;
+use chrono::Duration;
+use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
 use log::debug;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, clap::Parser)]
@@ -135,19 +138,33 @@ impl Execute for Archive {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let archive_formats = ArchiveFilter::new(url_filter, self.clone())
+            let single_format_collection = ArchiveFilter::new(url_filter, self.clone())
                 .visit(media_collection)
                 .await?;
 
-            if archive_formats.is_empty() {
+            if single_format_collection.is_empty() {
                 progress_handler.stop(format!("Skipping url {} (no matching videos found)", i + 1));
                 continue;
             }
             progress_handler.stop(format!("Loaded series information for url {}", i + 1));
 
-            formats_visual_output(archive_formats.iter().map(|(_, f)| f).collect());
+            single_format_collection.full_visual_output();
 
-            for (downloader, mut format) in archive_formats {
+            let download_builder = DownloadBuilder::new()
+                .default_subtitle(self.default_subtitle.clone())
+                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                .output_format(Some("matroska".to_string()))
+                .audio_sort(Some(self.locale.clone()))
+                .subtitle_sort(Some(self.subtitle.clone()));
+
+            for single_formats in single_format_collection.into_iter() {
+                let (download_formats, mut format) = get_format(&self, &single_formats).await?;
+
+                let mut downloader = download_builder.clone().build();
+                for download_format in download_formats {
+                    downloader.add_format(download_format)
+                }
+
                 let formatted_path = format.format_path((&self.output).into(), true);
                 let (path, changed) = free_file(formatted_path.clone());
 
@@ -182,4 +199,105 @@ impl Execute for Archive {
 
         Ok(())
     }
+}
+
+async fn get_format(
+    archive: &Archive,
+    single_formats: &Vec<SingleFormat>,
+) -> Result<(Vec<DownloadFormat>, Format)> {
+    let mut format_pairs = vec![];
+    let mut single_format_to_format_pairs = vec![];
+
+    for single_format in single_formats {
+        let stream = single_format.stream().await?;
+        let Some((video, audio)) = variant_data_from_stream(&stream, &archive.resolution).await? else {
+            if single_format.is_episode() {
+                bail!(
+                    "Resolution ({}) is not available for episode {} ({}) of {} season {}",
+                    archive.resolution,
+                    single_format.episode_number,
+                    single_format.title,
+                    single_format.series_name,
+                    single_format.season_number,
+                )
+            } else {
+                bail!(
+                    "Resolution ({}) is not available for {} ({})",
+                    archive.resolution,
+                    single_format.source_type(),
+                    single_format.title
+                )
+            }
+        };
+
+        let subtitles: Vec<Subtitle> = archive
+            .subtitle
+            .iter()
+            .filter_map(|s| stream.subtitles.get(s).cloned())
+            .collect();
+
+        format_pairs.push((single_format, video.clone(), audio, subtitles.clone()));
+        single_format_to_format_pairs.push((single_format.clone(), video, subtitles))
+    }
+
+    let mut download_formats = vec![];
+
+    match archive.merge {
+        MergeBehavior::Video => {
+            for (single_format, video, audio, subtitles) in format_pairs {
+                download_formats.push(DownloadFormat {
+                    video: (video, single_format.audio.clone()),
+                    audios: vec![(audio, single_format.audio.clone())],
+                    subtitles,
+                })
+            }
+        }
+        MergeBehavior::Audio => download_formats.push(DownloadFormat {
+            video: (
+                (*format_pairs.first().unwrap()).1.clone(),
+                (*format_pairs.first().unwrap()).0.audio.clone(),
+            ),
+            audios: format_pairs
+                .iter()
+                .map(|(single_format, _, audio, _)| (audio.clone(), single_format.audio.clone()))
+                .collect(),
+            // mix all subtitles together and then reduce them via a map so that only one subtitle
+            // per language exists
+            subtitles: format_pairs
+                .iter()
+                .flat_map(|(_, _, _, subtitles)| subtitles.clone())
+                .map(|s| (s.locale.clone(), s))
+                .collect::<HashMap<Locale, Subtitle>>()
+                .into_values()
+                .collect(),
+        }),
+        MergeBehavior::Auto => {
+            let mut d_formats: HashMap<Duration, DownloadFormat> = HashMap::new();
+
+            for (single_format, video, audio, subtitles) in format_pairs {
+                if let Some(d_format) = d_formats.get_mut(&single_format.duration) {
+                    d_format.audios.push((audio, single_format.audio.clone()));
+                    d_format.subtitles.extend(subtitles)
+                } else {
+                    d_formats.insert(
+                        single_format.duration,
+                        DownloadFormat {
+                            video: (video, single_format.audio.clone()),
+                            audios: vec![(audio, single_format.audio.clone())],
+                            subtitles,
+                        },
+                    );
+                }
+            }
+
+            for d_format in d_formats.into_values() {
+                download_formats.push(d_format)
+            }
+        }
+    }
+
+    Ok((
+        download_formats,
+        Format::from_single_formats(single_format_to_format_pairs),
+    ))
 }

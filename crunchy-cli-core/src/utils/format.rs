@@ -1,9 +1,12 @@
 use crate::utils::filter::real_dedup_vec;
 use crate::utils::log::tab_info;
 use crate::utils::os::is_special_file;
-use crunchyroll_rs::media::{Resolution, VariantData};
-use crunchyroll_rs::{Concert, Episode, Locale, Movie, MusicVideo};
+use anyhow::Result;
+use chrono::Duration;
+use crunchyroll_rs::media::{Resolution, Stream, Subtitle, VariantData};
+use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
 use log::{debug, info};
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -14,9 +17,6 @@ pub struct SingleFormat {
 
     pub audio: Locale,
     pub subtitles: Vec<Locale>,
-
-    pub resolution: Resolution,
-    pub fps: f64,
 
     pub series_id: String,
     pub series_name: String,
@@ -29,12 +29,15 @@ pub struct SingleFormat {
     pub episode_number: String,
     pub sequence_number: f32,
     pub relative_episode_number: Option<u32>,
+
+    pub duration: Duration,
+
+    source: MediaCollection,
 }
 
 impl SingleFormat {
     pub fn new_from_episode(
-        episode: &Episode,
-        video: &VariantData,
+        episode: Episode,
         subtitles: Vec<Locale>,
         relative_episode_number: Option<u32>,
     ) -> Self {
@@ -43,8 +46,6 @@ impl SingleFormat {
             description: episode.description.clone(),
             audio: episode.audio_locale.clone(),
             subtitles,
-            resolution: video.resolution.clone(),
-            fps: video.fps,
             series_id: episode.series_id.clone(),
             series_name: episode.series_title.clone(),
             season_id: episode.season_id.clone(),
@@ -58,17 +59,17 @@ impl SingleFormat {
             },
             sequence_number: episode.sequence_number,
             relative_episode_number,
+            duration: episode.duration,
+            source: episode.into(),
         }
     }
 
-    pub fn new_from_movie(movie: &Movie, video: &VariantData, subtitles: Vec<Locale>) -> Self {
+    pub fn new_from_movie(movie: Movie, subtitles: Vec<Locale>) -> Self {
         Self {
             title: movie.title.clone(),
             description: movie.description.clone(),
             audio: Locale::ja_JP,
             subtitles,
-            resolution: video.resolution.clone(),
-            fps: video.fps,
             series_id: movie.movie_listing_id.clone(),
             series_name: movie.movie_listing_title.clone(),
             season_id: movie.movie_listing_id.clone(),
@@ -78,17 +79,17 @@ impl SingleFormat {
             episode_number: "1".to_string(),
             sequence_number: 1.0,
             relative_episode_number: Some(1),
+            duration: movie.duration,
+            source: movie.into(),
         }
     }
 
-    pub fn new_from_music_video(music_video: &MusicVideo, video: &VariantData) -> Self {
+    pub fn new_from_music_video(music_video: MusicVideo) -> Self {
         Self {
             title: music_video.title.clone(),
             description: music_video.description.clone(),
             audio: Locale::ja_JP,
             subtitles: vec![],
-            resolution: video.resolution.clone(),
-            fps: video.fps,
             series_id: music_video.id.clone(),
             series_name: music_video.title.clone(),
             season_id: music_video.id.clone(),
@@ -98,17 +99,17 @@ impl SingleFormat {
             episode_number: "1".to_string(),
             sequence_number: 1.0,
             relative_episode_number: Some(1),
+            duration: music_video.duration,
+            source: music_video.into(),
         }
     }
 
-    pub fn new_from_concert(concert: &Concert, video: &VariantData) -> Self {
+    pub fn new_from_concert(concert: Concert) -> Self {
         Self {
             title: concert.title.clone(),
             description: concert.description.clone(),
             audio: Locale::ja_JP,
             subtitles: vec![],
-            resolution: video.resolution.clone(),
-            fps: video.fps,
             series_id: concert.id.clone(),
             series_name: concert.title.clone(),
             season_id: concert.id.clone(),
@@ -118,7 +119,144 @@ impl SingleFormat {
             episode_number: "1".to_string(),
             sequence_number: 1.0,
             relative_episode_number: Some(1),
+            duration: concert.duration,
+            source: concert.into(),
         }
+    }
+
+    pub async fn stream(&self) -> Result<Stream> {
+        let stream = match &self.source {
+            MediaCollection::Episode(e) => e.streams().await?,
+            MediaCollection::Movie(m) => m.streams().await?,
+            MediaCollection::MusicVideo(mv) => mv.streams().await?,
+            MediaCollection::Concert(c) => c.streams().await?,
+            _ => unreachable!(),
+        };
+        Ok(stream)
+    }
+
+    pub fn source_type(&self) -> String {
+        match &self.source {
+            MediaCollection::Episode(_) => "episode",
+            MediaCollection::Movie(_) => "movie",
+            MediaCollection::MusicVideo(_) => "music video",
+            MediaCollection::Concert(_) => "concert",
+            _ => unreachable!(),
+        }
+        .to_string()
+    }
+
+    pub fn is_episode(&self) -> bool {
+        match self.source {
+            MediaCollection::Episode(_) => true,
+            _ => false,
+        }
+    }
+}
+
+struct SingleFormatCollectionEpisodeKey(f32);
+
+impl PartialOrd for SingleFormatCollectionEpisodeKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+impl Ord for SingleFormatCollectionEpisodeKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+impl PartialEq for SingleFormatCollectionEpisodeKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+impl Eq for SingleFormatCollectionEpisodeKey {}
+
+pub struct SingleFormatCollection(
+    BTreeMap<u32, BTreeMap<SingleFormatCollectionEpisodeKey, Vec<SingleFormat>>>,
+);
+
+impl SingleFormatCollection {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn add_single_formats(&mut self, single_formats: Vec<SingleFormat>) {
+        let format = single_formats.first().unwrap();
+        self.0
+            .entry(format.season_number)
+            .or_insert(BTreeMap::new())
+            .insert(
+                SingleFormatCollectionEpisodeKey(format.sequence_number),
+                single_formats,
+            );
+    }
+
+    pub fn full_visual_output(&self) {
+        debug!("Series has {} seasons", self.0.len());
+        for (season_number, episodes) in &self.0 {
+            info!(
+                "{} Season {}",
+                episodes
+                    .first_key_value()
+                    .unwrap()
+                    .1
+                    .first()
+                    .unwrap()
+                    .series_name
+                    .clone(),
+                season_number
+            );
+            for (i, (_, formats)) in episodes.iter().enumerate() {
+                let format = formats.first().unwrap();
+                if log::max_level() == log::Level::Debug {
+                    info!(
+                        "{} S{:02}E{:0>2}",
+                        format.title, format.season_number, format.episode_number
+                    )
+                } else {
+                    tab_info!(
+                        "{}. {} » S{:02}E{:0>2}",
+                        i + 1,
+                        format.title,
+                        format.season_number,
+                        format.episode_number
+                    )
+                }
+            }
+        }
+    }
+}
+
+impl IntoIterator for SingleFormatCollection {
+    type Item = Vec<SingleFormat>;
+    type IntoIter = SingleFormatCollectionIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SingleFormatCollectionIterator(self)
+    }
+}
+
+pub struct SingleFormatCollectionIterator(SingleFormatCollection);
+
+impl Iterator for SingleFormatCollectionIterator {
+    type Item = Vec<SingleFormat>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Some((_, episodes)) = self.0.0.iter_mut().next() else {
+            return None
+        };
+
+        let value = episodes.pop_first().unwrap().1;
+        if episodes.is_empty() {
+            self.0 .0.pop_first();
+        }
+        Some(value)
     }
 }
 
@@ -146,28 +284,38 @@ pub struct Format {
 }
 
 impl Format {
-    pub fn from_single_formats(mut single_formats: Vec<SingleFormat>) -> Self {
+    pub fn from_single_formats(
+        mut single_formats: Vec<(SingleFormat, VariantData, Vec<Subtitle>)>,
+    ) -> Self {
         let locales: Vec<(Locale, Vec<Locale>)> = single_formats
             .iter()
-            .map(|sf| (sf.audio.clone(), sf.subtitles.clone()))
+            .map(|(single_format, _, subtitles)| {
+                (
+                    single_format.audio.clone(),
+                    subtitles
+                        .into_iter()
+                        .map(|s| s.locale.clone())
+                        .collect::<Vec<Locale>>(),
+                )
+            })
             .collect();
-        let first = single_formats.remove(0);
+        let (first_format, first_stream, _) = single_formats.remove(0);
 
         Self {
-            title: first.title,
-            description: first.description,
+            title: first_format.title,
+            description: first_format.description,
             locales,
-            resolution: first.resolution,
-            fps: first.fps,
-            series_id: first.series_id,
-            series_name: first.series_name,
-            season_id: first.season_id,
-            season_title: first.season_title,
-            season_number: first.season_number,
-            episode_id: first.episode_id,
-            episode_number: first.episode_number,
-            sequence_number: first.sequence_number,
-            relative_episode_number: first.relative_episode_number,
+            resolution: first_stream.resolution,
+            fps: first_stream.fps,
+            series_id: first_format.series_id,
+            series_name: first_format.series_name,
+            season_id: first_format.season_id,
+            season_title: first_format.season_title,
+            season_number: first_format.season_number,
+            episode_id: first_format.episode_id,
+            episode_number: first_format.episode_number,
+            sequence_number: first_format.sequence_number,
+            relative_episode_number: first_format.relative_episode_number,
         }
     }
 
@@ -261,61 +409,4 @@ impl Format {
     pub fn has_relative_episodes_fmt<S: AsRef<str>>(s: S) -> bool {
         return s.as_ref().contains("{relative_episode_number}");
     }
-}
-
-pub fn formats_visual_output(formats: Vec<&Format>) {
-    if log::max_level() == log::Level::Debug {
-        let seasons = sort_formats_after_seasons(formats);
-        debug!("Series has {} seasons", seasons.len());
-        for (i, season) in seasons.into_iter().enumerate() {
-            info!("Season {}", i + 1);
-            for format in season {
-                info!(
-                    "{}: {}px, {:.02} FPS (S{:02}E{:0>2})",
-                    format.title,
-                    format.resolution,
-                    format.fps,
-                    format.season_number,
-                    format.episode_number,
-                )
-            }
-        }
-    } else {
-        for season in sort_formats_after_seasons(formats) {
-            let first = season.get(0).unwrap();
-            info!("{} Season {}", first.series_name, first.season_number);
-
-            for (i, format) in season.into_iter().enumerate() {
-                tab_info!(
-                    "{}. {} » {}px, {:.2} FPS (S{:02}E{:0>2})",
-                    i + 1,
-                    format.title,
-                    format.resolution,
-                    format.fps,
-                    format.season_number,
-                    format.episode_number
-                )
-            }
-        }
-    }
-}
-
-fn sort_formats_after_seasons(formats: Vec<&Format>) -> Vec<Vec<&Format>> {
-    let mut season_map = BTreeMap::new();
-
-    for format in formats {
-        season_map
-            .entry(format.season_number)
-            .or_insert(vec![])
-            .push(format)
-    }
-
-    season_map
-        .into_values()
-        .into_iter()
-        .map(|mut fmts| {
-            fmts.sort_by(|a, b| a.sequence_number.total_cmp(&b.sequence_number));
-            fmts
-        })
-        .collect()
 }

@@ -1,11 +1,13 @@
 use crate::download::filter::DownloadFilter;
 use crate::utils::context::Context;
+use crate::utils::download::{DownloadBuilder, DownloadFormat};
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::Filter;
-use crate::utils::format::formats_visual_output;
+use crate::utils::format::{Format, SingleFormat};
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg};
 use crate::utils::parse::parse_url;
+use crate::utils::video::variant_data_from_stream;
 use crate::Execute;
 use anyhow::bail;
 use anyhow::Result;
@@ -116,19 +118,35 @@ impl Execute for Download {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let download_formats = DownloadFilter::new(url_filter, self.clone())
+            let single_format_collection = DownloadFilter::new(url_filter, self.clone())
                 .visit(media_collection)
                 .await?;
 
-            if download_formats.is_empty() {
+            if single_format_collection.is_empty() {
                 progress_handler.stop(format!("Skipping url {} (no matching videos found)", i + 1));
                 continue;
             }
             progress_handler.stop(format!("Loaded series information for url {}", i + 1));
 
-            formats_visual_output(download_formats.iter().map(|(_, f)| f).collect());
+            single_format_collection.full_visual_output();
 
-            for (downloader, format) in download_formats {
+            let download_builder = DownloadBuilder::new()
+                .default_subtitle(self.subtitle.clone())
+                .output_format(if self.output == "-" {
+                    Some("mpegts".to_string())
+                } else {
+                    None
+                });
+
+            for mut single_formats in single_format_collection.into_iter() {
+                // the vec contains always only one item
+                let single_format = single_formats.remove(0);
+
+                let (download_format, format) = get_format(&self, &single_format).await?;
+
+                let mut downloader = download_builder.clone().build();
+                downloader.add_format(download_format);
+
                 let formatted_path = format.format_path((&self.output).into(), true);
                 let (path, changed) = free_file(formatted_path.clone());
 
@@ -148,4 +166,49 @@ impl Execute for Download {
 
         Ok(())
     }
+}
+
+async fn get_format(
+    download: &Download,
+    single_format: &SingleFormat,
+) -> Result<(DownloadFormat, Format)> {
+    let stream = single_format.stream().await?;
+    let Some((video, audio)) = variant_data_from_stream(&stream, &download.resolution).await? else {
+        if single_format.is_episode() {
+            bail!(
+                "Resolution ({}) is not available for episode {} ({}) of {} season {}",
+                download.resolution,
+                single_format.episode_number,
+                single_format.title,
+                single_format.series_name,
+                single_format.season_number,
+            )
+        } else {
+            bail!(
+                "Resolution ({}) is not available for {} ({})",
+                download.resolution,
+                single_format.source_type(),
+                single_format.title
+            )
+        }
+    };
+
+    let subtitle = if let Some(subtitle_locale) = &download.subtitle {
+        stream.subtitles.get(subtitle_locale).map(|s| s.clone())
+    } else {
+        None
+    };
+
+    let download_format = DownloadFormat {
+        video: (video.clone(), single_format.audio.clone()),
+        audios: vec![(audio, single_format.audio.clone())],
+        subtitles: subtitle.clone().map_or(vec![], |s| vec![s]),
+    };
+    let format = Format::from_single_formats(vec![(
+        single_format.clone(),
+        video,
+        subtitle.map_or(vec![], |s| vec![s]),
+    )]);
+
+    Ok((download_format, format))
 }

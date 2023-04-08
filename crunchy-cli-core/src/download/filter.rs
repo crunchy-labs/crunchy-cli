@@ -1,21 +1,11 @@
 use crate::download::Download;
-use crate::utils::download::{DownloadBuilder, DownloadFormat, Downloader};
 use crate::utils::filter::Filter;
-use crate::utils::format::{Format, SingleFormat};
+use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
 use crate::utils::parse::UrlFilter;
-use crate::utils::video::variant_data_from_stream;
 use anyhow::{bail, Result};
-use crunchyroll_rs::media::{Subtitle, VariantData};
 use crunchyroll_rs::{Concert, Episode, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{error, warn};
 use std::collections::HashMap;
-
-pub(crate) struct FilterResult {
-    format: SingleFormat,
-    video: VariantData,
-    audio: VariantData,
-    subtitle: Option<Subtitle>,
-}
 
 pub(crate) struct DownloadFilter {
     url_filter: UrlFilter,
@@ -37,8 +27,8 @@ impl DownloadFilter {
 
 #[async_trait::async_trait]
 impl Filter for DownloadFilter {
-    type T = FilterResult;
-    type Output = (Downloader, Format);
+    type T = SingleFormat;
+    type Output = SingleFormatCollection;
 
     async fn visit_series(&mut self, series: Series) -> Result<Vec<Season>> {
         // `series.audio_locales` isn't always populated b/c of crunchyrolls api. so check if the
@@ -165,32 +155,6 @@ impl Filter for DownloadFilter {
             }
         }
 
-        // get the correct video stream
-        let stream = episode.streams().await?;
-        let (video, audio) = if let Some((video, audio)) =
-            variant_data_from_stream(&stream, &self.download.resolution).await?
-        {
-            (video, audio)
-        } else {
-            bail!(
-                "Resolution ({}) is not available for episode {} ({}) of {} season {}",
-                self.download.resolution,
-                episode.episode_number,
-                episode.title,
-                episode.series_title,
-                episode.season_number,
-            )
-        };
-
-        // it is assumed that the subtitle, if requested, exists b/c the subtitle check above must
-        // be passed to reach this condition.
-        // the check isn't done in this if block to reduce unnecessary fetching of the stream
-        let subtitle = if let Some(subtitle_locale) = &self.download.subtitle {
-            stream.subtitles.get(subtitle_locale).map(|s| s.clone())
-        } else {
-            None
-        };
-
         // get the relative episode number. only done if the output string has the pattern to include
         // the relative episode number as this requires some extra fetching
         let relative_episode_number = if Format::has_relative_episodes_fmt(&self.download.output) {
@@ -225,17 +189,17 @@ impl Filter for DownloadFilter {
             None
         };
 
-        Ok(Some(FilterResult {
-            format: SingleFormat::new_from_episode(
-                &episode,
-                &video,
-                subtitle.clone().map_or(vec![], |s| vec![s.locale]),
-                relative_episode_number.map(|n| n as u32),
-            ),
-            video,
-            audio,
-            subtitle,
-        }))
+        Ok(Some(SingleFormat::new_from_episode(
+            episode.clone(),
+            self.download.subtitle.clone().map_or(vec![], |s| {
+                if episode.subtitle_locales.contains(&s) {
+                    vec![s]
+                } else {
+                    vec![]
+                }
+            }),
+            relative_episode_number.map(|n| n as u32),
+        )))
     }
 
     async fn visit_movie_listing(&mut self, movie_listing: MovieListing) -> Result<Vec<Movie>> {
@@ -243,113 +207,24 @@ impl Filter for DownloadFilter {
     }
 
     async fn visit_movie(&mut self, movie: Movie) -> Result<Option<Self::T>> {
-        let stream = movie.streams().await?;
-        let (video, audio) = if let Some((video, audio)) =
-            variant_data_from_stream(&stream, &self.download.resolution).await?
-        {
-            (video, audio)
-        } else {
-            bail!(
-                "Resolution ({}) of movie '{}' is not available",
-                self.download.resolution,
-                movie.title
-            )
-        };
-        let subtitle = if let Some(subtitle_locale) = &self.download.subtitle {
-            let Some(subtitle) = stream.subtitles.get(subtitle_locale) else {
-                error!(
-                    "Movie '{}' has no {} subtitles",
-                    movie.title,
-                    subtitle_locale
-                );
-                return Ok(None)
-            };
-            Some(subtitle.clone())
-        } else {
-            None
-        };
-
-        Ok(Some(FilterResult {
-            format: SingleFormat::new_from_movie(
-                &movie,
-                &video,
-                subtitle.clone().map_or(vec![], |s| vec![s.locale]),
-            ),
-            video,
-            audio,
-            subtitle,
-        }))
+        Ok(Some(SingleFormat::new_from_movie(movie, vec![])))
     }
 
     async fn visit_music_video(&mut self, music_video: MusicVideo) -> Result<Option<Self::T>> {
-        let stream = music_video.streams().await?;
-        let (video, audio) = if let Some((video, audio)) =
-            variant_data_from_stream(&stream, &self.download.resolution).await?
-        {
-            (video, audio)
-        } else {
-            bail!(
-                "Resolution ({}) of music video {} is not available",
-                self.download.resolution,
-                music_video.title
-            )
-        };
-
-        Ok(Some(FilterResult {
-            format: SingleFormat::new_from_music_video(&music_video, &video),
-            video,
-            audio,
-            subtitle: None,
-        }))
+        Ok(Some(SingleFormat::new_from_music_video(music_video)))
     }
 
     async fn visit_concert(&mut self, concert: Concert) -> Result<Option<Self::T>> {
-        let stream = concert.streams().await?;
-        let (video, audio) = if let Some((video, audio)) =
-            variant_data_from_stream(&stream, &self.download.resolution).await?
-        {
-            (video, audio)
-        } else {
-            bail!(
-                "Resolution ({}) of music video {} is not available",
-                self.download.resolution,
-                concert.title
-            )
-        };
-
-        Ok(Some(FilterResult {
-            format: SingleFormat::new_from_concert(&concert, &video),
-            video,
-            audio,
-            subtitle: None,
-        }))
+        Ok(Some(SingleFormat::new_from_concert(concert)))
     }
 
-    async fn finish(self, mut input: Vec<Self::T>) -> Result<Vec<Self::Output>> {
-        let mut result = vec![];
-        input.sort_by(|a, b| {
-            a.format
-                .sequence_number
-                .total_cmp(&b.format.sequence_number)
-        });
+    async fn finish(self, input: Vec<Self::T>) -> Result<Self::Output> {
+        let mut single_format_collection = SingleFormatCollection::new();
+
         for data in input {
-            let mut download_builder =
-                DownloadBuilder::new().default_subtitle(self.download.subtitle.clone());
-            // set the output format to mpegts / mpeg transport stream if the output file is stdout.
-            // mp4 isn't used here as the output file must be readable which isn't possible when
-            // writing to stdout
-            if self.download.output == "-" {
-                download_builder = download_builder.output_format(Some("mpegts".to_string()))
-            }
-            let mut downloader = download_builder.build();
-            downloader.add_format(DownloadFormat {
-                video: (data.video, data.format.audio.clone()),
-                audios: vec![(data.audio, data.format.audio.clone())],
-                subtitles: data.subtitle.map_or(vec![], |s| vec![s]),
-            });
-            result.push((downloader, Format::from_single_formats(vec![data.format])))
+            single_format_collection.add_single_formats(vec![data])
         }
 
-        Ok(result)
+        Ok(single_format_collection)
     }
 }

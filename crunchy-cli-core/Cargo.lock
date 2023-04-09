@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.8"
+version = "3.0.0-dev.10"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "808095ff5e340185e2783bdc2fc450003e918d79f110c1b27c7fe54fa4ba23eb"
+checksum = "942a21f27140a954654d3b6b4aab8e8e3888b33cec736a51f0feab5e7fedc15f"
 dependencies = [
  "aes",
  "async-trait",
@@ -364,14 +364,14 @@ dependencies = [
  "serde_urlencoded",
  "smart-default",
  "tokio",
- "webpki-roots",
+ "webpki-roots 0.23.0",
 ]
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e5e2c70231ecd0bdc5a243bdb94cd3923176e4dfaa957006adee7899e484c8f"
+checksum = "9d90bc631b1f94891b3f5d5b9ca0b8c7f7a33e4e8d9ae98dbc6bcb5aee56b817"
 dependencies = [
  "darling 0.14.4",
  "quote",
@@ -1362,7 +1362,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.22.6",
  "winreg",
 ]
 
@@ -1414,6 +1414,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d194b56d58803a43635bdc398cd17e383d6f71f9182b9a192c127ca42494a59b"
 dependencies = [
  "base64 0.21.0",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.100.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6207cd5ed3d8dca7816f8f3725513a34609c0c765bf652b8c3cb4cfd87db46b"
+dependencies = [
+ "ring",
+ "untrusted",
 ]
 
 [[package]]
@@ -2045,6 +2055,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c71e40d7d2c34a5106301fb632274ca37242cd0c9d3e64dbece371a40a2d87"
 dependencies = [
  "webpki",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa54963694b65584e170cf5dc46aeb4dcaa5584e652ff5f3952e56d66aff0125"
+dependencies = [
+ "rustls-webpki",
 ]
 
 [[package]]

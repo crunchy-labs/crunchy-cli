@@ -19,17 +19,21 @@ pub fn has_ffmpeg() -> bool {
     }
 }
 
+/// Get the temp directory either by the specified `CRUNCHY_CLI_TEMP_DIR` env variable or the dir
+/// provided by the os.
+pub fn temp_directory() -> PathBuf {
+    env::var("CRUNCHY_CLI_TEMP_DIR").map_or(env::temp_dir(), |d| PathBuf::from(d))
+}
+
 /// Any tempfile should be created with this function. The prefix and directory of every file
 /// created with this method stays the same which is helpful to query all existing tempfiles and
 /// e.g. remove them in a case of ctrl-c. Having one function also good to prevent mistakes like
 /// setting the wrong prefix if done manually.
 pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
-    let tmp_dir = env::var("CRUNCHY_CLI_TEMP_DIR").map_or(env::temp_dir(), |d| PathBuf::from(d));
-
     let tempfile = Builder::default()
         .prefix(".crunchy-cli_")
         .suffix(suffix.as_ref())
-        .tempfile_in(tmp_dir)?;
+        .tempfile_in(temp_directory())?;
     debug!(
         "Created temporary file: {}",
         tempfile.path().to_string_lossy()

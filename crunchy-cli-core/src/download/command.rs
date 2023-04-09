@@ -42,7 +42,7 @@ pub struct Download {
       {resolution}              → Resolution of the video\n  \
       {season_number}           → Number of the season\n  \
       {episode_number}          → Number of the episode\n  \
-      {relative_episode_number} → Number of the episode relative to its season\
+      {relative_episode_number} → Number of the episode relative to its season\n  \
       {series_id}               → ID of the series\n  \
       {season_id}               → ID of the season\n  \
       {episode_id}              → ID of the episode")]

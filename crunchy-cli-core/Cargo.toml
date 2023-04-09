@@ -13,6 +13,7 @@ crunchyroll-rs = { version = "0.3", features = ["dash-stream"] }
 ctrlc = "3.2"
 dirs = "5.0"
 derive_setters = "0.1"
+fs2 = "0.4"
 indicatif = "0.17"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }

@@ -1,19 +1,20 @@
 use crate::utils::context::Context;
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::log::progress;
-use crate::utils::os::tempfile;
+use crate::utils::os::{is_special_file, temp_directory, tempfile};
 use anyhow::{bail, Result};
 use chrono::NaiveTime;
 use crunchyroll_rs::media::{Subtitle, VariantData, VariantSegment};
 use crunchyroll_rs::Locale;
 use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
-use log::{debug, LevelFilter};
+use log::{debug, warn, LevelFilter};
 use regex::Regex;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::collections::BTreeMap;
+use std::env;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
@@ -99,6 +100,32 @@ impl Downloader {
     }
 
     pub async fn download(mut self, ctx: &Context, dst: &Path) -> Result<()> {
+        // `.unwrap_or_default()` here unless https://doc.rust-lang.org/stable/std/path/fn.absolute.html
+        // gets stabilized as the function might throw error on weird file paths
+        let required = self.check_free_space(dst).await.unwrap_or_default();
+        if let Some((path, tmp_required)) = &required.0 {
+            let kb = (*tmp_required as f64) / 1024.0;
+            let mb = kb / 1024.0;
+            let gb = mb / 1024.0;
+            warn!(
+                "You may have not enough disk space to store temporary files. The temp directory ({}) should have at least {}{} free space",
+                path.to_string_lossy(),
+                if gb < 1.0 { mb.ceil().to_string() } else { format!("{:.2}", gb) },
+                if gb < 1.0 { "MB" } else { "GB" }
+            )
+        }
+        if let Some((path, dst_required)) = &required.1 {
+            let kb = (*dst_required as f64) / 1024.0;
+            let mb = kb / 1024.0;
+            let gb = mb / 1024.0;
+            warn!(
+                "You may have not enough disk space to store the output file. The directory {} should have at least {}{} free space",
+                path.to_string_lossy(),
+                if gb < 1.0 { mb.ceil().to_string() } else { format!("{:.2}", gb) },
+                if gb < 1.0 { "MB" } else { "GB" }
+            )
+        }
+
         if let Some(audio_sort_locales) = &self.audio_sort {
             self.formats.sort_by(|a, b| {
                 audio_sort_locales
@@ -335,6 +362,69 @@ impl Downloader {
         Ok(())
     }
 
+    async fn check_free_space(
+        &self,
+        dst: &Path,
+    ) -> Result<(Option<(PathBuf, u64)>, Option<(PathBuf, u64)>)> {
+        let mut all_variant_data = vec![];
+        for format in &self.formats {
+            all_variant_data.push(&format.video.0);
+            all_variant_data.extend(format.audios.iter().map(|(a, _)| a))
+        }
+        let mut estimated_required_space: u64 = 0;
+        for variant_data in all_variant_data {
+            // nearly no overhead should be generated with this call(s) as we're using dash as
+            // stream provider and generating the dash segments does not need any fetching of
+            // additional (http) resources as hls segments would
+            let segments = variant_data.segments().await?;
+
+            // sum the length of all streams up
+            estimated_required_space += estimate_variant_file_size(variant_data, &segments);
+        }
+
+        let tmp_stat = fs2::statvfs(temp_directory()).unwrap();
+        let mut dst_file = if dst.is_absolute() {
+            dst.to_path_buf()
+        } else {
+            env::current_dir()?.join(dst)
+        };
+        for ancestor in dst_file.ancestors() {
+            if ancestor.exists() {
+                dst_file = ancestor.to_path_buf();
+                break;
+            }
+        }
+        let dst_stat = fs2::statvfs(&dst_file).unwrap();
+
+        let mut tmp_space = tmp_stat.available_space();
+        let mut dst_space = dst_stat.available_space();
+
+        // this checks if the partition the two directories are located on are the same to prevent
+        // that the space fits both file sizes each but not together. this is done by checking the
+        // total space if each partition and the free space of each partition (the free space can
+        // differ by 10MB as some tiny I/O operations could be performed between the two calls which
+        // are checking the disk space)
+        if tmp_stat.total_space() == dst_stat.total_space()
+            && (tmp_stat.available_space() as i64 - dst_stat.available_space() as i64).abs() < 10240
+        {
+            tmp_space *= 2;
+            dst_space *= 2;
+        }
+
+        let mut tmp_required = None;
+        let mut dst_required = None;
+
+        if tmp_space < estimated_required_space {
+            tmp_required = Some((temp_directory(), estimated_required_space))
+        }
+        if (!is_special_file(dst) && dst.to_string_lossy() != "-")
+            && dst_space < estimated_required_space
+        {
+            dst_required = Some((dst_file, estimated_required_space))
+        }
+        Ok((tmp_required, dst_required))
+    }
+
     async fn download_video(
         &self,
         ctx: &Context,
@@ -395,8 +485,7 @@ pub async fn download_segments(
     let count = Arc::new(Mutex::new(0));
 
     let progress = if log::max_level() == LevelFilter::Info {
-        let estimated_file_size =
-            (variant_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>();
+        let estimated_file_size = estimate_variant_file_size(variant_data, &segments);
 
         let progress = ProgressBar::new(estimated_file_size)
             .with_style(
@@ -553,6 +642,10 @@ pub async fn download_segments(
     }
 
     Ok(())
+}
+
+fn estimate_variant_file_size(variant_data: &VariantData, segments: &Vec<VariantSegment>) -> u64 {
+    (variant_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>()
 }
 
 /// Add `ScaledBorderAndShadows: yes` to subtitles; without it they look very messy on some video

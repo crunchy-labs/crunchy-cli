@@ -24,10 +24,12 @@ pub fn has_ffmpeg() -> bool {
 /// e.g. remove them in a case of ctrl-c. Having one function also good to prevent mistakes like
 /// setting the wrong prefix if done manually.
 pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
+    let tmp_dir = env::var("CRUNCHY_CLI_TEMP_DIR").map_or(env::temp_dir(), |d| PathBuf::from(d));
+
     let tempfile = Builder::default()
         .prefix(".crunchy-cli_")
         .suffix(suffix.as_ref())
-        .tempfile_in(&env::temp_dir())?;
+        .tempfile_in(tmp_dir)?;
     debug!(
         "Created temporary file: {}",
         tempfile.path().to_string_lossy()

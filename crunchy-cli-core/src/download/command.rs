@@ -5,7 +5,7 @@ use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat};
 use crate::utils::log::progress;
-use crate::utils::os::{free_file, has_ffmpeg};
+use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::parse_url;
 use crate::utils::video::variant_data_from_stream;
 use crate::Execute;
@@ -86,6 +86,7 @@ impl Execute for Download {
             .extension()
             .unwrap_or_default()
             .is_empty()
+            && !is_special_file(&self.output)
             && self.output != "-"
         {
             bail!("No file extension found. Please specify a file extension (via `-o`) for the output file")
@@ -132,7 +133,7 @@ impl Execute for Download {
 
             let download_builder = DownloadBuilder::new()
                 .default_subtitle(self.subtitle.clone())
-                .output_format(if self.output == "-" {
+                .output_format(if is_special_file(&self.output) || self.output == "-" {
                     Some("mpegts".to_string())
                 } else {
                     None

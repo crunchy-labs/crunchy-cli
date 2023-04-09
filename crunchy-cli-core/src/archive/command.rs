@@ -110,7 +110,7 @@ impl Execute for Archive {
             .unwrap_or_default()
             .to_string_lossy()
             != "mkv"
-            && !is_special_file(PathBuf::from(&self.output))
+            && !is_special_file(&self.output)
             && self.output != "-"
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")

@@ -4,8 +4,10 @@ use crate::utils::log::{progress, CliLogger};
 use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use crunchyroll_rs::crunchyroll::CrunchyrollBuilder;
 use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
+use reqwest::Proxy;
 use std::{env, fs};
 
 mod archive;
@@ -49,6 +51,14 @@ pub struct Cli {
 
     #[clap(flatten)]
     login_method: LoginMethod,
+
+    #[arg(help = "Use a proxy to route all traffic through")]
+    #[arg(long_help = "Use a proxy to route all traffic through. \
+            Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself"
+    )]
+    #[clap(long)]
+    #[arg(value_parser = crate::utils::clap::clap_parse_proxy)]
+    proxy: Option<Proxy>,
 
     #[clap(subcommand)]
     command: Command,
@@ -234,7 +244,13 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         lang
     };
 
+    let mut client_builder = CrunchyrollBuilder::predefined_client_builder();
+    if let Some(proxy) = &cli.proxy {
+        client_builder = client_builder.proxy(proxy.clone())
+    }
+
     let mut builder = Crunchyroll::builder()
+        .client(client_builder.build()?)
         .locale(locale)
         .stabilization_locales(cli.experimental_fixes)
         .stabilization_season_number(cli.experimental_fixes);

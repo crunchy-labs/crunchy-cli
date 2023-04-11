@@ -361,6 +361,7 @@ dependencies = [
  "log",
  "num_cpus",
  "regex",
+ "reqwest",
  "sanitize-filename",
  "serde",
  "serde_json",
@@ -374,9 +375,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "942a21f27140a954654d3b6b4aab8e8e3888b33cec736a51f0feab5e7fedc15f"
+checksum = "be975d4a27439853f6e80311b497e910fc49fd24525afdc12ca27ace18b84eeb"
 dependencies = [
  "aes",
  "async-trait",
@@ -401,9 +402,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d90bc631b1f94891b3f5d5b9ca0b8c7f7a33e4e8d9ae98dbc6bcb5aee56b817"
+checksum = "b8d71a343838c462ace0531b2f5556fd1ea6b677d7a3e61ac28251e87d158c47"
 dependencies = [
  "darling 0.14.4",
  "quote",
@@ -594,6 +595,12 @@ dependencies = [
  "redox_users",
  "windows-sys 0.45.0",
 ]
+
+[[package]]
+name = "either"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "encode_unicode"
@@ -1399,6 +1406,7 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls",
+ "tokio-socks",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -1872,6 +1880,18 @@ dependencies = [
  "rustls",
  "tokio",
  "webpki",
+]
+
+[[package]]
+name = "tokio-socks"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51165dfa029d2a65969413a6cc96f354b86b464498702f174a4efa13608fd8c0"
+dependencies = [
+ "either",
+ "futures-util",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

@@ -375,9 +375,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be975d4a27439853f6e80311b497e910fc49fd24525afdc12ca27ace18b84eeb"
+checksum = "b75b403a64b4cc8ed9a96cb16588475a93cb5c8643cf960907a54ae6f6ac3f0d"
 dependencies = [
  "aes",
  "async-trait",
@@ -402,9 +402,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8d71a343838c462ace0531b2f5556fd1ea6b677d7a3e61ac28251e87d158c47"
+checksum = "d91a9978a505750f606a1fcf1efd5970d20521310e886839f2ad95c31354e54e"
 dependencies = [
  "darling 0.14.4",
  "quote",

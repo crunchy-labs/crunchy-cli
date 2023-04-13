@@ -16,6 +16,7 @@ mod login;
 mod utils;
 
 pub use archive::Archive;
+use crunchyroll_rs::error::CrunchyrollError;
 pub use download::Download;
 pub use login::Login;
 
@@ -200,6 +201,20 @@ async fn execute_executor(mut executor: impl Execute, ctx: Context) {
 
     if let Err(err) = executor.execute(ctx).await {
         error!("a unexpected error occurred: {}", err);
+
+        if let Some(crunchy_error) = err.downcast_ref::<CrunchyrollError>() {
+            let message = match crunchy_error {
+                CrunchyrollError::Internal(i) => &i.message,
+                CrunchyrollError::Request(r) => &r.message,
+                CrunchyrollError::Decode(d) => &d.message,
+                CrunchyrollError::Authentication(a) => &a.message,
+                CrunchyrollError::Input(i) => &i.message,
+            };
+            if message.contains("content.get_video_streams_v2.cms_service_error") {
+                error!("You've probably hit a rate limit. Try again later, generally after 10-20 minutes the rate limit is over and you can continue to use the cli")
+            }
+        }
+
         std::process::exit(1)
     }
 }

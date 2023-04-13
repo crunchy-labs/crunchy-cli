@@ -15,7 +15,7 @@ use anyhow::Result;
 use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
-use log::debug;
+use log::{debug, warn};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -29,7 +29,10 @@ pub struct Archive {
     #[arg(long_help = format!("Audio languages. Can be used multiple times. \
     Available languages are:\n{}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(short, long, default_values_t = vec![Locale::ja_JP, crate::utils::locale::system_locale()])]
-    pub(crate) locale: Vec<Locale>,
+    pub(crate) audio: Vec<Locale>,
+    #[arg(help = "Deprecated. Use '-a' / '--audio' instead")]
+    #[arg(short, long, default_values_t = vec![Locale::ja_JP, crate::utils::locale::system_locale()])]
+    locale: Vec<Locale>,
     #[arg(help = format!("Subtitle languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Subtitle languages. Can be used multiple times. \
@@ -116,7 +119,16 @@ impl Execute for Archive {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
         }
 
-        self.locale = all_locale_in_locales(self.locale.clone());
+        if !self.locale.is_empty() {
+            warn!("The '-l' / '--locale' flag is deprecated, use '-a' / '--audio' instead");
+            for locale in &self.locale {
+                if !self.audio.contains(locale) {
+                    self.audio.push(locale.clone())
+                }
+            }
+        }
+
+        self.audio = all_locale_in_locales(self.audio.clone());
         self.subtitle = all_locale_in_locales(self.subtitle.clone());
 
         Ok(())
@@ -154,7 +166,7 @@ impl Execute for Archive {
                 .default_subtitle(self.default_subtitle.clone())
                 .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
                 .output_format(Some("matroska".to_string()))
-                .audio_sort(Some(self.locale.clone()))
+                .audio_sort(Some(self.audio.clone()))
                 .subtitle_sort(Some(self.subtitle.clone()));
 
             for single_formats in single_format_collection.into_iter() {
@@ -177,10 +189,10 @@ impl Execute for Archive {
                 }
 
                 format.locales.sort_by(|(a, _), (b, _)| {
-                    self.locale
+                    self.audio
                         .iter()
                         .position(|l| l == a)
-                        .cmp(&self.locale.iter().position(|l| l == b))
+                        .cmp(&self.audio.iter().position(|l| l == b))
                 });
                 for (_, subtitles) in format.locales.iter_mut() {
                     subtitles.sort_by(|a, b| {

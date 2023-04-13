@@ -42,7 +42,7 @@ impl Filter for ArchiveFilter {
         // `series.audio_locales` isn't always populated b/c of crunchyrolls api. so check if the
         // audio is matching only if the field is populated
         if !series.audio_locales.is_empty() {
-            let missing_audio = missing_locales(&series.audio_locales, &self.archive.locale);
+            let missing_audio = missing_locales(&series.audio_locales, &self.archive.audio);
             if !missing_audio.is_empty() {
                 warn!(
                     "Series {} is not available with {} audio",
@@ -77,10 +77,10 @@ impl Filter for ArchiveFilter {
             return Ok(vec![]);
         }
 
-        let mut seasons = season.version(self.archive.locale.clone()).await?;
+        let mut seasons = season.version(self.archive.audio.clone()).await?;
         if self
             .archive
-            .locale
+            .audio
             .iter()
             .any(|l| season.audio_locales.contains(l))
         {
@@ -94,7 +94,7 @@ impl Filter for ArchiveFilter {
                 .flatten()
                 .collect();
             real_dedup_vec(&mut audio_locales);
-            let missing_audio = missing_locales(&audio_locales, &self.archive.locale);
+            let missing_audio = missing_locales(&audio_locales, &self.archive.audio);
             if !missing_audio.is_empty() {
                 warn!(
                     "Season {} is not available with {} audio",
@@ -154,12 +154,12 @@ impl Filter for ArchiveFilter {
 
         let mut episodes = vec![];
         if !matches!(self.visited, Visited::Series) && !matches!(self.visited, Visited::Season) {
-            if self.archive.locale.contains(&episode.audio_locale) {
+            if self.archive.audio.contains(&episode.audio_locale) {
                 episodes.push((episode.clone(), episode.subtitle_locales.clone()))
             }
             episodes.extend(
                 episode
-                    .version(self.archive.locale.clone())
+                    .version(self.archive.audio.clone())
                     .await?
                     .into_iter()
                     .map(|e| (e.clone(), e.subtitle_locales.clone())),
@@ -168,7 +168,7 @@ impl Filter for ArchiveFilter {
                 .iter()
                 .map(|(e, _)| e.audio_locale.clone())
                 .collect();
-            let missing_audio = missing_locales(&audio_locales, &self.archive.locale);
+            let missing_audio = missing_locales(&audio_locales, &self.archive.audio);
             if !missing_audio.is_empty() {
                 warn!(
                     "Episode {} is not available with {} audio",

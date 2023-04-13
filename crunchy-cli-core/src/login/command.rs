@@ -17,7 +17,7 @@ pub struct Login {
 #[async_trait::async_trait(?Send)]
 impl Execute for Login {
     async fn execute(self, ctx: Context) -> Result<()> {
-        if let Some(login_file_path) = login_file_path() {
+        if let Some(login_file_path) = session_file_path() {
             fs::create_dir_all(login_file_path.parent().unwrap())?;
 
             match ctx.crunchy.session_token().await {
@@ -36,6 +36,6 @@ impl Execute for Login {
     }
 }
 
-pub fn login_file_path() -> Option<PathBuf> {
+pub fn session_file_path() -> Option<PathBuf> {
     dirs::config_dir().map(|config_dir| config_dir.join("crunchy-cli").join("session"))
 }

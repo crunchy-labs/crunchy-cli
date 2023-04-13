@@ -15,6 +15,7 @@ mod download;
 mod login;
 mod utils;
 
+use crate::login::session_file_path;
 pub use archive::Archive;
 use crunchyroll_rs::error::CrunchyrollError;
 pub use download::Download;
@@ -142,7 +143,16 @@ pub async fn cli_entrypoint() {
     match &mut cli.command {
         Command::Archive(archive) => pre_check_executor(archive).await,
         Command::Download(download) => pre_check_executor(download).await,
-        Command::Login(login) => pre_check_executor(login).await,
+        Command::Login(login) => {
+            if login.remove {
+                if let Some(session_file) = session_file_path() {
+                    let _ = fs::remove_file(session_file);
+                }
+                return;
+            } else {
+                pre_check_executor(login).await
+            }
+        }
     };
 
     let ctx = match create_ctx(&cli).await {
@@ -187,13 +197,7 @@ pub async fn cli_entrypoint() {
     match cli.command {
         Command::Archive(archive) => execute_executor(archive, ctx).await,
         Command::Download(download) => execute_executor(download, ctx).await,
-        Command::Login(login) => {
-            if login.remove {
-                return;
-            } else {
-                execute_executor(login, ctx).await
-            }
-        }
+        Command::Login(login) => execute_executor(login, ctx).await,
     };
 }
 
@@ -285,7 +289,7 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
 
     let progress_handler = progress!("Logging in");
     if login_methods_count == 0 {
-        if let Some(login_file_path) = login::login_file_path() {
+        if let Some(login_file_path) = login::session_file_path() {
             if login_file_path.exists() {
                 let session = fs::read_to_string(login_file_path)?;
                 if let Some((token_type, token)) = session.split_once(':') {

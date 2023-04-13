@@ -529,11 +529,21 @@ pub async fn download_segments(
                 for (i, segment) in thread_segments.into_iter().enumerate() {
                     let mut retry_count = 0;
                     let mut buf = loop {
-                        let response = thread_client
+                        let request = thread_client
                             .get(&segment.url)
                             .timeout(Duration::from_secs(60))
-                            .send()
-                            .await?;
+                            .send();
+
+                        let response = match request.await {
+                            Ok(r) => r,
+                            Err(e) => {
+                                if retry_count == 5 {
+                                    bail!("Max retry count reached ({}), multiple errors occurred while receiving segment {}: {}", retry_count, num + (i * cpus), e)
+                                }
+                                debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), e, 5 - retry_count);
+                                continue
+                            }
+                        };
 
                         match response.bytes().await {
                             Ok(b) => break b.to_vec(),

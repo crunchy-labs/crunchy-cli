@@ -9,7 +9,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 clap = { version = "4.2", features = ["derive", "string"] }
 chrono = "0.4"
-crunchyroll-rs = { version = "0.3.3", features = ["dash-stream"] }
+crunchyroll-rs = { version = "0.3.4", features = ["dash-stream"] }
 ctrlc = "3.2"
 dirs = "5.0"
 derive_setters = "0.1"

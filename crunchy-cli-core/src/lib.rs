@@ -54,8 +54,7 @@ pub struct Cli {
 
     #[arg(help = "Use a proxy to route all traffic through")]
     #[arg(long_help = "Use a proxy to route all traffic through. \
-            Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself"
-    )]
+            Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself")]
     #[clap(long)]
     #[arg(value_parser = crate::utils::clap::clap_parse_proxy)]
     proxy: Option<Proxy>,

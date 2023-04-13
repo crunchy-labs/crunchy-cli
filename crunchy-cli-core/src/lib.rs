@@ -120,7 +120,7 @@ struct LoginMethod {
 }
 
 pub async fn cli_entrypoint() {
-    let cli: Cli = Cli::parse();
+    let mut cli: Cli = Cli::parse();
 
     if let Some(verbosity) = &cli.verbosity {
         if verbosity.v as u8 + verbosity.q as u8 + verbosity.vv as u8 > 1 {
@@ -138,6 +138,12 @@ pub async fn cli_entrypoint() {
     }
 
     debug!("cli input: {:?}", cli);
+
+    match &mut cli.command {
+        Command::Archive(archive) => pre_check_executor(archive).await,
+        Command::Download(download) => pre_check_executor(download).await,
+        Command::Login(login) => pre_check_executor(login).await,
+    };
 
     let ctx = match create_ctx(&cli).await {
         Ok(ctx) => ctx,
@@ -191,14 +197,14 @@ pub async fn cli_entrypoint() {
     };
 }
 
-/// Cannot be done in the main function. I wanted to return `dyn` [`Execute`] from the match but had to
-/// box it which then conflicts with [`Execute::execute`] which consumes `self`
-async fn execute_executor(mut executor: impl Execute, ctx: Context) {
+async fn pre_check_executor(executor: &mut impl Execute) {
     if let Err(err) = executor.pre_check() {
         error!("Misconfigurations detected: {}", err);
         std::process::exit(1)
     }
+}
 
+async fn execute_executor(executor: impl Execute, ctx: Context) {
     if let Err(err) = executor.execute(ctx).await {
         error!("a unexpected error occurred: {}", err);
 

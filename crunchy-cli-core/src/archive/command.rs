@@ -31,7 +31,7 @@ pub struct Archive {
     #[arg(short, long, default_values_t = vec![Locale::ja_JP, crate::utils::locale::system_locale()])]
     pub(crate) audio: Vec<Locale>,
     #[arg(help = "Deprecated. Use '-a' / '--audio' instead")]
-    #[arg(short, long, default_values_t = Vec::<Locale>::new())]
+    #[arg(short, long)]
     locale: Vec<Locale>,
     #[arg(help = format!("Subtitle languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]

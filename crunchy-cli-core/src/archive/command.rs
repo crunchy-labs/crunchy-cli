@@ -242,10 +242,16 @@ async fn get_format(
             }
         };
 
-        let subtitles: Vec<Subtitle> = archive
+        let subtitles: Vec<(Subtitle, bool)> = archive
             .subtitle
             .iter()
-            .filter_map(|s| stream.subtitles.get(s).cloned())
+            .filter_map(|s| {
+                stream
+                    .subtitles
+                    .get(s)
+                    .cloned()
+                    .map(|l| (l, single_format.audio == Locale::ja_JP))
+            })
             .collect();
 
         format_pairs.push((single_format, video.clone(), audio, subtitles.clone()));
@@ -278,9 +284,6 @@ async fn get_format(
             subtitles: format_pairs
                 .iter()
                 .flat_map(|(_, _, _, subtitles)| subtitles.clone())
-                .map(|s| (s.locale.clone(), s))
-                .collect::<HashMap<Locale, Subtitle>>()
-                .into_values()
                 .collect(),
         }),
         MergeBehavior::Auto => {

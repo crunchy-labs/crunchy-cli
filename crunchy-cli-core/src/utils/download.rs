@@ -11,6 +11,7 @@ use log::{debug, warn, LevelFilter};
 use regex::Regex;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::env;
 use std::io::Write;
@@ -81,7 +82,7 @@ struct FFmpegMeta {
 pub struct DownloadFormat {
     pub video: (VariantData, Locale),
     pub audios: Vec<(VariantData, Locale)>,
-    pub subtitles: Vec<Subtitle>,
+    pub subtitles: Vec<(Subtitle, bool)>,
 }
 
 pub struct Downloader {
@@ -144,12 +145,19 @@ impl Downloader {
                 })
             }
             if let Some(subtitle_sort) = &self.subtitle_sort {
-                format.subtitles.sort_by(|a, b| {
-                    subtitle_sort
-                        .iter()
-                        .position(|l| l == &a.locale)
-                        .cmp(&subtitle_sort.iter().position(|l| l == &b.locale))
-                })
+                format
+                    .subtitles
+                    .sort_by(|(a_subtitle, a_not_cc), (b_subtitle, b_not_cc)| {
+                        let ordering = subtitle_sort
+                            .iter()
+                            .position(|l| l == &a_subtitle.locale)
+                            .cmp(&subtitle_sort.iter().position(|l| l == &b_subtitle.locale));
+                        if matches!(ordering, Ordering::Equal) {
+                            a_not_cc.cmp(b_not_cc).reverse()
+                        } else {
+                            ordering
+                        }
+                    })
             }
         }
 
@@ -191,20 +199,19 @@ impl Downloader {
                 })
             }
             let len = get_video_length(&video_path)?;
-            for subtitle in format.subtitles.iter() {
+            for (subtitle, not_cc) in format.subtitles.iter() {
                 let subtitle_path = self.download_subtitle(subtitle.clone(), len).await?;
+                let mut subtitle_title = subtitle.locale.to_human_readable();
+                if !not_cc {
+                    subtitle_title += " (CC)"
+                }
+                if i != 0 {
+                    subtitle_title += &format!(" [Video: #{}]", i + 1)
+                }
                 subtitles.push(FFmpegMeta {
                     path: subtitle_path,
                     language: subtitle.locale.clone(),
-                    title: if i == 0 {
-                        subtitle.locale.to_human_readable()
-                    } else {
-                        format!(
-                            "{} [Video: #{}]",
-                            subtitle.locale.to_human_readable(),
-                            i + 1
-                        )
-                    },
+                    title: subtitle_title,
                 })
             }
             videos.push(FFmpegMeta {

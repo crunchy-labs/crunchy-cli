@@ -301,7 +301,7 @@ pub struct Format {
 
 impl Format {
     pub fn from_single_formats(
-        mut single_formats: Vec<(SingleFormat, VariantData, Vec<Subtitle>)>,
+        mut single_formats: Vec<(SingleFormat, VariantData, Vec<(Subtitle, bool)>)>,
     ) -> Self {
         let locales: Vec<(Locale, Vec<Locale>)> = single_formats
             .iter()
@@ -310,7 +310,7 @@ impl Format {
                     single_format.audio.clone(),
                     subtitles
                         .into_iter()
-                        .map(|s| s.locale.clone())
+                        .map(|(s, _)| s.locale.clone())
                         .collect::<Vec<Locale>>(),
                 )
             })

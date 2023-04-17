@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.0.0-dev.11"
+version = "3.0.0-dev.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -515,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "dash-mpd"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df35f3b3b0fde2747a01530de0a81f7a27620d050f656e518ef0550557f564de"
+checksum = "4937210c839d6f764b196afa05349927a8a2cc204ad613086e81defcddd4ade1"
 dependencies = [
  "chrono",
  "fs-err",
@@ -529,6 +529,7 @@ dependencies = [
  "serde",
  "serde_with",
  "thiserror",
+ "tokio",
  "xattr",
 ]
 
@@ -818,9 +819,9 @@ checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
 
 [[package]]
 name = "hyper"
-version = "0.14.25"
+version = "0.14.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc5e554ff619822309ffd57d8734d77cd5ce6238bc956f037ea06c58238c9899"
+checksum = "ab302d72a6f11a3b910431ff93aae7e773078c769f0a3ef15fb9ec692ed147d4"
 dependencies = [
  "bytes",
  "futures-channel",

@@ -252,20 +252,28 @@ impl Downloader {
                 format!("title={}", meta.title),
             ]);
         }
-        for (i, meta) in subtitles.iter().enumerate() {
-            input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
-            maps.extend([
-                "-map".to_string(),
-                (i + videos.len() + audios.len()).to_string(),
-            ]);
-            metadata.extend([
-                format!("-metadata:s:s:{}", i),
-                format!("language={}", meta.language),
-            ]);
-            metadata.extend([
-                format!("-metadata:s:s:{}", i),
-                format!("title={}", meta.title),
-            ]);
+
+        // this formats are supporting embedding subtitles into the video container instead of
+        // burning it into the video stream directly
+        let container_supports_softsubs =
+            ["mkv", "mp4"].contains(&dst.extension().unwrap_or_default().to_str().unwrap());
+
+        if container_supports_softsubs {
+            for (i, meta) in subtitles.iter().enumerate() {
+                input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
+                maps.extend([
+                    "-map".to_string(),
+                    (i + videos.len() + audios.len()).to_string(),
+                ]);
+                metadata.extend([
+                    format!("-metadata:s:s:{}", i),
+                    format!("language={}", meta.language),
+                ]);
+                metadata.extend([
+                    format!("-metadata:s:s:{}", i),
+                    format!("title={}", meta.title),
+                ]);
+            }
         }
 
         let (input_presets, mut output_presets) = self.ffmpeg_preset.into_input_output_args();
@@ -283,17 +291,12 @@ impl Downloader {
                 .position(|m| m.language == default_subtitle)
             {
                 match dst.extension().unwrap_or_default().to_str().unwrap() {
+                    "mkv" => (),
                     "mp4" => output_presets.extend([
                         "-movflags".to_string(),
                         "faststart".to_string(),
                         "-c:s".to_string(),
                         "mov_text".to_string(),
-                        format!("-disposition:s:s:{}", position),
-                        "forced".to_string(),
-                    ]),
-                    "mkv" => output_presets.extend([
-                        format!("-disposition:s:s:{}", position),
-                        "forced".to_string(),
                     ]),
                     _ => {
                         // remove '-c:v copy' and '-c:a copy' from output presets as its causes issues with
@@ -314,7 +317,7 @@ impl Downloader {
                         output_presets.extend([
                             "-vf".to_string(),
                             format!(
-                                "subtitles={}",
+                                "ass={}",
                                 subtitles.get(position).unwrap().path.to_str().unwrap()
                             ),
                         ])
@@ -322,14 +325,16 @@ impl Downloader {
                 }
             }
 
-            if let Some(position) = subtitles
-                .iter()
-                .position(|meta| meta.language == default_subtitle)
-            {
-                command_args.extend([
-                    format!("-disposition:s:s:{}", position),
-                    "forced".to_string(),
-                ])
+            if container_supports_softsubs {
+                if let Some(position) = subtitles
+                    .iter()
+                    .position(|meta| meta.language == default_subtitle)
+                {
+                    command_args.extend([
+                        format!("-disposition:s:s:{}", position),
+                        "forced".to_string(),
+                    ])
+                }
             }
         }
 

@@ -5,6 +5,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use crunchyroll_rs::crunchyroll::CrunchyrollBuilder;
+use crunchyroll_rs::error::CrunchyrollError;
 use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
 use reqwest::Proxy;
@@ -15,9 +16,7 @@ mod download;
 mod login;
 mod utils;
 
-use crate::login::session_file_path;
 pub use archive::Archive;
-use crunchyroll_rs::error::CrunchyrollError;
 pub use download::Download;
 pub use login::Login;
 
@@ -90,10 +89,6 @@ struct Verbosity {
     #[arg(short)]
     v: bool,
 
-    #[arg(help = "Very verbose output. Generally not recommended, use '-v' instead")]
-    #[arg(long)]
-    vv: bool,
-
     #[arg(help = "Quiet output. Does not print anything unless it's a error")]
     #[arg(
         long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout"
@@ -124,18 +119,16 @@ pub async fn cli_entrypoint() {
     let mut cli: Cli = Cli::parse();
 
     if let Some(verbosity) = &cli.verbosity {
-        if verbosity.v as u8 + verbosity.q as u8 + verbosity.vv as u8 > 1 {
+        if verbosity.v as u8 + verbosity.q as u8 > 1 {
             eprintln!("Output cannot be verbose ('-v') and quiet ('-q') at the same time");
             std::process::exit(1)
         } else if verbosity.v {
-            CliLogger::init(false, LevelFilter::Debug).unwrap()
+            CliLogger::init(LevelFilter::Debug).unwrap()
         } else if verbosity.q {
-            CliLogger::init(false, LevelFilter::Error).unwrap()
-        } else if verbosity.vv {
-            CliLogger::init(true, LevelFilter::Debug).unwrap()
+            CliLogger::init(LevelFilter::Error).unwrap()
         }
     } else {
-        CliLogger::init(false, LevelFilter::Info).unwrap()
+        CliLogger::init(LevelFilter::Info).unwrap()
     }
 
     debug!("cli input: {:?}", cli);
@@ -145,7 +138,7 @@ pub async fn cli_entrypoint() {
         Command::Download(download) => pre_check_executor(download).await,
         Command::Login(login) => {
             if login.remove {
-                if let Some(session_file) = session_file_path() {
+                if let Some(session_file) = login::session_file_path() {
                     let _ = fs::remove_file(session_file);
                 }
                 return;

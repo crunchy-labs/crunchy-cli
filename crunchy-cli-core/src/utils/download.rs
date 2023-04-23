@@ -256,7 +256,7 @@ impl Downloader {
         // this formats are supporting embedding subtitles into the video container instead of
         // burning it into the video stream directly
         let container_supports_softsubs =
-            ["mkv", "mp4"].contains(&dst.extension().unwrap_or_default().to_str().unwrap());
+            ["mkv", "mov", "mp4"].contains(&dst.extension().unwrap_or_default().to_str().unwrap());
 
         if container_supports_softsubs {
             for (i, meta) in subtitles.iter().enumerate() {
@@ -292,7 +292,7 @@ impl Downloader {
             {
                 match dst.extension().unwrap_or_default().to_str().unwrap() {
                     "mkv" => (),
-                    "mp4" => output_presets.extend([
+                    "mov" | "mp4" => output_presets.extend([
                         "-movflags".to_string(),
                         "faststart".to_string(),
                         "-c:s".to_string(),

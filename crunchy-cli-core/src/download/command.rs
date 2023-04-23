@@ -205,12 +205,12 @@ async fn get_format(
         audios: vec![(audio, single_format.audio.clone())],
         subtitles: subtitle
             .clone()
-            .map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP)]),
+            .map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1)]),
     };
     let format = Format::from_single_formats(vec![(
         single_format.clone(),
         video,
-        subtitle.map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP)]),
+        subtitle.map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1)]),
     )]);
 
     Ok((download_format, format))

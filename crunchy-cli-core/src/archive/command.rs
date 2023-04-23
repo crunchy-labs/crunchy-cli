@@ -250,7 +250,14 @@ async fn get_format(
                     .subtitles
                     .get(s)
                     .cloned()
-                    .map(|l| (l, single_format.audio == Locale::ja_JP))
+                    // the subtitle is probably not cc if the audio is japanese or more than one
+                    // subtitle exists for this stream
+                    .map(|l| {
+                        (
+                            l,
+                            single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
+                        )
+                    })
             })
             .collect();
 

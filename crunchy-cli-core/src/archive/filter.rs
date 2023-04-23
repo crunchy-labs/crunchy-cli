@@ -269,8 +269,6 @@ impl Filter for ArchiveFilter {
 
         let mut single_format_collection = SingleFormatCollection::new();
 
-        struct SortKey(u32, String);
-
         let mut sorted: BTreeMap<(u32, String), Self::T> = BTreeMap::new();
         for data in flatten_input {
             sorted

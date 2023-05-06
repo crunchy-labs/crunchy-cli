@@ -52,8 +52,17 @@ pub fn free_file(mut path: PathBuf) -> (PathBuf, bool) {
     while path.exists() {
         i += 1;
 
-        let ext = path.extension().unwrap_or_default().to_string_lossy();
+        let mut ext = path.extension().unwrap_or_default().to_str().unwrap();
         let mut filename = path.file_stem().unwrap_or_default().to_str().unwrap();
+
+        // if the extension is empty, the filename without extension is probably empty
+        // (e.g. `.mp4`). in this case Rust assumes that `.mp4` is the file stem rather than the
+        // extension. if this is the case, set the extension to the file stem and make the file stem
+        // empty
+        if ext.is_empty() {
+            ext = filename;
+            filename = "";
+        }
 
         if filename.ends_with(&format!(" ({})", i - 1)) {
             filename = filename.strip_suffix(&format!(" ({})", i - 1)).unwrap();

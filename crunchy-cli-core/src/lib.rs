@@ -51,7 +51,7 @@ pub struct Cli {
     experimental_fixes: bool,
 
     #[clap(flatten)]
-    login_method: LoginMethod,
+    login_method: login::LoginMethod,
 
     #[arg(help = "Use a proxy to route all traffic through")]
     #[arg(long_help = "Use a proxy to route all traffic through. \
@@ -97,24 +97,6 @@ struct Verbosity {
     q: bool,
 }
 
-#[derive(Debug, Parser)]
-struct LoginMethod {
-    #[arg(
-        help = "Login with credentials (username or email and password). Must be provided as user:password"
-    )]
-    #[arg(long)]
-    credentials: Option<String>,
-    #[arg(help = "Login with the etp-rt cookie")]
-    #[arg(
-        long_help = "Login with the etp-rt cookie. This can be obtained when you login on crunchyroll.com and extract it from there"
-    )]
-    #[arg(long)]
-    etp_rt: Option<String>,
-    #[arg(help = "Login anonymously / without an account")]
-    #[arg(long, default_value_t = false)]
-    anonymous: bool,
-}
-
 pub async fn cli_entrypoint() {
     let mut cli: Cli = Cli::parse();
 
@@ -148,7 +130,7 @@ pub async fn cli_entrypoint() {
         }
     };
 
-    let ctx = match create_ctx(&cli).await {
+    let ctx = match create_ctx(&mut cli).await {
         Ok(ctx) => ctx,
         Err(e) => {
             error!("{}", e);
@@ -222,12 +204,12 @@ async fn execute_executor(executor: impl Execute, ctx: Context) {
     }
 }
 
-async fn create_ctx(cli: &Cli) -> Result<Context> {
+async fn create_ctx(cli: &mut Cli) -> Result<Context> {
     let crunchy = crunchyroll_session(cli).await?;
     Ok(Context { crunchy })
 }
 
-async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
+async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     let supported_langs = vec![
         Locale::ar_ME,
         Locale::de_DE,
@@ -276,12 +258,18 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
         builder = builder.preferred_audio_locale(download.audio.clone())
     }
 
-    let login_methods_count = cli.login_method.credentials.is_some() as u8
+    let root_login_methods_count = cli.login_method.credentials.is_some() as u8
         + cli.login_method.etp_rt.is_some() as u8
         + cli.login_method.anonymous as u8;
+    let mut login_login_methods_count = 0;
+    if let Command::Login(login) = &cli.command {
+        login_login_methods_count += login.login_method.credentials.is_some() as u8
+            + cli.login_method.etp_rt.is_some() as u8
+            + cli.login_method.anonymous as u8
+    }
 
     let progress_handler = progress!("Logging in");
-    if login_methods_count == 0 {
+    if root_login_methods_count + login_login_methods_count == 0 {
         if let Some(login_file_path) = login::session_file_path() {
             if login_file_path.exists() {
                 let session = fs::read_to_string(login_file_path)?;
@@ -298,11 +286,21 @@ async fn crunchyroll_session(cli: &Cli) -> Result<Crunchyroll> {
             }
         }
         bail!("Please use a login method ('--credentials', '--etp-rt' or '--anonymous')")
-    } else if login_methods_count > 1 {
+    } else if root_login_methods_count + login_login_methods_count > 1 {
         bail!("Please use only one login method ('--credentials', '--etp-rt' or '--anonymous')")
     }
 
-    let crunchy = if let Some(credentials) = &cli.login_method.credentials {
+    let login_method = if login_login_methods_count > 0 {
+        if let Command::Login(login) = &cli.command {
+            login.login_method.clone()
+        } else {
+            unreachable!()
+        }
+    } else {
+        cli.login_method.clone()
+    };
+
+    let crunchy = if let Some(credentials) = &login_method.credentials {
         if let Some((user, password)) = credentials.split_once(':') {
             builder.login_with_credentials(user, password).await?
         } else {

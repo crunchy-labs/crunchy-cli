@@ -203,14 +203,22 @@ async fn get_format(
     let download_format = DownloadFormat {
         video: (video.clone(), single_format.audio.clone()),
         audios: vec![(audio, single_format.audio.clone())],
-        subtitles: subtitle
-            .clone()
-            .map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1)]),
+        subtitles: subtitle.clone().map_or(vec![], |s| {
+            vec![(
+                s,
+                single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
+            )]
+        }),
     };
     let format = Format::from_single_formats(vec![(
         single_format.clone(),
         video,
-        subtitle.map_or(vec![], |s| vec![(s, single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1)]),
+        subtitle.map_or(vec![], |s| {
+            vec![(
+                s,
+                single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
+            )]
+        }),
     )]);
 
     Ok((download_format, format))

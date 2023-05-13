@@ -264,8 +264,8 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     let mut login_login_methods_count = 0;
     if let Command::Login(login) = &cli.command {
         login_login_methods_count += login.login_method.credentials.is_some() as u8
-            + cli.login_method.etp_rt.is_some() as u8
-            + cli.login_method.anonymous as u8
+            + login.login_method.etp_rt.is_some() as u8
+            + login.login_method.anonymous as u8
     }
 
     let progress_handler = progress!("Logging in");

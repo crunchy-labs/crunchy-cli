@@ -23,7 +23,7 @@ pub struct Download {
     #[arg(help = format!("Audio language. Can only be used if the provided url(s) point to a series. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Audio language. Can only be used if the provided url(s) point to a series. \
-    Available languages are:\n{}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
+    Available languages are:\n  {}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(short, long, default_value_t = crate::utils::locale::system_locale())]
     pub(crate) audio: Locale,
     #[arg(help = format!("Subtitle language. Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]

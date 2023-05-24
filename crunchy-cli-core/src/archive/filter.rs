@@ -129,7 +129,34 @@ impl Filter for ArchiveFilter {
 
         let mut episodes = vec![];
         for season in seasons {
-            episodes.extend(season.episodes().await?)
+            let season_locale = season
+                .audio_locales
+                .get(0)
+                .cloned()
+                .unwrap_or(Locale::ja_JP);
+            let mut eps = season.episodes().await?;
+            let before_len = eps.len();
+            eps.retain(|e| e.audio_locale == season_locale);
+            if eps.len() != before_len {
+                if eps.len() == 0 {
+                    if matches!(self.visited, Visited::Series) {
+                        warn!(
+                            "Season {} is not available with {} audio",
+                            season.season_number, season_locale
+                        )
+                    }
+                } else {
+                    let last_episode = eps.last().unwrap();
+                    warn!(
+                        "Season {} is only available with {} audio until episode {} ({})",
+                        season.season_number,
+                        season_locale,
+                        last_episode.episode_number,
+                        last_episode.title
+                    )
+                }
+            }
+            episodes.extend(eps)
         }
 
         if Format::has_relative_episodes_fmt(&self.archive.output) {

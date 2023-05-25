@@ -14,11 +14,13 @@ use std::{env, fs};
 mod archive;
 mod download;
 mod login;
+mod search;
 mod utils;
 
 pub use archive::Archive;
 pub use download::Download;
 pub use login::Login;
+pub use search::Search;
 
 #[async_trait::async_trait(?Send)]
 trait Execute {
@@ -81,6 +83,7 @@ enum Command {
     Archive(Archive),
     Download(Download),
     Login(Login),
+    Search(Search),
 }
 
 #[derive(Debug, Parser)]
@@ -128,6 +131,7 @@ pub async fn cli_entrypoint() {
                 pre_check_executor(login).await
             }
         }
+        Command::Search(search) => pre_check_executor(search).await,
     };
 
     let ctx = match create_ctx(&mut cli).await {
@@ -173,6 +177,7 @@ pub async fn cli_entrypoint() {
         Command::Archive(archive) => execute_executor(archive, ctx).await,
         Command::Download(download) => execute_executor(download, ctx).await,
         Command::Login(login) => execute_executor(login, ctx).await,
+        Command::Search(search) => execute_executor(search, ctx).await,
     };
 }
 

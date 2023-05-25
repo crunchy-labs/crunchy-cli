@@ -211,16 +211,6 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
   ```
   Default is none.
 
-- Subtitle optimizations
-
-  Crunchyroll's subtitles look weird in some players (#66).
-  This can be fixed by adding a specific entry to the subtitles.
-  Even though this entry is a de facto standard, it is not defined in the official specification for the `.ass` format (cf. [Advanced SubStation Subtitles](https://wiki.videolan.org/SubStation_Alpha)). This could cause compatibility issues, but no issues have been reported yet.
-  `--no_subtitle_optimizations` disables these optimizations.
-  ```shell
-  $ crunchy archive --no_subtitle_optimizations https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
-  ```
-
 ### Episode filtering
 
 Filters patterns can be used to download a specific range of episodes from a single series.

@@ -5,14 +5,14 @@ version = "3.0.0-dev.13"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.27", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.28", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [build-dependencies]
 chrono = "0.4"
-clap = { version = "4.2", features = ["string"] }
-clap_complete = "4.2"
+clap = { version = "4.3", features = ["string"] }
+clap_complete = "4.3"
 clap_mangen = "0.2"
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }

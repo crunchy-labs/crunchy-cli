@@ -8,7 +8,7 @@ use regex::Regex;
 /// If a struct instance equals the [`Default::default()`] it's considered that no find is applied.
 /// If `from_*` is [`None`] they're set to [`u32::MIN`].
 /// If `to_*` is [`None`] they're set to [`u32::MAX`].
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InnerUrlFilter {
     from_episode: Option<u32>,
     to_episode: Option<u32>,
@@ -16,9 +16,17 @@ pub struct InnerUrlFilter {
     to_season: Option<u32>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct UrlFilter {
     inner: Vec<InnerUrlFilter>,
+}
+
+impl Default for UrlFilter {
+    fn default() -> Self {
+        Self {
+            inner: vec![InnerUrlFilter::default()],
+        }
+    }
 }
 
 impl UrlFilter {

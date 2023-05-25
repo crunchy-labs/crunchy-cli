@@ -205,9 +205,9 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
 
 - Default subtitle
 
-  `--default_subtitle` Set which subtitle language is to be flagged as **default** and **forced**.
+  `--default-subtitle` Set which subtitle language is to be flagged as **default** and **forced**.
   ```shell
-  $ crunchy archive --default_subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  $ crunchy archive --default-subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
   Default is none.
 

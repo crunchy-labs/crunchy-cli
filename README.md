@@ -50,6 +50,13 @@ A pure [Rust](https://www.rust-lang.org/) CLI for [Crunchyroll](https://www.crun
 
 Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) tab and get the binary from the latest (pre-)release.
 
+### ❄️  The nix way
+
+This requires [nix](https://nixos.org) and you'll probably need `--extra-experimental-features "nix-command flakes"` depending on your configurations.
+```shell
+$ nix <run|shell|develop> github:crunchy-labs/crunchy-cli
+```
+
 ### 🛠 Build it yourself
 
 Since we do not support every platform and architecture you may have to build the project yourself.

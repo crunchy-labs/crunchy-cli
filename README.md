@@ -143,7 +143,7 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
   ```shell
   $ crunchy download -o "ditf.ts" https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
-  Default is `{title}.ts`.
+  Default is `{title}.ts` or `{title}.mp4`, depending on the version of binary you're using. See the Template Options section below for more options.
 
 - Resolution
 
@@ -187,7 +187,7 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
   ```shell
   $ crunchy archive -o "{title}.mkv" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
-  Default is `{title}.mkv`.
+  Default is `{title}.mkv`. See the Template Options section below for more options.
 
 - Resolution
 
@@ -217,6 +217,28 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
   $ crunchy archive --default-subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
   Default is none.
+  
+### Output Template Options
+
+You can use various template options to change how the filename is processed. The following tags are available:
+
+- {title}                   → Title of the video
+- {series_name}             → Name of the series
+- {season_name}             → Name of the season
+- {audio}                   → Audio language of the video
+- {resolution}              → Resolution of the video
+- {season_number}           → Number of the season
+- {episode_number}          → Number of the episode
+- {relative_episode_number} → Number of the episode relative to its season
+- {series_id}               → ID of the series
+- {season_id}               → ID of the season
+- {episode_id}              → ID of the episode
+
+When including a file extension in the output, use the `.mp4` extension when using a binary crunchy-cli v3.0.0-dev.9 or newer and using the `download` option. `.mkv` is the default file extension for `archive` downloads. Here is an example of using output templates:
+```shell
+$ crunchy archive -o "[S{season_number}E{episode_number}] {title}.mkv" https://www.crunchyroll.com/series/G8DHV7W21/dragon-ball
+# Outputs: '[S01E01] Secret of the Dragon Ball.mkv'
+```
 
 ### Episode filtering
 

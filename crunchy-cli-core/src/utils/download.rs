@@ -475,8 +475,7 @@ impl Downloader {
 
         let mut buf = vec![];
         subtitle.write_to(&mut buf).await?;
-        fix_subtitle_look_and_feel(&mut buf);
-        fix_subtitle_length(&mut buf, max_length);
+        fix_subtitles(&mut buf, max_length);
 
         file.write_all(buf.as_slice())?;
 
@@ -670,27 +669,6 @@ fn estimate_variant_file_size(variant_data: &VariantData, segments: &Vec<Variant
     (variant_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>()
 }
 
-/// Add `ScaledBorderAndShadows: yes` to subtitles; without it they look very messy on some video
-/// players. See [crunchy-labs/crunchy-cli#66](https://github.com/crunchy-labs/crunchy-cli/issues/66)
-/// for more information.
-fn fix_subtitle_look_and_feel(raw: &mut Vec<u8>) {
-    let mut script_info = false;
-    let mut new = String::new();
-
-    for line in String::from_utf8_lossy(raw.as_slice()).split('\n') {
-        if line.trim().starts_with('[') && script_info {
-            new.push_str("ScaledBorderAndShadow: yes\n");
-            script_info = false
-        } else if line.trim() == "[Script Info]" {
-            script_info = true
-        }
-        new.push_str(line);
-        new.push('\n')
-    }
-
-    *raw = new.into_bytes()
-}
-
 /// Get the length of a video. This is required because sometimes subtitles have an unnecessary entry
 /// long after the actual video ends with artificially extends the video length on some video players.
 /// To prevent this, the video length must be hard set. See
@@ -712,12 +690,22 @@ pub fn get_video_length(path: &Path) -> Result<NaiveTime> {
     Ok(NaiveTime::parse_from_str(caps.name("time").unwrap().as_str(), "%H:%M:%S%.f").unwrap())
 }
 
-/// Fix the length of subtitles to a specified maximum amount. This is required because sometimes
-/// subtitles have an unnecessary entry long after the actual video ends with artificially extends
-/// the video length on some video players. To prevent this, the video length must be hard set. See
-/// [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32) for more
+/// Fix the subtitles in multiple ways as Crunchyroll sometimes delivers them malformed.
+///
+/// Look and feel fix: Add `ScaledBorderAndShadows: yes` to subtitles; without it they look very
+/// messy on some video players. See
+/// [crunchy-labs/crunchy-cli#66](https://github.com/crunchy-labs/crunchy-cli/issues/66) for more
 /// information.
-fn fix_subtitle_length(raw: &mut Vec<u8>, max_length: NaiveTime) {
+/// Length fix: Sometimes subtitles have an unnecessary long entry which exceeds the video length,
+/// some video players can't handle this correctly. To prevent this, the subtitles must be checked
+/// if any entry is longer than the video length and if so the entry ending must be hard set to not
+/// exceed the video length. See [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32)
+/// for more information.
+/// Sort fix: Sometimes subtitle entries aren't sorted correctly by time which confuses some video
+/// players. To prevent this, the subtitle entries must be manually sorted. See
+/// [crunchy-labs/crunchy-cli#208](https://github.com/crunchy-labs/crunchy-cli/issues/208) for more
+/// information.
+fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
     let re =
         Regex::new(r#"^Dialogue:\s\d+,(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),"#)
             .unwrap();
@@ -738,10 +726,17 @@ fn fix_subtitle_length(raw: &mut Vec<u8>, max_length: NaiveTime) {
     }
 
     let length_as_string = format_naive_time(max_length);
-    let mut new = String::new();
+    let mut entries = (vec![], vec![]);
 
-    for line in String::from_utf8_lossy(raw.as_slice()).split('\n') {
-        if let Some(capture) = re.captures(line) {
+    let mut as_lines: Vec<String> = String::from_utf8_lossy(raw.as_slice())
+        .split('\n')
+        .map(|s| s.to_string())
+        .collect();
+
+    for (i, line) in as_lines.iter_mut().enumerate() {
+        if line.trim() == "[Script Info]" {
+            line.push_str("\nScaledBorderAndShadow: yes")
+        } else if let Some(capture) = re.captures(line) {
             let start = capture.name("start").map_or(NaiveTime::default(), |s| {
                 NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
             });
@@ -749,29 +744,32 @@ fn fix_subtitle_length(raw: &mut Vec<u8>, max_length: NaiveTime) {
                 NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
             });
 
-            if start > max_length {
-                continue;
-            } else if end > max_length {
-                new.push_str(
-                    re.replace(
+            if end > max_length {
+                *line = re
+                    .replace(
                         line,
                         format!(
                             "Dialogue: {},{},",
-                            format_naive_time(start),
+                            format_naive_time(start.clone()),
                             &length_as_string
                         ),
                     )
                     .to_string()
-                    .as_str(),
-                )
-            } else {
-                new.push_str(line)
             }
-        } else {
-            new.push_str(line)
+            entries.0.push((start, i));
+            entries.1.push(i)
         }
-        new.push('\n')
     }
 
-    *raw = new.into_bytes()
+    entries.0.sort_by(|(a, _), (b, _)| a.cmp(b));
+    for i in 0..entries.0.len() {
+        let (_, original_position) = entries.0[i];
+        let new_position = entries.1[i];
+
+        if original_position != new_position {
+            as_lines.swap(original_position, new_position)
+        }
+    }
+
+    *raw = as_lines.join("\n").into_bytes()
 }

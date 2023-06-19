@@ -108,11 +108,11 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
 ### Download
 
 **Supported urls**
-- Single episode
+- Single episode (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy download https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
-- Series
+- Series (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy download https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -156,9 +156,11 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
 ### Archive
 
 **Supported urls**
-- Series
-
-  Only series urls are supported, because episode urls are locked to a single audio language.
+- Single episode (with [episode filtering](#episode-filtering))
+  ```shell
+  $ crunchy archive https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+- Series (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy archive https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```

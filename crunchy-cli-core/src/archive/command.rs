@@ -22,7 +22,6 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, clap::Parser)]
 #[clap(about = "Archive a video")]
 #[command(arg_required_else_help(true))]
-#[command()]
 pub struct Archive {
     #[arg(help = format!("Audio languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]

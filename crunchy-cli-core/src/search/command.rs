@@ -9,6 +9,8 @@ use crunchyroll_rs::search::QueryResults;
 use crunchyroll_rs::{Episode, Locale, MediaCollection, MovieListing, MusicVideo, Series};
 
 #[derive(Debug, clap::Parser)]
+#[clap(about = "Search in videos")]
+#[command(arg_required_else_help(true))]
 pub struct Search {
     #[arg(help = format!("Audio languages to include. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]

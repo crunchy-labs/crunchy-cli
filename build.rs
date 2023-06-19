@@ -100,6 +100,7 @@ fn generate_manpages(out_dir: PathBuf) -> std::io::Result<()> {
     generate_command_manpage(crunchy_cli_core::Archive::command(), &out_dir, "archive")?;
     generate_command_manpage(crunchy_cli_core::Download::command(), &out_dir, "download")?;
     generate_command_manpage(crunchy_cli_core::Login::command(), &out_dir, "login")?;
+    generate_command_manpage(crunchy_cli_core::Search::command(), &out_dir, "search")?;
 
     Ok(())
 }

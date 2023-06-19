@@ -242,6 +242,31 @@ $ crunchy archive -o "[S{season_number}E{episode_number}] {title}.mkv" https://w
 # Output file: '[S01E01] Secret of the Dragon Ball.mkv'
 ```
 
+### Search
+
+**Supported urls/input**
+- Single episode (with [episode filtering](#episode-filtering))
+  ```shell
+  $ crunchy search https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+- Series (with [episode filtering](#episode-filtering))
+  ```shell
+  $ crunchy search https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+- Search input
+  ```shell
+  $ crunchy search "darling in the franxx"
+  ```
+
+**Options**
+- Audio
+
+  Set the audio language to search via the `--audio` flag. Can be used multiple times.
+  ```shell
+  $ crunchy search --audio en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is your system locale.
+
 ### Episode filtering
 
 Filters patterns can be used to download a specific range of episodes from a single series.

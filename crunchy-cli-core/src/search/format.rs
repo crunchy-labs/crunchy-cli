@@ -165,7 +165,7 @@ impl From<&Subtitle> for FormatSubtitle {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 enum Scope {
     Series,
     Season,
@@ -192,13 +192,11 @@ macro_rules! must_match_if_true {
 }
 
 macro_rules! self_and_versions {
-    ($var:expr => $audio:expr) => {
-        {
-            let mut items = vec![$var.clone()];
-            items.extend($var.clone().version($audio).await?);
-            items
-        }
-    };
+    ($var:expr => $audio:expr) => {{
+        let mut items = vec![$var.clone()];
+        items.extend($var.clone().version($audio).await?);
+        items
+    }};
 }
 
 pub struct Format {
@@ -281,20 +279,41 @@ impl Format {
         })
     }
 
-    fn check_pattern_count_empty(&self, scope: Scope) -> bool {
-        self.pattern_count.get(&scope).cloned().unwrap_or_default() == 0
-    }
-
     pub async fn parse(&self, media_collection: MediaCollection) -> Result<String> {
         match &media_collection {
             MediaCollection::Series(_)
             | MediaCollection::Season(_)
-            | MediaCollection::Episode(_) => self.parse_series(media_collection).await,
+            | MediaCollection::Episode(_) => {
+                self.check_scopes(vec![
+                    Scope::Series,
+                    Scope::Season,
+                    Scope::Episode,
+                    Scope::Stream,
+                    Scope::Subtitle,
+                ])?;
+
+                self.parse_series(media_collection).await
+            }
             MediaCollection::MovieListing(_) | MediaCollection::Movie(_) => {
+                self.check_scopes(vec![
+                    Scope::MovieListing,
+                    Scope::Movie,
+                    Scope::Stream,
+                    Scope::Subtitle,
+                ])?;
+
                 self.parse_movie_listing(media_collection).await
             }
-            MediaCollection::MusicVideo(_) => self.parse_music_video(media_collection).await,
-            MediaCollection::Concert(_) => self.parse_concert(media_collection).await,
+            MediaCollection::MusicVideo(_) => {
+                self.check_scopes(vec![Scope::MusicVideo, Scope::Stream, Scope::Subtitle])?;
+
+                self.parse_music_video(media_collection).await
+            }
+            MediaCollection::Concert(_) => {
+                self.check_scopes(vec![Scope::Concert, Scope::Stream, Scope::Subtitle])?;
+
+                self.parse_concert(media_collection).await
+            }
         }
     }
 
@@ -518,6 +537,23 @@ impl Format {
 
     fn serializable_to_json_map<S: Serialize>(&self, s: S) -> Map<String, Value> {
         serde_json::from_value(serde_json::to_value(s).unwrap()).unwrap()
+    }
+
+    fn check_pattern_count_empty(&self, scope: Scope) -> bool {
+        self.pattern_count.get(&scope).cloned().unwrap_or_default() == 0
+    }
+
+    fn check_scopes(&self, available_scopes: Vec<Scope>) -> Result<()> {
+        for (_, scope, field) in self.pattern.iter() {
+            if !available_scopes.contains(scope) {
+                bail!(
+                    "'{}.{}' is not a valid keyword",
+                    format!("{:?}", scope).to_lowercase(),
+                    field
+                )
+            }
+        }
+        Ok(())
     }
 
     fn replace_all(

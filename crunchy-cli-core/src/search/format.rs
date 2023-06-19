@@ -178,6 +178,29 @@ enum Scope {
     Subtitle,
 }
 
+macro_rules! must_match_if_true {
+    ($condition:expr => $media_collection:ident | $field:pat => $expr:expr) => {
+        if $condition {
+            match &$media_collection {
+                $field => Some($expr),
+                _ => panic!(),
+            }
+        } else {
+            None
+        }
+    };
+}
+
+macro_rules! self_and_versions {
+    ($var:expr => $audio:expr) => {
+        {
+            let mut items = vec![$var.clone()];
+            items.extend($var.clone().version($audio).await?);
+            items
+        }
+    };
+}
+
 pub struct Format {
     pattern: Vec<(Range<usize>, Scope, String)>,
     pattern_count: HashMap<Scope, u32>,
@@ -191,44 +214,29 @@ impl Format {
         let mut pattern = vec![];
         let mut pattern_count = HashMap::new();
 
-        let field_check = HashMap::from([
-            (
-                Scope::Series,
-                serde_json::to_value(FormatSeries::default()).unwrap(),
-            ),
-            (
-                Scope::Season,
-                serde_json::to_value(FormatSeason::default()).unwrap(),
-            ),
-            (
-                Scope::Episode,
-                serde_json::to_value(FormatEpisode::default()).unwrap(),
-            ),
-            (
-                Scope::MovieListing,
-                serde_json::to_value(FormatMovieListing::default()).unwrap(),
-            ),
-            (
-                Scope::Movie,
-                serde_json::to_value(FormatMovie::default()).unwrap(),
-            ),
-            (
-                Scope::MusicVideo,
-                serde_json::to_value(FormatMusicVideo::default()).unwrap(),
-            ),
-            (
-                Scope::Concert,
-                serde_json::to_value(FormatConcert::default()).unwrap(),
-            ),
-            (
-                Scope::Stream,
-                serde_json::to_value(FormatStream::default()).unwrap(),
-            ),
-            (
-                Scope::Subtitle,
-                serde_json::to_value(FormatSubtitle::default()).unwrap(),
-            ),
-        ]);
+        macro_rules! generate_field_check {
+            ($($scope:expr => $struct_:ident)+) => {
+                HashMap::from([
+                    $(
+                        (
+                            $scope,
+                            serde_json::from_value::<Map<String, Value>>(serde_json::to_value($struct_::default()).unwrap()).unwrap()
+                        )
+                    ),+
+                ])
+            };
+        }
+        let field_check = generate_field_check!(
+            Scope::Series => FormatSeries
+            Scope::Season => FormatSeason
+            Scope::Episode => FormatEpisode
+            Scope::MovieListing => FormatMovieListing
+            Scope::Movie => FormatMovie
+            Scope::MusicVideo => FormatMusicVideo
+            Scope::Concert => FormatConcert
+            Scope::Stream => FormatStream
+            Scope::Subtitle => FormatSubtitle
+        );
 
         for capture in scope_regex.captures_iter(&input) {
             let full = capture.get(0).unwrap();
@@ -250,8 +258,6 @@ impl Format {
 
             if field_check
                 .get(&format_pattern_scope)
-                .unwrap()
-                .as_object()
                 .unwrap()
                 .get(field)
                 .is_none()
@@ -323,16 +329,8 @@ impl Format {
                 _ => panic!(),
             };
             let mut seasons = vec![];
-            for mut season in tmp_seasons {
-                if self
-                    .filter_options
-                    .audio
-                    .iter()
-                    .any(|a| season.audio_locales.contains(a))
-                {
-                    seasons.push(season.clone())
-                }
-                seasons.extend(season.version(self.filter_options.audio.clone()).await?);
+            for season in tmp_seasons {
+                seasons.extend(self_and_versions!(season => self.filter_options.audio.clone()))
             }
             tree.extend(
                 self.filter_options
@@ -346,17 +344,7 @@ impl Format {
         if !episode_empty || !stream_empty {
             match &media_collection {
                 MediaCollection::Episode(episode) => {
-                    let mut episodes = vec![];
-                    if self.filter_options.audio.contains(&episode.audio_locale) {
-                        episodes.push(episode.clone())
-                    }
-                    episodes.extend(
-                        episode
-                            .clone()
-                            .version(self.filter_options.audio.clone())
-                            .await?,
-                    );
-
+                    let episodes = self_and_versions!(episode => self.filter_options.audio.clone());
                     tree.push((
                         Season::default(),
                         episodes
@@ -402,31 +390,21 @@ impl Format {
             let season_map = self.serializable_to_json_map(FormatSeason::from(&season));
             for (episode, streams) in episodes {
                 let episode_map = self.serializable_to_json_map(FormatEpisode::from(&episode));
-                for mut stream in streams {
+                for stream in streams {
                     let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
-                    if stream.subtitles.is_empty() {
-                        if !self.check_pattern_count_empty(Scope::Subtitle) {
-                            continue;
-                        }
-                        stream
-                            .subtitles
-                            .insert(Locale::Custom("".to_string()), Subtitle::default());
-                    }
-                    for subtitle in self
-                        .filter_options
-                        .filter_subtitles(stream.subtitles.into_values().collect())
-                    {
-                        let subtitle_map =
-                            self.serializable_to_json_map(FormatSubtitle::from(&subtitle));
-                        let replace_map = HashMap::from([
-                            (Scope::Series, &series_map),
-                            (Scope::Season, &season_map),
-                            (Scope::Episode, &episode_map),
-                            (Scope::Stream, &stream_map),
-                            (Scope::Subtitle, &subtitle_map),
-                        ]);
-                        output.push(self.replace(replace_map))
-                    }
+
+                    output.push(
+                        self.replace_all(
+                            HashMap::from([
+                                (Scope::Series, &series_map),
+                                (Scope::Season, &season_map),
+                                (Scope::Episode, &episode_map),
+                                (Scope::Stream, &stream_map),
+                            ]),
+                            stream,
+                        )
+                        .unwrap_or_default(),
+                    )
                 }
             }
         }
@@ -477,30 +455,20 @@ impl Format {
             self.serializable_to_json_map(FormatMovieListing::from(&movie_listing));
         for (movie, streams) in tree {
             let movie_map = self.serializable_to_json_map(FormatMovie::from(&movie));
-            for mut stream in streams {
+            for stream in streams {
                 let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
-                if stream.subtitles.is_empty() {
-                    if !self.check_pattern_count_empty(Scope::Subtitle) {
-                        continue;
-                    }
-                    stream
-                        .subtitles
-                        .insert(Locale::Custom("".to_string()), Subtitle::default());
-                }
-                for subtitle in self
-                    .filter_options
-                    .filter_subtitles(stream.subtitles.into_values().collect())
-                {
-                    let subtitle_map =
-                        self.serializable_to_json_map(FormatSubtitle::from(&subtitle));
-                    let replace_map = HashMap::from([
-                        (Scope::MovieListing, &movie_listing_map),
-                        (Scope::Movie, &movie_map),
-                        (Scope::Stream, &stream_map),
-                        (Scope::Subtitle, &subtitle_map),
-                    ]);
-                    output.push(self.replace(replace_map))
-                }
+
+                output.push(
+                    self.replace_all(
+                        HashMap::from([
+                            (Scope::MovieListing, &movie_listing_map),
+                            (Scope::Movie, &movie_map),
+                            (Scope::Stream, &stream_map),
+                        ]),
+                        stream,
+                    )
+                    .unwrap_or_default(),
+                )
             }
         }
 
@@ -511,100 +479,73 @@ impl Format {
         let music_video_empty = self.check_pattern_count_empty(Scope::MusicVideo);
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
-        let music_video = if !music_video_empty {
-            match &media_collection {
-                MediaCollection::MusicVideo(music_video) => music_video.clone(),
-                _ => panic!(),
-            }
-        } else {
-            MusicVideo::default()
-        };
-        let mut stream = if !stream_empty {
-            match &media_collection {
-                MediaCollection::MusicVideo(music_video) => music_video.streams().await?,
-                _ => panic!(),
-            }
-        } else {
-            Stream::default()
-        };
+        let music_video = must_match_if_true!(!music_video_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.clone()).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.streams().await?).unwrap_or_default();
 
-        let mut output = vec![];
         let music_video_map = self.serializable_to_json_map(FormatMusicVideo::from(&music_video));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
-        if stream.subtitles.is_empty() {
-            if !self.check_pattern_count_empty(Scope::Subtitle) {
-                return Ok("".to_string());
-            }
-            stream
-                .subtitles
-                .insert(Locale::Custom("".to_string()), Subtitle::default());
-        }
-        for subtitle in self
-            .filter_options
-            .filter_subtitles(stream.subtitles.into_values().collect())
-        {
-            let subtitle_map = self.serializable_to_json_map(FormatSubtitle::from(&subtitle));
-            let replace_map = HashMap::from([
-                (Scope::MusicVideo, &music_video_map),
-                (Scope::Stream, &stream_map),
-                (Scope::Subtitle, &subtitle_map),
-            ]);
-            output.push(self.replace(replace_map))
-        }
 
-        Ok(output.join("\n"))
+        let output = self
+            .replace_all(
+                HashMap::from([
+                    (Scope::MusicVideo, &music_video_map),
+                    (Scope::Stream, &stream_map),
+                ]),
+                stream,
+            )
+            .unwrap_or_default();
+        Ok(output)
     }
 
     async fn parse_concert(&self, media_collection: MediaCollection) -> Result<String> {
         let concert_empty = self.check_pattern_count_empty(Scope::Concert);
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
-        let concert = if !concert_empty {
-            match &media_collection {
-                MediaCollection::Concert(concert) => concert.clone(),
-                _ => panic!(),
-            }
-        } else {
-            Concert::default()
-        };
-        let mut stream = if !stream_empty {
-            match &media_collection {
-                MediaCollection::Concert(concert) => concert.streams().await?,
-                _ => panic!(),
-            }
-        } else {
-            Stream::default()
-        };
+        let concert = must_match_if_true!(!concert_empty => media_collection|MediaCollection::Concert(concert) => concert.clone()).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::Concert(concert) => concert.streams().await?).unwrap_or_default();
 
-        let mut output = vec![];
         let concert_map = self.serializable_to_json_map(FormatConcert::from(&concert));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
+
+        let output = self
+            .replace_all(
+                HashMap::from([(Scope::Concert, &concert_map), (Scope::Stream, &stream_map)]),
+                stream,
+            )
+            .unwrap_or_default();
+        Ok(output)
+    }
+
+    fn serializable_to_json_map<S: Serialize>(&self, s: S) -> Map<String, Value> {
+        serde_json::from_value(serde_json::to_value(s).unwrap()).unwrap()
+    }
+
+    fn replace_all(
+        &self,
+        values: HashMap<Scope, &Map<String, Value>>,
+        mut stream: Stream,
+    ) -> Option<String> {
         if stream.subtitles.is_empty() {
             if !self.check_pattern_count_empty(Scope::Subtitle) {
-                return Ok("".to_string());
+                return None;
             }
             stream
                 .subtitles
                 .insert(Locale::Custom("".to_string()), Subtitle::default());
         }
-        for subtitle in self
+        let subtitles = self
             .filter_options
-            .filter_subtitles(stream.subtitles.into_values().collect())
-        {
+            .filter_subtitles(stream.subtitles.into_values().collect());
+
+        let mut output = vec![];
+        for subtitle in subtitles {
             let subtitle_map = self.serializable_to_json_map(FormatSubtitle::from(&subtitle));
-            let replace_map = HashMap::from([
-                (Scope::MusicVideo, &concert_map),
-                (Scope::Stream, &stream_map),
-                (Scope::Subtitle, &subtitle_map),
-            ]);
-            output.push(self.replace(replace_map))
+            let mut tmp_values = values.clone();
+            tmp_values.insert(Scope::Subtitle, &subtitle_map);
+            output.push(self.replace(tmp_values))
         }
 
-        Ok(output.join("\n"))
-    }
-
-    fn serializable_to_json_map<S: Serialize>(&self, s: S) -> Map<String, Value> {
-        serde_json::from_value(serde_json::to_value(s).unwrap()).unwrap()
+        Some(output.join("\n"))
     }
 
     fn replace(&self, values: HashMap<Scope, &Map<String, Value>>) -> String {

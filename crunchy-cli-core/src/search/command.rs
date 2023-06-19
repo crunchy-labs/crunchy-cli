@@ -10,7 +10,10 @@ use crunchyroll_rs::{Episode, Locale, MediaCollection, MovieListing, MusicVideo,
 
 #[derive(Debug, clap::Parser)]
 pub struct Search {
-    #[arg(help = "Audio languages to include")]
+    #[arg(help = format!("Audio languages to include. \
+    Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
+    #[arg(long_help = format!("Audio languages to include. \
+    Available languages are:\n  {}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(long, default_values_t = vec![crate::utils::locale::system_locale()])]
     audio: Vec<Locale>,
 
@@ -41,37 +44,55 @@ pub struct Search {
     /// For example, if you want to get the title of an episode, you can use `Title {{episode.title}}` and `{{episode.title}}` will be replaced with the episode title
     ///
     /// See the following list for all keywords and their meaning:
+    ///     series.id                 → Series id
     ///     series.title              → Series title
     ///     series.description        → Series description
+    ///     series.release_year       → Series release year
     ///
+    ///     season.id                 → Season id
     ///     season.title              → Season title
     ///     season.description        → Season description
     ///     season.number             → Season number
+    ///     season.episodes           → Number of episodes the season has
     ///
+    ///     episode.id                → Episode id
     ///     episode.title             → Episode title
     ///     episode.description       → Episode description
     ///     episode.locale            → Episode locale/language
     ///     episode.number            → Episode number
     ///     episode.sequence_number   → Episode number. This number is unique unlike `episode.number` which sometimes can be duplicated
+    ///     episode.duration          → Episode duration in milliseconds
+    ///     episode.air_date          → Episode air date as unix timestamp
+    ///     episode.premium_only      → If the episode is only available with Crunchyroll premium
     ///
+    ///     movie_listing.id          → Movie listing id
     ///     movie_listing.title       → Movie listing title
     ///     movie_listing.description → Movie listing description
     ///
+    ///     movie.id                  → Movie id
     ///     movie.title               → Movie title
     ///     movie.description         → Movie description
+    ///     movie.duration            → Movie duration in milliseconds
+    ///     movie.premium_only        → If the movie is only available with Crunchyroll premium
     ///
+    ///     music_video.id            → Music video id
     ///     music_video.title         → Music video title
     ///     music_video.description   → Music video description
+    ///     music_video.duration      → Music video duration in milliseconds
+    ///     music_video.premium_only  → If the music video is only available with Crunchyroll premium
     ///
+    ///     concert.id                → Concert id
     ///     concert.title             → Concert title
     ///     concert.description       → Concert description
+    ///     concert.duration          → Concert duration in milliseconds
+    ///     concert.premium_only      → If the concert is only available with Crunchyroll premium
     ///
     ///     stream.locale             → Stream locale/language
     ///     stream.dash_url           → Stream url in DASH format
     ///     stream.hls_url            → Stream url in HLS format
     ///
     ///     subtitle.locale           → Subtitle locale/language
-    ///     subtitle.url              → Subtitle url
+    ///     subtitle.url              → Url to the subtitle
     #[arg(short, long, verbatim_doc_comment)]
     #[arg(default_value = "S{{season.number}}E{{episode.number}} - {{episode.title}}")]
     output: String,

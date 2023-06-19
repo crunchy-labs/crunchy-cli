@@ -1,10 +1,8 @@
 use crate::utils::parse::UrlFilter;
-use crunchyroll_rs::media::Subtitle;
 use crunchyroll_rs::{Episode, Locale, MovieListing, Season, Series};
 
 pub struct FilterOptions {
     pub audio: Vec<Locale>,
-    pub filter_subtitles: bool,
     pub url_filter: UrlFilter,
 }
 
@@ -38,13 +36,6 @@ impl FilterOptions {
                 .clone()
                 .map_or(vec![], |a| vec![a.clone()]),
         )
-    }
-
-    pub fn filter_subtitles(&self, mut subtitles: Vec<Subtitle>) -> Vec<Subtitle> {
-        if self.filter_subtitles {
-            subtitles.retain(|s| self.check_audio_language(&vec![s.locale.clone()]))
-        }
-        subtitles
     }
 
     fn check_audio_language(&self, audio: &Vec<Locale>) -> bool {

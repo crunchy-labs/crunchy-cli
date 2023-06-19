@@ -17,10 +17,6 @@ pub struct Search {
     #[arg(long, default_values_t = vec![crate::utils::locale::system_locale()])]
     audio: Vec<Locale>,
 
-    #[arg(help = "Filter the locale/language of subtitles according to the value of `--audio`")]
-    #[arg(long, default_value_t = false)]
-    filter_subtitles: bool,
-
     #[arg(help = "Limit of search top search results")]
     #[arg(long, default_value_t = 5)]
     search_top_results_limit: u32,
@@ -144,7 +140,6 @@ impl Execute for Search {
         for (media_collection, url_filter) in input {
             let filter_options = FilterOptions {
                 audio: self.audio.clone(),
-                filter_subtitles: self.filter_subtitles,
                 url_filter,
             };
 

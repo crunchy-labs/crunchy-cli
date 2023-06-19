@@ -605,12 +605,9 @@ impl Format {
                 .subtitles
                 .insert(Locale::Custom("".to_string()), Subtitle::default());
         }
-        let subtitles = self
-            .filter_options
-            .filter_subtitles(stream.subtitles.into_values().collect());
 
         let mut output = vec![];
-        for subtitle in subtitles {
+        for (_, subtitle) in stream.subtitles {
             let subtitle_map = self.serializable_to_json_map(FormatSubtitle::from(&subtitle));
             let mut tmp_values = values.clone();
             tmp_values.insert(Scope::Subtitle, &subtitle_map);

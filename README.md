@@ -221,6 +221,31 @@ With the session stored, you do not need to use `--credentials` / `--etp-rt` any
   $ crunchy archive --no_subtitle_optimizations https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
+### Search
+
+**Supported urls/input**
+- Single episode (with [episode filtering](#episode-filtering))
+  ```shell
+  $ crunchy search https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+- Series (with [episode filtering](#episode-filtering))
+  ```shell
+  $ crunchy search https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+- Search input
+  ```shell
+  $ crunchy search "darling in the franxx"
+  ```
+
+**Options**
+- Audio
+
+  Set the audio language to search via the `--audio` flag. Can be used multiple times.
+  ```shell
+  $ crunchy search --audio en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  Default is your system locale.
+
 ### Episode filtering
 
 Filters patterns can be used to download a specific range of episodes from a single series.

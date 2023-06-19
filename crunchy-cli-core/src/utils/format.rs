@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Stream, Subtitle, VariantData};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
-use log::{debug, info, warn};
+use log::{debug, info};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -126,24 +126,8 @@ impl SingleFormat {
 
     pub async fn stream(&self) -> Result<Stream> {
         let stream = match &self.source {
-            MediaCollection::Episode(e) => {
-                if let Ok(stream) = e.legacy_streams().await {
-                    stream
-                } else {
-                    let stream = e.streams().await?;
-                    warn!("Failed to get stream via legacy endpoint");
-                    stream
-                }
-            }
-            MediaCollection::Movie(m) => {
-                if let Ok(stream) = m.legacy_streams().await {
-                    stream
-                } else {
-                    let stream = m.streams().await?;
-                    warn!("Failed to get stream via legacy endpoint");
-                    stream
-                }
-            }
+            MediaCollection::Episode(e) => e.streams().await?,
+            MediaCollection::Movie(m) => m.streams().await?,
             MediaCollection::MusicVideo(mv) => mv.streams().await?,
             MediaCollection::Concert(c) => c.streams().await?,
             _ => unreachable!(),

@@ -12,59 +12,76 @@ use std::ops::Range;
 
 #[derive(Default, Serialize)]
 struct FormatSeries {
+    pub id: String,
     pub title: String,
     pub description: String,
+    pub release_year: u32,
 }
 
 impl From<&Series> for FormatSeries {
     fn from(value: &Series) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
+            release_year: value.series_launch_year.unwrap_or_default(),
         }
     }
 }
 
 #[derive(Default, Serialize)]
 struct FormatSeason {
+    pub id: String,
     pub title: String,
     pub description: String,
     pub number: u32,
+    pub episodes: u32,
 }
 
 impl From<&Season> for FormatSeason {
     fn from(value: &Season) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
             number: value.season_number,
+            episodes: value.number_of_episodes,
         }
     }
 }
 
 #[derive(Default, Serialize)]
 struct FormatEpisode {
+    pub id: String,
     pub title: String,
     pub description: String,
     pub locale: Locale,
     pub number: u32,
     pub sequence_number: f32,
+    pub duration: i64,
+    pub air_date: i64,
+    pub premium_only: bool,
 }
 
 impl From<&Episode> for FormatEpisode {
     fn from(value: &Episode) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
             locale: value.audio_locale.clone(),
             number: value.episode_number,
             sequence_number: value.sequence_number,
+            duration: value.duration.num_milliseconds(),
+            air_date: value.episode_air_date.timestamp(),
+            premium_only: value.is_premium_only,
         }
     }
 }
 
 #[derive(Default, Serialize)]
 struct FormatMovieListing {
+    pub id: String,
     pub title: String,
     pub description: String,
 }
@@ -72,6 +89,7 @@ struct FormatMovieListing {
 impl From<&MovieListing> for FormatMovieListing {
     fn from(value: &MovieListing) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
         }
@@ -80,45 +98,63 @@ impl From<&MovieListing> for FormatMovieListing {
 
 #[derive(Default, Serialize)]
 struct FormatMovie {
+    pub id: String,
     pub title: String,
     pub description: String,
+    pub duration: i64,
+    pub premium_only: bool,
 }
 
 impl From<&Movie> for FormatMovie {
     fn from(value: &Movie) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
+            duration: value.duration.num_milliseconds(),
+            premium_only: value.is_premium_only,
         }
     }
 }
 
 #[derive(Default, Serialize)]
 struct FormatMusicVideo {
+    pub id: String,
     pub title: String,
     pub description: String,
+    pub duration: i64,
+    pub premium_only: bool,
 }
 
 impl From<&MusicVideo> for FormatMusicVideo {
     fn from(value: &MusicVideo) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
+            duration: value.duration.num_milliseconds(),
+            premium_only: value.is_premium_only,
         }
     }
 }
 
 #[derive(Default, Serialize)]
 struct FormatConcert {
+    pub id: String,
     pub title: String,
     pub description: String,
+    pub duration: i64,
+    pub premium_only: bool,
 }
 
 impl From<&Concert> for FormatConcert {
     fn from(value: &Concert) -> Self {
         Self {
+            id: value.id.clone(),
             title: value.title.clone(),
             description: value.description.clone(),
+            duration: value.duration.num_milliseconds(),
+            premium_only: value.is_premium_only,
         }
     }
 }

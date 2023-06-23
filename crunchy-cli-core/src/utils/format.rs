@@ -173,8 +173,42 @@ impl PartialEq for SingleFormatCollectionEpisodeKey {
 }
 impl Eq for SingleFormatCollectionEpisodeKey {}
 
+struct SingleFormatCollectionSeasonKey((u32, String));
+
+impl PartialOrd for SingleFormatCollectionSeasonKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let mut cmp = self.0 .0.partial_cmp(&other.0 .0);
+        if let Some(ordering) = cmp {
+            if matches!(ordering, Ordering::Equal) && self.0 .1 != other.0 .1 {
+                // first come first serve
+                cmp = Some(Ordering::Greater)
+            }
+        }
+        cmp
+    }
+}
+impl Ord for SingleFormatCollectionSeasonKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut cmp = self.0 .0.cmp(&other.0 .0);
+        if matches!(cmp, Ordering::Equal) && self.0 .1 != other.0 .1 {
+            // first come first serve
+            cmp = Ordering::Greater
+        }
+        cmp
+    }
+}
+impl PartialEq for SingleFormatCollectionSeasonKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+impl Eq for SingleFormatCollectionSeasonKey {}
+
 pub struct SingleFormatCollection(
-    BTreeMap<u32, BTreeMap<SingleFormatCollectionEpisodeKey, Vec<SingleFormat>>>,
+    BTreeMap<
+        SingleFormatCollectionSeasonKey,
+        BTreeMap<SingleFormatCollectionEpisodeKey, Vec<SingleFormat>>,
+    >,
 );
 
 impl SingleFormatCollection {
@@ -189,7 +223,10 @@ impl SingleFormatCollection {
     pub fn add_single_formats(&mut self, single_formats: Vec<SingleFormat>) {
         let format = single_formats.first().unwrap();
         self.0
-            .entry(format.season_number)
+            .entry(SingleFormatCollectionSeasonKey((
+                format.season_number,
+                format.season_id.clone(),
+            )))
             .or_insert(BTreeMap::new())
             .insert(
                 SingleFormatCollectionEpisodeKey(format.sequence_number),
@@ -199,18 +236,13 @@ impl SingleFormatCollection {
 
     pub fn full_visual_output(&self) {
         debug!("Series has {} seasons", self.0.len());
-        for (season_number, episodes) in &self.0 {
+        for (season_key, episodes) in &self.0 {
+            let first_episode = episodes.first_key_value().unwrap().1.first().unwrap();
             info!(
-                "{} Season {}",
-                episodes
-                    .first_key_value()
-                    .unwrap()
-                    .1
-                    .first()
-                    .unwrap()
-                    .series_name
-                    .clone(),
-                season_number
+                "{} Season {} ({})",
+                first_episode.series_name.clone(),
+                season_key.0 .0,
+                first_episode.season_title.clone(),
             );
             for (i, (_, formats)) in episodes.iter().enumerate() {
                 let format = formats.first().unwrap();

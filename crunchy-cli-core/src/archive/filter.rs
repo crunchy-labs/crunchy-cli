@@ -18,6 +18,7 @@ pub(crate) struct ArchiveFilter {
     archive: Archive,
     season_episode_count: HashMap<u32, Vec<String>>,
     season_subtitles_missing: Vec<u32>,
+    season_sorting: Vec<String>,
     visited: Visited,
 }
 
@@ -28,6 +29,7 @@ impl ArchiveFilter {
             archive,
             season_episode_count: HashMap::new(),
             season_subtitles_missing: vec![],
+            season_sorting: vec![],
             visited: Visited::None,
         }
     }
@@ -129,6 +131,7 @@ impl Filter for ArchiveFilter {
 
         let mut episodes = vec![];
         for season in seasons {
+            self.season_sorting.push(season.id.clone());
             let season_locale = season
                 .audio_locales
                 .get(0)
@@ -296,15 +299,24 @@ impl Filter for ArchiveFilter {
 
         let mut single_format_collection = SingleFormatCollection::new();
 
-        let mut sorted: BTreeMap<(u32, String), Self::T> = BTreeMap::new();
+        let mut pre_sorted: BTreeMap<(String, String), Self::T> = BTreeMap::new();
         for data in flatten_input {
-            sorted
-                .entry((data.season_number, data.sequence_number.to_string()))
+            pre_sorted
+                .entry((data.season_id.clone(), data.sequence_number.to_string()))
                 .or_insert(vec![])
                 .push(data)
         }
 
-        for data in sorted.into_values() {
+        let mut sorted: Vec<((String, String), Self::T)> = pre_sorted.into_iter().collect();
+        sorted.sort_by(|((a, _), _), ((b, _), _)| {
+            self.season_sorting
+                .iter()
+                .position(|p| p == a)
+                .unwrap()
+                .cmp(&self.season_sorting.iter().position(|p| p == b).unwrap())
+        });
+
+        for (_, data) in sorted {
             single_format_collection.add_single_formats(data)
         }
 

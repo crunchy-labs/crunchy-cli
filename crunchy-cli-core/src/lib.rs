@@ -18,6 +18,7 @@ mod search;
 mod utils;
 
 pub use archive::Archive;
+use dialoguer::console::Term;
 pub use download::Download;
 pub use login::Login;
 pub use search::Search;
@@ -168,6 +169,9 @@ pub async fn cli_entrypoint() {
                 }
             }
         }
+        // when pressing ctrl-c while interactively choosing seasons the cursor stays hidden, this
+        // line shows it again
+        let _ = Term::stdout().show_cursor();
         std::process::exit(1)
     })
     .unwrap();

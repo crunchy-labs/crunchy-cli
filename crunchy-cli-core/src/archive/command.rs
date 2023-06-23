@@ -98,6 +98,10 @@ pub struct Archive {
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
 
+    #[arg(help = "Skip any interactive input")]
+    #[arg(short, long, default_value_t = false)]
+    pub(crate) yes: bool,
+
     #[arg(help = "Crunchyroll series url(s)")]
     pub(crate) urls: Vec<String>,
 }
@@ -149,7 +153,7 @@ impl Execute for Archive {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection = ArchiveFilter::new(url_filter, self.clone())
+            let single_format_collection = ArchiveFilter::new(url_filter, self.clone(), !self.yes)
                 .visit(media_collection)
                 .await?;
 

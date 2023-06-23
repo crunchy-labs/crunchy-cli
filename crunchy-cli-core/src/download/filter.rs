@@ -1,24 +1,27 @@
 use crate::download::Download;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
+use crate::utils::interactive_select::{check_for_duplicated_seasons, get_duplicated_seasons};
 use crate::utils::parse::UrlFilter;
 use anyhow::{bail, Result};
 use crunchyroll_rs::{Concert, Episode, Movie, MovieListing, MusicVideo, Season, Series};
-use log::{error, warn};
+use log::{error, info, warn};
 use std::collections::HashMap;
 
 pub(crate) struct DownloadFilter {
     url_filter: UrlFilter,
     download: Download,
+    interactive_input: bool,
     season_episode_count: HashMap<u32, Vec<String>>,
     season_subtitles_missing: Vec<u32>,
 }
 
 impl DownloadFilter {
-    pub(crate) fn new(url_filter: UrlFilter, download: Download) -> Self {
+    pub(crate) fn new(url_filter: UrlFilter, download: Download, interactive_input: bool) -> Self {
         Self {
             url_filter,
             download,
+            interactive_input,
             season_episode_count: HashMap::new(),
             season_subtitles_missing: vec![],
         }
@@ -43,42 +46,61 @@ impl Filter for DownloadFilter {
             }
         }
 
-        let seasons = series.seasons().await?;
+        let mut seasons = vec![];
+        for mut season in series.seasons().await? {
+            if !self.url_filter.is_season_valid(season.season_number) {
+                continue;
+            }
+
+            if !season
+                .audio_locales
+                .iter()
+                .any(|l| l == &self.download.audio)
+            {
+                if season
+                    .available_versions()
+                    .await?
+                    .iter()
+                    .any(|l| l == &self.download.audio)
+                {
+                    season = season
+                        .version(vec![self.download.audio.clone()])
+                        .await?
+                        .remove(0)
+                } else {
+                    error!(
+                        "Season {} - '{}' is not available with {} audio",
+                        season.season_number,
+                        season.title,
+                        self.download.audio.clone(),
+                    );
+                    continue;
+                }
+            }
+
+            seasons.push(season)
+        }
+
+        let duplicated_seasons = get_duplicated_seasons(&seasons);
+        if duplicated_seasons.len() > 0 {
+            if self.interactive_input {
+                check_for_duplicated_seasons(&mut seasons);
+            } else {
+                info!(
+                    "Found duplicated seasons: {}",
+                    duplicated_seasons
+                        .iter()
+                        .map(|d| d.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+        }
 
         Ok(seasons)
     }
 
-    async fn visit_season(&mut self, mut season: Season) -> Result<Vec<Episode>> {
-        if !self.url_filter.is_season_valid(season.season_number) {
-            return Ok(vec![]);
-        }
-
-        if !season
-            .audio_locales
-            .iter()
-            .any(|l| l == &self.download.audio)
-        {
-            if season
-                .available_versions()
-                .await?
-                .iter()
-                .any(|l| l == &self.download.audio)
-            {
-                season = season
-                    .version(vec![self.download.audio.clone()])
-                    .await?
-                    .remove(0)
-            } else {
-                error!(
-                    "Season {} - '{}' is not available with {} audio",
-                    season.season_number,
-                    season.title,
-                    self.download.audio.clone(),
-                );
-                return Ok(vec![]);
-            }
-        }
-
+    async fn visit_season(&mut self, season: Season) -> Result<Vec<Episode>> {
         let mut episodes = season.episodes().await?;
 
         if Format::has_relative_episodes_fmt(&self.download.output) {

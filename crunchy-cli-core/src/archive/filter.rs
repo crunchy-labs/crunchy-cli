@@ -1,10 +1,11 @@
 use crate::archive::command::Archive;
 use crate::utils::filter::{real_dedup_vec, Filter};
 use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
+use crate::utils::interactive_select::{check_for_duplicated_seasons, get_duplicated_seasons};
 use crate::utils::parse::UrlFilter;
 use anyhow::Result;
 use crunchyroll_rs::{Concert, Episode, Locale, Movie, MovieListing, MusicVideo, Season, Series};
-use log::warn;
+use log::{info, warn};
 use std::collections::{BTreeMap, HashMap};
 
 enum Visited {
@@ -16,6 +17,7 @@ enum Visited {
 pub(crate) struct ArchiveFilter {
     url_filter: UrlFilter,
     archive: Archive,
+    interactive_input: bool,
     season_episode_count: HashMap<u32, Vec<String>>,
     season_subtitles_missing: Vec<u32>,
     season_sorting: Vec<String>,
@@ -23,10 +25,11 @@ pub(crate) struct ArchiveFilter {
 }
 
 impl ArchiveFilter {
-    pub(crate) fn new(url_filter: UrlFilter, archive: Archive) -> Self {
+    pub(crate) fn new(url_filter: UrlFilter, archive: Archive, interactive_input: bool) -> Self {
         Self {
             url_filter,
             archive,
+            interactive_input,
             season_episode_count: HashMap::new(),
             season_subtitles_missing: vec![],
             season_sorting: vec![],
@@ -71,7 +74,44 @@ impl Filter for ArchiveFilter {
             }
             self.visited = Visited::Series
         }
-        Ok(series.seasons().await?)
+
+        let mut seasons = series.seasons().await?;
+        let mut remove_ids = vec![];
+        for season in seasons.iter_mut() {
+            if !self.url_filter.is_season_valid(season.season_number)
+                && !season
+                    .audio_locales
+                    .iter()
+                    .any(|l| self.archive.audio.contains(l))
+                && !season
+                    .available_versions()
+                    .await?
+                    .iter()
+                    .any(|l| self.archive.audio.contains(l))
+            {
+                remove_ids.push(season.id.clone());
+            }
+        }
+
+        seasons.retain(|s| !remove_ids.contains(&s.id));
+
+        let duplicated_seasons = get_duplicated_seasons(&seasons);
+        if duplicated_seasons.len() > 0 {
+            if self.interactive_input {
+                check_for_duplicated_seasons(&mut seasons);
+            } else {
+                info!(
+                    "Found duplicated seasons: {}",
+                    duplicated_seasons
+                        .iter()
+                        .map(|d| d.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+        }
+
+        Ok(seasons)
     }
 
     async fn visit_season(&mut self, mut season: Season) -> Result<Vec<Episode>> {

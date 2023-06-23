@@ -1,4 +1,4 @@
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use log::{
     info, set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record,
     SetLoggerError,
@@ -37,6 +37,15 @@ macro_rules! progress {
 }
 pub(crate) use progress;
 
+macro_rules! progress_pause {
+    () => {
+        {
+            log::info!(target: "progress_pause", "")
+        }
+    }
+}
+pub(crate) use progress_pause;
+
 macro_rules! tab_info {
     ($($arg:tt)+) => {
         if log::max_level() == log::LevelFilter::Debug {
@@ -62,6 +71,7 @@ impl Log for CliLogger {
     fn log(&self, record: &Record) {
         if !self.enabled(record.metadata())
             || (record.target() != "progress"
+                && record.target() != "progress_pause"
                 && record.target() != "progress_end"
                 && !record.target().starts_with("crunchy_cli"))
         {
@@ -75,6 +85,16 @@ impl Log for CliLogger {
 
         match record.target() {
             "progress" => self.progress(record, false),
+            "progress_pause" => {
+                let progress = self.progress.lock().unwrap();
+                if let Some(p) = &*progress {
+                    p.set_draw_target(if p.is_hidden() {
+                        ProgressDrawTarget::stdout()
+                    } else {
+                        ProgressDrawTarget::hidden()
+                    })
+                }
+            }
             "progress_end" => self.progress(record, true),
             _ => {
                 if self.progress.lock().unwrap().is_some() {
@@ -158,6 +178,7 @@ impl CliLogger {
                     .unwrap()
                     .tick_strings(&["—", "\\", "|", "/", finish_str]),
             );
+            pb.set_draw_target(ProgressDrawTarget::stdout());
             pb.enable_steady_tick(Duration::from_millis(200));
             pb.set_message(msg);
             *progress = Some(pb)

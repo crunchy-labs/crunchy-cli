@@ -73,6 +73,10 @@ pub struct Download {
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
 
+    #[arg(help = "Skip any interactive input")]
+    #[arg(short, long, default_value_t = false)]
+    pub(crate) yes: bool,
+
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     pub(crate) urls: Vec<String>,
 }
@@ -119,7 +123,7 @@ impl Execute for Download {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection = DownloadFilter::new(url_filter, self.clone())
+            let single_format_collection = DownloadFilter::new(url_filter, self.clone(), !self.yes)
                 .visit(media_collection)
                 .await?;
 

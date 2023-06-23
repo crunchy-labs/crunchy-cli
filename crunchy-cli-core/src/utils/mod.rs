@@ -4,6 +4,7 @@ pub mod download;
 pub mod ffmpeg;
 pub mod filter;
 pub mod format;
+pub mod interactive_select;
 pub mod locale;
 pub mod log;
 pub mod os;

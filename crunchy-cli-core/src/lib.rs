@@ -120,8 +120,20 @@ pub async fn cli_entrypoint() {
     debug!("cli input: {:?}", cli);
 
     match &mut cli.command {
-        Command::Archive(archive) => pre_check_executor(archive).await,
-        Command::Download(download) => pre_check_executor(download).await,
+        Command::Archive(archive) => {
+            // prevent interactive select to be shown when output should be quiet
+            if cli.verbosity.is_some() && cli.verbosity.as_ref().unwrap().quiet {
+                archive.yes = true;
+            }
+            pre_check_executor(archive).await
+        }
+        Command::Download(download) => {
+            // prevent interactive select to be shown when output should be quiet
+            if cli.verbosity.is_some() && cli.verbosity.as_ref().unwrap().quiet {
+                download.yes = true;
+            }
+            pre_check_executor(download).await
+        }
         Command::Login(login) => {
             if login.remove {
                 if let Some(session_file) = login::session_file_path() {

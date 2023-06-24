@@ -90,27 +90,27 @@ enum Command {
 #[derive(Debug, Parser)]
 struct Verbosity {
     #[arg(help = "Verbose output")]
-    #[arg(short)]
-    v: bool,
+    #[arg(short, long)]
+    verbose: bool,
 
     #[arg(help = "Quiet output. Does not print anything unless it's a error")]
     #[arg(
         long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout"
     )]
-    #[arg(short)]
-    q: bool,
+    #[arg(short, long)]
+    quiet: bool,
 }
 
 pub async fn cli_entrypoint() {
     let mut cli: Cli = Cli::parse();
 
     if let Some(verbosity) = &cli.verbosity {
-        if verbosity.v as u8 + verbosity.q as u8 > 1 {
+        if verbosity.verbose as u8 + verbosity.quiet as u8 > 1 {
             eprintln!("Output cannot be verbose ('-v') and quiet ('-q') at the same time");
             std::process::exit(1)
-        } else if verbosity.v {
+        } else if verbosity.verbose {
             CliLogger::init(LevelFilter::Debug).unwrap()
-        } else if verbosity.q {
+        } else if verbosity.quiet {
             CliLogger::init(LevelFilter::Error).unwrap()
         }
     } else {

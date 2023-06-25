@@ -79,15 +79,15 @@ impl Filter for ArchiveFilter {
         let mut remove_ids = vec![];
         for season in seasons.iter_mut() {
             if !self.url_filter.is_season_valid(season.season_number)
-                && !season
+                || (!season
                     .audio_locales
                     .iter()
                     .any(|l| self.archive.audio.contains(l))
-                && !season
-                    .available_versions()
-                    .await?
-                    .iter()
-                    .any(|l| self.archive.audio.contains(l))
+                    && !season
+                        .available_versions()
+                        .await?
+                        .iter()
+                        .any(|l| self.archive.audio.contains(l)))
             {
                 remove_ids.push(season.id.clone());
             }
@@ -172,20 +172,44 @@ impl Filter for ArchiveFilter {
         let mut episodes = vec![];
         for season in seasons {
             self.season_sorting.push(season.id.clone());
-            let season_locale = season
-                .audio_locales
-                .get(0)
-                .cloned()
-                .unwrap_or(Locale::ja_JP);
+            let season_locale = if season.audio_locales.len() < 2 {
+                Some(
+                    season
+                        .audio_locales
+                        .get(0)
+                        .cloned()
+                        .unwrap_or(Locale::ja_JP),
+                )
+            } else {
+                None
+            };
             let mut eps = season.episodes().await?;
             let before_len = eps.len();
-            eps.retain(|e| e.audio_locale == season_locale);
-            if eps.len() != before_len {
+
+            for mut ep in eps.clone() {
+                if let Some(l) = &season_locale {
+                    if &ep.audio_locale == l {
+                        continue;
+                    }
+                    eps.remove(eps.iter().position(|p| p.id == ep.id).unwrap());
+                } else {
+                    let mut requested_locales = self.archive.audio.clone();
+                    if let Some(idx) = requested_locales.iter().position(|p| p == &ep.audio_locale)
+                    {
+                        requested_locales.remove(idx);
+                    } else {
+                        eps.remove(eps.iter().position(|p| p.id == ep.id).unwrap());
+                    }
+                    eps.extend(ep.version(self.archive.audio.clone()).await?);
+                }
+            }
+            if eps.len() < before_len {
                 if eps.len() == 0 {
                     if matches!(self.visited, Visited::Series) {
                         warn!(
                             "Season {} is not available with {} audio",
-                            season.season_number, season_locale
+                            season.season_number,
+                            season_locale.unwrap_or(Locale::ja_JP)
                         )
                     }
                 } else {
@@ -193,7 +217,7 @@ impl Filter for ArchiveFilter {
                     warn!(
                         "Season {} is only available with {} audio until episode {} ({})",
                         season.season_number,
-                        season_locale,
+                        season_locale.unwrap_or(Locale::ja_JP),
                         last_episode.episode_number,
                         last_episode.title
                     )
@@ -339,24 +363,45 @@ impl Filter for ArchiveFilter {
 
         let mut single_format_collection = SingleFormatCollection::new();
 
-        let mut pre_sorted: BTreeMap<(String, String), Self::T> = BTreeMap::new();
+        let mut pre_sorted: BTreeMap<String, Self::T> = BTreeMap::new();
         for data in flatten_input {
             pre_sorted
-                .entry((data.season_id.clone(), data.sequence_number.to_string()))
+                .entry(data.identifier.clone())
                 .or_insert(vec![])
                 .push(data)
         }
 
-        let mut sorted: Vec<((String, String), Self::T)> = pre_sorted.into_iter().collect();
-        sorted.sort_by(|((a, _), _), ((b, _), _)| {
+        let mut sorted: Vec<(String, Self::T)> = pre_sorted.into_iter().collect();
+        sorted.sort_by(|(_, a), (_, b)| {
             self.season_sorting
                 .iter()
-                .position(|p| p == a)
+                .position(|p| p == &a.first().unwrap().season_id)
                 .unwrap()
-                .cmp(&self.season_sorting.iter().position(|p| p == b).unwrap())
+                .cmp(
+                    &self
+                        .season_sorting
+                        .iter()
+                        .position(|p| p == &b.first().unwrap().season_id)
+                        .unwrap(),
+                )
         });
 
-        for (_, data) in sorted {
+        for (_, mut data) in sorted {
+            data.sort_by(|a, b| {
+                self.archive
+                    .audio
+                    .iter()
+                    .position(|p| p == &a.audio)
+                    .unwrap_or(usize::MAX)
+                    .cmp(
+                        &self
+                            .archive
+                            .audio
+                            .iter()
+                            .position(|p| p == &b.audio)
+                            .unwrap_or(usize::MAX),
+                    )
+            });
             single_format_collection.add_single_formats(data)
         }
 

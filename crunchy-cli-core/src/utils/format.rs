@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct SingleFormat {
+    pub identifier: String,
+
     pub title: String,
     pub description: String,
 
@@ -42,6 +44,7 @@ impl SingleFormat {
         relative_episode_number: Option<u32>,
     ) -> Self {
         Self {
+            identifier: episode.identifier.clone(),
             title: episode.title.clone(),
             description: episode.description.clone(),
             audio: episode.audio_locale.clone(),
@@ -66,6 +69,7 @@ impl SingleFormat {
 
     pub fn new_from_movie(movie: Movie, subtitles: Vec<Locale>) -> Self {
         Self {
+            identifier: movie.id.clone(),
             title: movie.title.clone(),
             description: movie.description.clone(),
             audio: Locale::ja_JP,
@@ -86,6 +90,7 @@ impl SingleFormat {
 
     pub fn new_from_music_video(music_video: MusicVideo) -> Self {
         Self {
+            identifier: music_video.id.clone(),
             title: music_video.title.clone(),
             description: music_video.description.clone(),
             audio: Locale::ja_JP,
@@ -106,6 +111,7 @@ impl SingleFormat {
 
     pub fn new_from_concert(concert: Concert) -> Self {
         Self {
+            identifier: concert.id.clone(),
             title: concert.title.clone(),
             description: concert.description.clone(),
             audio: Locale::ja_JP,

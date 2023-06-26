@@ -132,10 +132,10 @@ impl SingleFormat {
 
     pub async fn stream(&self) -> Result<Stream> {
         let stream = match &self.source {
-            MediaCollection::Episode(e) => e.streams().await?,
-            MediaCollection::Movie(m) => m.streams().await?,
-            MediaCollection::MusicVideo(mv) => mv.streams().await?,
-            MediaCollection::Concert(c) => c.streams().await?,
+            MediaCollection::Episode(e) => e.stream().await?,
+            MediaCollection::Movie(m) => m.stream().await?,
+            MediaCollection::MusicVideo(mv) => mv.stream().await?,
+            MediaCollection::Concert(c) => c.stream().await?,
             _ => unreachable!(),
         };
         Ok(stream)

@@ -428,7 +428,7 @@ impl Format {
         if !stream_empty {
             for (_, episodes) in tree.iter_mut() {
                 for (episode, streams) in episodes {
-                    streams.push(episode.streams().await?)
+                    streams.push(episode.stream().await?)
                 }
             }
         } else {
@@ -497,7 +497,7 @@ impl Format {
         }
         if !stream_empty {
             for (movie, streams) in tree.iter_mut() {
-                streams.push(movie.streams().await?)
+                streams.push(movie.stream().await?)
             }
         } else {
             for (_, streams) in tree.iter_mut() {
@@ -535,7 +535,7 @@ impl Format {
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
         let music_video = must_match_if_true!(!music_video_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.clone()).unwrap_or_default();
-        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.streams().await?).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.stream().await?).unwrap_or_default();
 
         let music_video_map = self.serializable_to_json_map(FormatMusicVideo::from(&music_video));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
@@ -557,7 +557,7 @@ impl Format {
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
         let concert = must_match_if_true!(!concert_empty => media_collection|MediaCollection::Concert(concert) => concert.clone()).unwrap_or_default();
-        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::Concert(concert) => concert.streams().await?).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::Concert(concert) => concert.stream().await?).unwrap_or_default();
 
         let concert_map = self.serializable_to_json_map(FormatConcert::from(&concert));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));

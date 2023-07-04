@@ -47,6 +47,7 @@ pub struct DownloadBuilder {
     output_format: Option<String>,
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
+    force_hardsub: bool,
 }
 
 impl DownloadBuilder {
@@ -57,6 +58,7 @@ impl DownloadBuilder {
             output_format: None,
             audio_sort: None,
             subtitle_sort: None,
+            force_hardsub: false,
         }
     }
 
@@ -67,6 +69,8 @@ impl DownloadBuilder {
             output_format: self.output_format,
             audio_sort: self.audio_sort,
             subtitle_sort: self.subtitle_sort,
+
+            force_hardsub: self.force_hardsub,
 
             formats: vec![],
         }
@@ -91,6 +95,8 @@ pub struct Downloader {
     output_format: Option<String>,
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
+
+    force_hardsub: bool,
 
     formats: Vec<DownloadFormat>,
 }
@@ -255,8 +261,9 @@ impl Downloader {
 
         // this formats are supporting embedding subtitles into the video container instead of
         // burning it into the video stream directly
-        let container_supports_softsubs =
-            ["mkv", "mov", "mp4"].contains(&dst.extension().unwrap_or_default().to_str().unwrap());
+        let container_supports_softsubs = !self.force_hardsub
+            && ["mkv", "mov", "mp4"]
+                .contains(&dst.extension().unwrap_or_default().to_str().unwrap());
 
         if container_supports_softsubs {
             for (i, meta) in subtitles.iter().enumerate() {
@@ -290,38 +297,39 @@ impl Downloader {
                 .iter()
                 .position(|m| m.language == default_subtitle)
             {
-                match dst.extension().unwrap_or_default().to_str().unwrap() {
-                    "mkv" => (),
-                    "mov" | "mp4" => output_presets.extend([
-                        "-movflags".to_string(),
-                        "faststart".to_string(),
-                        "-c:s".to_string(),
-                        "mov_text".to_string(),
-                    ]),
-                    _ => {
-                        // remove '-c:v copy' and '-c:a copy' from output presets as its causes issues with
-                        // burning subs into the video
-                        let mut last = String::new();
-                        let mut remove_count = 0;
-                        for (i, s) in output_presets.clone().iter().enumerate() {
-                            if (last == "-c:v" || last == "-c:a") && s == "copy" {
-                                // remove last
-                                output_presets.remove(i - remove_count - 1);
-                                remove_count += 1;
-                                output_presets.remove(i - remove_count);
-                                remove_count += 1;
-                            }
-                            last = s.clone();
-                        }
-
-                        output_presets.extend([
-                            "-vf".to_string(),
-                            format!(
-                                "ass={}",
-                                subtitles.get(position).unwrap().path.to_str().unwrap()
-                            ),
-                        ])
+                if container_supports_softsubs {
+                    match dst.extension().unwrap_or_default().to_str().unwrap() {
+                        "mov" | "mp4" => output_presets.extend([
+                            "-movflags".to_string(),
+                            "faststart".to_string(),
+                            "-c:s".to_string(),
+                            "mov_text".to_string(),
+                        ]),
+                        _ => (),
                     }
+                } else {
+                    // remove '-c:v copy' and '-c:a copy' from output presets as its causes issues with
+                    // burning subs into the video
+                    let mut last = String::new();
+                    let mut remove_count = 0;
+                    for (i, s) in output_presets.clone().iter().enumerate() {
+                        if (last == "-c:v" || last == "-c:a") && s == "copy" {
+                            // remove last
+                            output_presets.remove(i - remove_count - 1);
+                            remove_count += 1;
+                            output_presets.remove(i - remove_count);
+                            remove_count += 1;
+                        }
+                        last = s.clone();
+                    }
+
+                    output_presets.extend([
+                        "-vf".to_string(),
+                        format!(
+                            "ass={}",
+                            subtitles.get(position).unwrap().path.to_str().unwrap()
+                        ),
+                    ])
                 }
             }
 

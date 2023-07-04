@@ -77,6 +77,10 @@ pub struct Download {
     #[arg(short, long, default_value_t = false)]
     pub(crate) yes: bool,
 
+    #[arg(help = "Force subtitles to be always burnt-in")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) force_hardsub: bool,
+
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     pub(crate) urls: Vec<String>,
 }
@@ -98,8 +102,10 @@ impl Execute for Download {
 
         if self.subtitle.is_some() {
             if let Some(ext) = Path::new(&self.output).extension() {
-                if ext.to_string_lossy() != "mp4" {
-                    warn!("Detected a non mp4 output container. Adding subtitles may take a while")
+                if self.force_hardsub {
+                    warn!("Hardsubs are forced. Adding subtitles may take a while")
+                } else if !["mkv", "mov", "mp4"].contains(&ext.to_string_lossy().as_ref()) {
+                    warn!("Detected a container which does not support softsubs. Adding subtitles may take a while")
                 }
             }
         }
@@ -137,6 +143,7 @@ impl Execute for Download {
 
             let download_builder = DownloadBuilder::new()
                 .default_subtitle(self.subtitle.clone())
+                .force_hardsub(self.force_hardsub)
                 .output_format(if is_special_file(&self.output) || self.output == "-" {
                     Some("mpegts".to_string())
                 } else {

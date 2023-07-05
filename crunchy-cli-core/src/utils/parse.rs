@@ -130,6 +130,20 @@ pub async fn parse_url(
         UrlFilter::default()
     };
 
+    // check if the url is the old series/episode scheme which still occurs in some places (like the
+    // rss)
+    let old_url_regex = Regex::new(r"https?://(www\.)?crunchyroll\.com/.+").unwrap();
+    if old_url_regex.is_match(&url) {
+        debug!("Detected maybe old url");
+        // replace the 'http' prefix with 'https' as https is not supported by the reqwest client
+        if url.starts_with("http://") {
+            url.replace_range(0..4, "https")
+        }
+        // the old url redirects to the new url. request the old url, follow the redirects and
+        // extract the final url
+        url = crunchy.client().get(&url).send().await?.url().to_string()
+    }
+
     let parsed_url = crunchyroll_rs::parse_url(url).map_or(Err(anyhow!("Invalid url")), Ok)?;
     debug!("Url type: {:?}", parsed_url);
     let media_collection = match parsed_url {

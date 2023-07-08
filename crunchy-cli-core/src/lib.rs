@@ -264,13 +264,15 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
         lang
     };
 
-    let mut client_builder = CrunchyrollBuilder::predefined_client_builder();
-    if let Some(proxy) = &cli.proxy {
-        client_builder = client_builder.proxy(proxy.clone())
-    }
-
+    let proxy = cli.proxy.clone();
     let mut builder = Crunchyroll::builder()
-        .client(client_builder.build()?)
+        .client_builder(move || {
+            let mut client_builder = CrunchyrollBuilder::predefined_client_builder();
+            if let Some(proxy) = &proxy {
+                client_builder = client_builder.proxy(proxy.clone())
+            }
+            client_builder
+        })
         .locale(locale)
         .stabilization_locales(cli.experimental_fixes)
         .stabilization_season_number(cli.experimental_fixes);

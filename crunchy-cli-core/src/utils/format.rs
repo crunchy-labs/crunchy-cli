@@ -44,7 +44,18 @@ impl SingleFormat {
         relative_episode_number: Option<u32>,
     ) -> Self {
         Self {
-            identifier: episode.identifier.clone(),
+            identifier: if episode.identifier.is_empty() {
+                // crunchyroll sometimes leafs the identifier field empty so we have to build it
+                // ourself. it's not 100% save that the identifier which is built here is the same
+                // as if crunchyroll would deliver it (because the variables used here may also be
+                // wrong delivered by crunchy), but it's the best thing i can do at the moment
+                format!(
+                    "{}|S{}|E{}",
+                    episode.series_id, episode.season_number, episode.sequence_number
+                )
+            } else {
+                episode.identifier.clone()
+            },
             title: episode.title.clone(),
             description: episode.description.clone(),
             audio: episode.audio_locale.clone(),

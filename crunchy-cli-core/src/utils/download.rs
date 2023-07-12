@@ -205,43 +205,60 @@ impl Downloader {
                 })
             }
             if !format.subtitles.is_empty() {
-                #[cfg(not(windows))]
-                let pb = ProgressBar::new_spinner()
-                    .with_style(
-                        ProgressStyle::with_template(
-                            format!(
-                                ":: {:<1$}  {{msg}} {{spinner}}",
-                                "Downloading subtitles", fmt_space
+                let progress_spinner = if log::max_level() == LevelFilter::Info {
+                    let progress_spinner = ProgressBar::new_spinner()
+                        .with_style(
+                            ProgressStyle::with_template(
+                                format!(
+                                    ":: {:<1$}  {{msg}} {{spinner}}",
+                                    "Downloading subtitles", fmt_space
+                                )
+                                .as_str(),
                             )
-                            .as_str(),
+                            .unwrap()
+                            .tick_strings(&["—", "\\", "|", "/", ""]),
                         )
-                        .unwrap()
-                        .tick_strings(&["—", "\\", "|", "/", ""]),
-                    )
-                    .with_finish(ProgressFinish::Abandon);
-                pb.enable_steady_tick(Duration::from_millis(100));
+                        .with_finish(ProgressFinish::Abandon);
+                    progress_spinner.enable_steady_tick(Duration::from_millis(100));
+                    Some(progress_spinner)
+                } else {
+                    None
+                };
 
                 let len = get_video_length(&video_path)?;
                 for (subtitle, not_cc) in format.subtitles.iter() {
-                    let mut progress_message = pb.message();
-                    if !progress_message.is_empty() {
-                        progress_message += ", "
+                    if let Some(pb) = &progress_spinner {
+                        let mut progress_message = pb.message();
+                        if !progress_message.is_empty() {
+                            progress_message += ", "
+                        }
+                        progress_message += &subtitle.locale.to_string();
+                        if !not_cc {
+                            progress_message += " (CC)";
+                        }
+                        if i != 0 {
+                            progress_message += &format!(" [Video: #{}]", i + 1);
+                        }
+                        pb.set_message(progress_message)
                     }
-                    progress_message += &subtitle.locale.to_string();
-                    let mut subtitle_title = subtitle.locale.to_human_readable();
 
+                    let mut subtitle_title = subtitle.locale.to_human_readable();
                     if !not_cc {
-                        progress_message += " (CC)";
                         subtitle_title += " (CC)"
                     }
                     if i != 0 {
-                        progress_message += &format!(" [Video: #{}]", i + 1);
                         subtitle_title += &format!(" [Video: #{}]", i + 1)
                     }
 
-                    pb.set_message(progress_message);
-
                     let subtitle_path = self.download_subtitle(subtitle.clone(), len).await?;
+                    debug!(
+                        "Downloaded {} subtitles{}{}",
+                        subtitle.locale,
+                        (!not_cc).then_some(" (cc)").unwrap_or_default(),
+                        (i != 0)
+                            .then_some(format!(" for video {}", i))
+                            .unwrap_or_default()
+                    );
                     subtitles.push(FFmpegMeta {
                         path: subtitle_path,
                         language: subtitle.locale.clone(),

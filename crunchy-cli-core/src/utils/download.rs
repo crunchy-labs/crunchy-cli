@@ -204,21 +204,50 @@ impl Downloader {
                     },
                 })
             }
-            let len = get_video_length(&video_path)?;
-            for (subtitle, not_cc) in format.subtitles.iter() {
-                let subtitle_path = self.download_subtitle(subtitle.clone(), len).await?;
-                let mut subtitle_title = subtitle.locale.to_human_readable();
-                if !not_cc {
-                    subtitle_title += " (CC)"
+            if !format.subtitles.is_empty() {
+                #[cfg(not(windows))]
+                let pb = ProgressBar::new_spinner()
+                    .with_style(
+                        ProgressStyle::with_template(
+                            format!(
+                                ":: {:<1$}  {{msg}} {{spinner}}",
+                                "Downloading subtitles", fmt_space
+                            )
+                            .as_str(),
+                        )
+                        .unwrap()
+                        .tick_strings(&["—", "\\", "|", "/", ""]),
+                    )
+                    .with_finish(ProgressFinish::Abandon);
+                pb.enable_steady_tick(Duration::from_millis(100));
+
+                let len = get_video_length(&video_path)?;
+                for (subtitle, not_cc) in format.subtitles.iter() {
+                    let mut progress_message = pb.message();
+                    if !progress_message.is_empty() {
+                        progress_message += ", "
+                    }
+                    progress_message += &subtitle.locale.to_string();
+                    let mut subtitle_title = subtitle.locale.to_human_readable();
+
+                    if !not_cc {
+                        progress_message += " (CC)";
+                        subtitle_title += " (CC)"
+                    }
+                    if i != 0 {
+                        progress_message += &format!(" [Video: #{}]", i + 1);
+                        subtitle_title += &format!(" [Video: #{}]", i + 1)
+                    }
+
+                    pb.set_message(progress_message);
+
+                    let subtitle_path = self.download_subtitle(subtitle.clone(), len).await?;
+                    subtitles.push(FFmpegMeta {
+                        path: subtitle_path,
+                        language: subtitle.locale.clone(),
+                        title: subtitle_title,
+                    })
                 }
-                if i != 0 {
-                    subtitle_title += &format!(" [Video: #{}]", i + 1)
-                }
-                subtitles.push(FFmpegMeta {
-                    path: subtitle_path,
-                    language: subtitle.locale.clone(),
-                    title: subtitle_title,
-                })
             }
             videos.push(FFmpegMeta {
                 path: video_path,
@@ -454,7 +483,7 @@ impl Downloader {
         let tempfile = tempfile(".mp4")?;
         let (mut file, path) = tempfile.into_parts();
 
-        download_segments(ctx, &mut file, Some(message), variant_data).await?;
+        download_segments(ctx, &mut file, message, variant_data).await?;
 
         Ok(path)
     }
@@ -468,7 +497,7 @@ impl Downloader {
         let tempfile = tempfile(".m4a")?;
         let (mut file, path) = tempfile.into_parts();
 
-        download_segments(ctx, &mut file, Some(message), variant_data).await?;
+        download_segments(ctx, &mut file, message, variant_data).await?;
 
         Ok(path)
     }
@@ -494,7 +523,7 @@ impl Downloader {
 pub async fn download_segments(
     ctx: &Context,
     writer: &mut impl Write,
-    message: Option<String>,
+    message: String,
     variant_data: &VariantData,
 ) -> Result<()> {
     let segments = variant_data.segments().await?;
@@ -509,12 +538,12 @@ pub async fn download_segments(
         let progress = ProgressBar::new(estimated_file_size)
             .with_style(
                 ProgressStyle::with_template(
-                    ":: {msg}{bytes:>10} {bytes_per_sec:>12} [{wide_bar}] {percent:>3}%",
+                    ":: {msg} {bytes:>10} {bytes_per_sec:>12} [{wide_bar}] {percent:>3}%",
                 )
                 .unwrap()
                 .progress_chars("##-"),
             )
-            .with_message(message.map(|m| m + " ").unwrap_or_default())
+            .with_message(message)
             .with_finish(ProgressFinish::Abandon);
         Some(progress)
     } else {

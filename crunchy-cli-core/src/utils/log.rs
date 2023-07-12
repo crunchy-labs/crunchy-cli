@@ -169,7 +169,7 @@ impl CliLogger {
             let finish_str = "✔";
             #[cfg(windows)]
             // windows does not support all unicode characters by default in their consoles, so
-            // we're using this (square root?) symbol instead. microsoft.
+            // we're using this (square root) symbol instead. microsoft.
             let finish_str = "√";
 
             let pb = ProgressBar::new_spinner();

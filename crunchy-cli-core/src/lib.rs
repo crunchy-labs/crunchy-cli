@@ -335,9 +335,9 @@ async fn crunchyroll_session(cli: &mut Cli, config: &mut Config) -> Result<Crunc
         } else {
             bail!("Invalid credentials format. Please provide your credentials as user:password")
         }
-    } else if let Some(etp_rt) = &cli.login_method.etp_rt {
+    } else if let Some(etp_rt) = &login_method.etp_rt {
         builder.login_with_etp_rt(etp_rt).await?
-    } else if cli.login_method.anonymous {
+    } else if login_method.anonymous {
         builder.login_anonymously().await?
     } else {
         bail!("should never happen")

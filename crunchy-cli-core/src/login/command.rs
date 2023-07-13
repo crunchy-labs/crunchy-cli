@@ -4,6 +4,7 @@ use crate::Execute;
 use anyhow::Result;
 use clap::Parser;
 use crunchyroll_rs::crunchyroll::SessionToken;
+use log::info;
 
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Save your login credentials persistent on disk")]
@@ -24,7 +25,11 @@ impl Execute for Login {
             SessionToken::Anonymous => Auth::Anonymous,
         };
         ctx.config.auth = Some(auth);
-        Ok(ctx.config.write()?)
+        ctx.config.write()?;
+
+        info!("Saved login");
+
+        Ok(())
     }
 }
 

@@ -17,6 +17,7 @@ mod login;
 mod search;
 mod utils;
 
+use crate::utils::config::{Auth, Config};
 pub use archive::Archive;
 use dialoguer::console::Term;
 pub use download::Download;
@@ -136,8 +137,20 @@ pub async fn cli_entrypoint() {
         }
         Command::Login(login) => {
             if login.remove {
-                if let Some(session_file) = login::session_file_path() {
-                    let _ = fs::remove_file(session_file);
+                match Config::load() {
+                    Ok(config) => {
+                        if let Some(mut c) = config {
+                            c.auth = None;
+                            if let Err(e) = c.write() {
+                                error!("{}", e);
+                                std::process::exit(1)
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("{}", e);
+                        std::process::exit(1)
+                    }
                 }
                 return;
             } else {
@@ -226,11 +239,12 @@ async fn execute_executor(executor: impl Execute, ctx: Context) {
 }
 
 async fn create_ctx(cli: &mut Cli) -> Result<Context> {
-    let crunchy = crunchyroll_session(cli).await?;
-    Ok(Context { crunchy })
+    let mut config = Config::load()?.unwrap_or_default();
+    let crunchy = crunchyroll_session(cli, &mut config).await?;
+    Ok(Context { crunchy, config })
 }
 
-async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
+async fn crunchyroll_session(cli: &mut Cli, config: &mut Config) -> Result<Crunchyroll> {
     let supported_langs = vec![
         Locale::ar_ME,
         Locale::de_DE,
@@ -293,20 +307,12 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
 
     let progress_handler = progress!("Logging in");
     if root_login_methods_count + login_login_methods_count == 0 {
-        if let Some(login_file_path) = login::session_file_path() {
-            if login_file_path.exists() {
-                let session = fs::read_to_string(login_file_path)?;
-                if let Some((token_type, token)) = session.split_once(':') {
-                    match token_type {
-                        "refresh_token" => {
-                            return Ok(builder.login_with_refresh_token(token).await?)
-                        }
-                        "etp_rt" => return Ok(builder.login_with_etp_rt(token).await?),
-                        _ => (),
-                    }
-                }
-                bail!("Could not read stored session ('{}')", session)
-            }
+        if let Some(auth) = &config.auth {
+            return match auth {
+                Auth::RefreshToken { token } => Ok(builder.login_with_refresh_token(token).await?),
+                Auth::EtpRt { token } => Ok(builder.login_with_etp_rt(token).await?),
+                Auth::Anonymous => Ok(builder.login_anonymously().await?),
+            };
         }
         bail!("Please use a login method ('--credentials', '--etp-rt' or '--anonymous')")
     } else if root_login_methods_count + login_login_methods_count > 1 {

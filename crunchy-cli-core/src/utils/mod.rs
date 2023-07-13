@@ -1,5 +1,4 @@
 pub mod clap;
-pub mod config;
 pub mod context;
 pub mod download;
 pub mod ffmpeg;

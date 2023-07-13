@@ -1,10 +1,12 @@
-use crate::utils::config::Auth;
 use crate::utils::context::Context;
 use crate::Execute;
+use anyhow::bail;
 use anyhow::Result;
 use clap::Parser;
 use crunchyroll_rs::crunchyroll::SessionToken;
 use log::info;
+use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Save your login credentials persistent on disk")]
@@ -18,18 +20,26 @@ pub struct Login {
 
 #[async_trait::async_trait(?Send)]
 impl Execute for Login {
-    async fn execute(self, mut ctx: Context) -> Result<()> {
-        let auth = match ctx.crunchy.session_token().await {
-            SessionToken::RefreshToken(token) => Auth::RefreshToken { token },
-            SessionToken::EtpRt(token) => Auth::EtpRt { token },
-            SessionToken::Anonymous => Auth::Anonymous,
-        };
-        ctx.config.auth = Some(auth);
-        ctx.config.write()?;
+    async fn execute(self, ctx: Context) -> Result<()> {
+        if let Some(login_file_path) = session_file_path() {
+            fs::create_dir_all(login_file_path.parent().unwrap())?;
 
-        info!("Saved login");
+            match ctx.crunchy.session_token().await {
+                SessionToken::RefreshToken(refresh_token) => {
+                    fs::write(login_file_path, format!("refresh_token:{}", refresh_token))?
+                }
+                SessionToken::EtpRt(etp_rt) => {
+                    fs::write(login_file_path, format!("etp_rt:{}", etp_rt))?
+                }
+                SessionToken::Anonymous => bail!("Anonymous login cannot be saved"),
+            }
 
-        Ok(())
+            info!("Saved login");
+
+            Ok(())
+        } else {
+            bail!("Cannot find config path")
+        }
     }
 }
 
@@ -49,4 +59,8 @@ pub struct LoginMethod {
     #[arg(help = "Login anonymously / without an account")]
     #[arg(long, default_value_t = false)]
     pub anonymous: bool,
+}
+
+pub fn session_file_path() -> Option<PathBuf> {
+    dirs::config_dir().map(|config_dir| config_dir.join("crunchy-cli").join("session"))
 }

@@ -1,3 +1,3 @@
 mod command;
 
-pub use command::{Login, LoginMethod};
+pub use command::{session_file_path, Login, LoginMethod};

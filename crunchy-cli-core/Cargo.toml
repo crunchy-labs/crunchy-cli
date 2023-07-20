@@ -5,8 +5,8 @@ version = "3.0.0-dev.14"
 edition = "2021"
 
 [features]
-openssl = ["dep:native-tls", "reqwest/native-tls"]
-openssl-static = ["dep:native-tls", "native-tls?/vendored", "reqwest/native-tls-vendored"]
+openssl = ["dep:native-tls", "reqwest/native-tls-alpn"]
+openssl-static = ["dep:native-tls", "native-tls?/vendored", "reqwest/native-tls-alpn", "reqwest/native-tls-vendored"]
 
 [dependencies]
 anyhow = "1.0"

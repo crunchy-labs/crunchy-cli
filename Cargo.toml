@@ -4,6 +4,12 @@ authors = ["Crunchy Labs Maintainers"]
 version = "3.0.0-dev.14"
 edition = "2021"
 
+[features]
+default = ["openssl-static"]
+
+openssl = ["crunchy-cli-core/openssl"]
+openssl-static = ["crunchy-cli-core/openssl-static"]
+
 [dependencies]
 tokio = { version = "1.29", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 

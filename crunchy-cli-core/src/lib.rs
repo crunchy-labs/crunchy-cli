@@ -8,7 +8,7 @@ use crunchyroll_rs::crunchyroll::CrunchyrollBuilder;
 use crunchyroll_rs::error::CrunchyrollError;
 use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
-use reqwest::{Client, ClientBuilder, Proxy, StatusCode};
+use reqwest::Proxy;
 use std::{env, fs};
 
 mod archive;
@@ -267,16 +267,19 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     let proxy = cli.proxy.clone();
     let mut builder = Crunchyroll::builder()
         .locale(locale)
-        .client(
-            get_client(|| {
-                if let Some(p) = &proxy {
-                    CrunchyrollBuilder::predefined_client_builder().proxy(p.clone())
-                } else {
-                    CrunchyrollBuilder::predefined_client_builder()
-                }
-            })
-            .await?,
-        )
+        .client({
+            let builder = if let Some(p) = &proxy {
+                CrunchyrollBuilder::predefined_client_builder().proxy(p.clone())
+            } else {
+                CrunchyrollBuilder::predefined_client_builder()
+            };
+            #[cfg(any(feature = "openssl", feature = "openssl-static"))]
+            let client = builder.use_native_tls().build().unwrap();
+            #[cfg(not(any(feature = "openssl", feature = "openssl-static")))]
+            let client = builder.build().unwrap();
+
+            client
+        })
         .stabilization_locales(cli.experimental_fixes)
         .stabilization_season_number(cli.experimental_fixes);
     if let Command::Download(download) = &cli.command {
@@ -350,26 +353,4 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     progress_handler.stop("Logged in");
 
     Ok(crunchy)
-}
-
-#[cfg(target_os = "linux")]
-async fn get_client<F: Fn() -> ClientBuilder>(f: F) -> Result<Client> {
-    let client = f().build().unwrap();
-    if client
-        .get("https://www.crunchyroll.com")
-        .send()
-        .await?
-        .status()
-        != StatusCode::FORBIDDEN
-    {
-        return Ok(client);
-    }
-
-    debug!("rustls tls backend probably triggered the cloudflare bot check, using openssl instead");
-    Ok(f().use_native_tls().build().unwrap())
-}
-
-#[cfg(not(target_os = "linux"))]
-async fn get_client<F: Fn() -> ClientBuilder>(f: F) -> Result<Client> {
-    Ok(f().build().unwrap())
 }

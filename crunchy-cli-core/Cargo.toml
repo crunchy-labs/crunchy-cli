@@ -4,6 +4,10 @@ authors = ["Crunchy Labs Maintainers"]
 version = "3.0.0-dev.14"
 edition = "2021"
 
+[features]
+openssl = ["dep:native-tls", "reqwest/native-tls"]
+openssl-static = ["dep:native-tls", "native-tls?/vendored", "reqwest/native-tls-vendored"]
+
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
@@ -30,11 +34,9 @@ tempfile = "3.6"
 tokio = { version = "1.29", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.3"
 
-[target.'cfg(target_os = "linux")'.dependencies]
-reqwest = { version = "0.11", default-features = false, features = ["socks", "native-tls-alpn", "native-tls-vendored"] }
-
-[target.'cfg(not(target_os = "linux"))'.dependencies]
-reqwest = { version = "0.11", default-features = false, features = ["socks"] }
+# fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
+# `rustls` and `native-tls` as tls backend
+native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", optional = true }
 
 [build-dependencies]
 chrono = "0.4"

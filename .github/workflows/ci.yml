@@ -8,23 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            toolchain: x86_64-unknown-linux-musl
-            platform: linux
-            ext:
-          - os: windows-latest
-            toolchain: x86_64-pc-windows-gnu
-            platform: windows
-            ext: .exe
-          - os: macos-latest
-            toolchain: x86_64-apple-darwin
-            platform: darwin
-            ext:
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -41,35 +26,100 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install system dependencies
-        if: matrix.platform == 'linux'
         run: sudo apt-get install musl-tools
 
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          target: ${{ matrix.toolchain }}
+          target: x86_64-unknown-linux-musl
 
       - name: Build
-        run: cargo build --release --all-features --target ${{ matrix.toolchain }}
+        run: cargo build --release --all-features --target x86_64-unknown-linux-musl
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli_${{ matrix.platform }}
-          path: ./target/${{ matrix.toolchain }}/release/crunchy-cli${{ matrix.ext }}
+          name: crunchy-cli_linux
+          path: ./target/x86_64-unknown-linux-musl/release/crunchy-cli
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
           name: manpages
-          path: ./target/${{ matrix.toolchain }}/release/manpages
+          path: ./target/x86_64-unknown-linux-musl/release/manpages
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
           name: completions
-          path: ./target/${{ matrix.toolchain }}/release/completions
+          path: ./target/x86_64-unknown-linux-musl/release/completions
+          if-no-files-found: error
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+
+      - name: Build
+        run: cargo build --release --all-features --target x86_64-apple-darwin
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: crunchy-cli_darwin
+          path: ./target/x86_64-apple-darwin/release/crunchy-cli
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          install: mingw-w64-x86_64-rust base-devel
+
+      - name: Build
+        shell: msys2 {0}
+        run: cargo build --release --all-features --target x86_64-pc-windows-gnu
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: crunchy-cli_windows
+          path: ./target/x86_64-pc-windows-gnu/release/crunchy-cli.exe
           if-no-files-found: error

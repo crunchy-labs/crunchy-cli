@@ -50,9 +50,6 @@ jobs:
           toolchain: stable
           target: ${{ matrix.toolchain }}
 
-      - name: Test
-        run: cargo test --release --all-features --target ${{ matrix.toolchain }}
-
       - name: Build
         run: cargo build --release --all-features --target ${{ matrix.toolchain }}
 

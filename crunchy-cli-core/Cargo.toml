@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli-core"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.0-dev.14"
+version = "3.0.0-dev.15"
 edition = "2021"
 
 [features]
@@ -36,7 +36,7 @@ sys-locale = "0.3"
 
 # fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
 # `rustls` and `native-tls` as tls backend
-native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", optional = true }
+native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "570100d", features = ["alpn"], optional = true }
 
 [build-dependencies]
 chrono = "0.4"

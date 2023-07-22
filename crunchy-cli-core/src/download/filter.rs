@@ -14,6 +14,7 @@ pub(crate) struct DownloadFilter {
     interactive_input: bool,
     season_episode_count: HashMap<u32, Vec<String>>,
     season_subtitles_missing: Vec<u32>,
+    season_visited: bool,
 }
 
 impl DownloadFilter {
@@ -24,6 +25,7 @@ impl DownloadFilter {
             interactive_input,
             season_episode_count: HashMap::new(),
             season_subtitles_missing: vec![],
+            season_visited: false,
         }
     }
 }
@@ -101,6 +103,8 @@ impl Filter for DownloadFilter {
     }
 
     async fn visit_season(&mut self, season: Season) -> Result<Vec<Episode>> {
+        self.season_visited = true;
+
         let mut episodes = season.episodes().await?;
 
         if Format::has_relative_episodes_fmt(&self.download.output) {
@@ -139,14 +143,22 @@ impl Filter for DownloadFilter {
                 .await?
                 .contains(&self.download.audio)
             {
-                bail!(
+                let error_message = format!(
                     "Episode {} ({}) of {} season {} is not available with {} audio",
                     episode.episode_number,
                     episode.title,
                     episode.series_title,
                     episode.season_number,
                     self.download.audio
-                )
+                );
+                // sometimes a series randomly has episode in an other language. if this is the case,
+                // only error if the input url was a episode url
+                if self.season_visited {
+                    warn!("{}", error_message);
+                    return Ok(None);
+                } else {
+                    bail!("{}", error_message)
+                }
             }
             // overwrite the current episode with the other version episode
             episode = episode

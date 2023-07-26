@@ -1,12 +1,11 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::env;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FFmpegPreset {
     Predefined(FFmpegCodec, Option<FFmpegHwAccel>, FFmpegQuality),
-    Custom(Option<String>, Option<String>),
+    Custom(Option<String>),
 }
 
 lazy_static! {
@@ -81,7 +80,7 @@ ffmpeg_enum! {
 
 impl Default for FFmpegPreset {
     fn default() -> Self {
-        Self::Custom(None, Some("-c:v copy -c:a copy".to_string()))
+        Self::Custom(Some("-c:v copy -c:a copy".to_string()))
     }
 }
 
@@ -181,27 +180,8 @@ impl FFmpegPreset {
     }
 
     pub(crate) fn parse(s: &str) -> Result<FFmpegPreset, String> {
-        let env_ffmpeg_input_args = env::var("FFMPEG_INPUT_ARGS").ok();
-        let env_ffmpeg_output_args = env::var("FFMPEG_OUTPUT_ARGS").ok();
-
-        if env_ffmpeg_input_args.is_some() || env_ffmpeg_output_args.is_some() {
-            if let Some(input) = &env_ffmpeg_input_args {
-                if shlex::split(input).is_none() {
-                    return Err(format!("Failed to find custom ffmpeg input '{}' (`FFMPEG_INPUT_ARGS` env variable)", input));
-                }
-            }
-            if let Some(output) = &env_ffmpeg_output_args {
-                if shlex::split(output).is_none() {
-                    return Err(format!("Failed to find custom ffmpeg output '{}' (`FFMPEG_INPUT_ARGS` env variable)", output));
-                }
-            }
-
-            return Ok(FFmpegPreset::Custom(
-                env_ffmpeg_input_args,
-                env_ffmpeg_output_args,
-            ));
-        } else if !PREDEFINED_PRESET.is_match(s) {
-            return Ok(FFmpegPreset::Custom(None, Some(s.to_string())));
+        if !PREDEFINED_PRESET.is_match(s) {
+            return Ok(FFmpegPreset::Custom(Some(s.to_string())));
         }
 
         let mut codec: Option<FFmpegCodec> = None;
@@ -272,8 +252,8 @@ impl FFmpegPreset {
 
     pub(crate) fn into_input_output_args(self) -> (Vec<String>, Vec<String>) {
         match self {
-            FFmpegPreset::Custom(input, output) => (
-                input.map_or(vec![], |i| shlex::split(&i).unwrap_or_default()),
+            FFmpegPreset::Custom(output) => (
+                vec![],
                 output.map_or(vec![], |o| shlex::split(&o).unwrap_or_default()),
             ),
             FFmpegPreset::Predefined(codec, hwaccel_opt, quality) => {

@@ -381,9 +381,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1fc76ad1ab97992a987dd2a5fadfa4e90fc69d337704f42b7eeb30f7fda1eb1"
+checksum = "a0b33d2464e990dec5d3e6265cc892a88ab89971cfd177b7d7c7d0e9f8cde817"
 dependencies = [
  "aes",
  "async-trait",
@@ -403,14 +403,14 @@ dependencies = [
  "serde_urlencoded",
  "smart-default",
  "tokio",
- "webpki-roots 0.24.0",
+ "webpki-roots 0.25.0",
 ]
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f9581dc7276f1c327dcaa91fa6d3b3f09c46018dc5a0d7815be3f8027780a07"
+checksum = "cab3e4af975066a3dc3dd0bb50b1a29c4a3cdee5365e8b6559d21aa15d9ace6a"
 dependencies = [
  "darling",
  "quote",
@@ -2051,12 +2051,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.24.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b291546d5d9d1eab74f069c77749f2cb8504a12caa20f0f2de93ddbf6f411888"
-dependencies = [
- "rustls-webpki",
-]
+checksum = "1a4ac452058d835c2b7ff6d74f0ad9f40e172bb1ce661b1444f397eeb1d19e6d"
 
 [[package]]
 name = "winapi"

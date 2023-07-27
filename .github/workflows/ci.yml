@@ -10,6 +10,13 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            toolchain: x86_64-unknown-linux-musl
+          - arch: aarch64
+            toolchain: aarch64-unknown-linux-musl
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -25,37 +32,31 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install system dependencies
-        run: sudo apt-get install musl-tools
-
-      - name: Install toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: x86_64-unknown-linux-musl
+      - name: Install cross
+        run: cargo install cross
 
       - name: Build
-        run: cargo build --release --all-features --target x86_64-unknown-linux-musl
+        run: cross build --release --all-features --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli-linux-x86_64
-          path: ./target/x86_64-unknown-linux-musl/release/crunchy-cli
+          name: crunchy-cli-linux-${{ matrix.arch }}
+          path: ./target/${{ matrix.toolchain }}/release/crunchy-cli
           if-no-files-found: error
 
       - name: Upload manpages artifact
         uses: actions/upload-artifact@v3
         with:
           name: manpages
-          path: ./target/x86_64-unknown-linux-musl/release/manpages
+          path: ./target/${{ matrix.toolchain }}/release/manpages
           if-no-files-found: error
 
       - name: Upload completions artifact
         uses: actions/upload-artifact@v3
         with:
           name: completions
-          path: ./target/x86_64-unknown-linux-musl/release/completions
+          path: ./target/${{ matrix.toolchain }}/release/completions
           if-no-files-found: error
 
   build-mac:

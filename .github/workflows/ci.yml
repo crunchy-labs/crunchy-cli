@@ -40,7 +40,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli_linux
+          name: crunchy-cli-linux-x86_64
           path: ./target/x86_64-unknown-linux-musl/release/crunchy-cli
           if-no-files-found: error
 
@@ -87,7 +87,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli_darwin
+          name: crunchy-cli-darwin-x86_64
           path: ./target/x86_64-apple-darwin/release/crunchy-cli
           if-no-files-found: error
 
@@ -120,6 +120,6 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli_windows
+          name: crunchy-cli-windows-x86_64
           path: ./target/x86_64-pc-windows-gnu/release/crunchy-cli.exe
           if-no-files-found: error

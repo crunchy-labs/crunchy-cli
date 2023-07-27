@@ -15,7 +15,7 @@ use anyhow::Result;
 use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
-use log::{debug, warn};
+use log::debug;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -29,9 +29,6 @@ pub struct Archive {
     Available languages are:\n  {}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(short, long, default_values_t = vec![Locale::ja_JP, crate::utils::locale::system_locale()])]
     pub(crate) audio: Vec<Locale>,
-    #[arg(help = "Deprecated. Use '-a' / '--audio' instead")]
-    #[arg(short, long)]
-    locale: Vec<Locale>,
     #[arg(help = format!("Subtitle languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Subtitle languages. Can be used multiple times. \
@@ -120,15 +117,6 @@ impl Execute for Archive {
             && self.output != "-"
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
-        }
-
-        if !self.locale.is_empty() {
-            warn!("The '-l' / '--locale' flag is deprecated, use '-a' / '--audio' instead");
-            for locale in &self.locale {
-                if !self.audio.contains(locale) {
-                    self.audio.push(locale.clone())
-                }
-            }
         }
 
         self.audio = all_locale_in_locales(self.audio.clone());

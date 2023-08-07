@@ -1,0 +1,39 @@
+# Maintainer: ByteDream
+pkgname=crunchy-cli-bin
+pkgdesc="Command-line downloader for Crunchyroll"
+arch=('x86_64')
+url="https://github.com/crunchy-labs/crunchy-cli"
+license=('MIT')
+
+pkgver=$CI_PKG_VERSION
+pkgrel=1
+
+depends=('ffmpeg')
+source=(
+  "crunchy-cli::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-linux-x86_64"
+  "manpages.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-manpages.zip"
+  "completions.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-completions.zip"
+  "LICENSE::https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/v${pkgver}/LICENSE"
+)
+noextract=("manpages.zip" "completions.zip")
+sha256sums=('$CI_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
+
+package() {
+  cd "$srcdir"
+
+  # all files in manpages.zip and completions.zip are stored in root of the archive, makepkg extracts them all to $srcdir
+  # which makes it pretty messy. so the extraction is done manually to keep the content of $srcdir structured
+  mkdir manpages completions
+  cd manpages
+  bsdtar -xf ../manpages.zip
+  cd ../completions
+  bsdtar -xf ../completions.zip
+  cd ..
+
+  install -Dm755 crunchy-cli $pkgdir/usr/bin/crunchy-cli
+  install -Dm644 manpages/* -t $pkgdir/usr/share/man/man1
+  install -Dm644 completions/crunchy-cli.bash $pkgdir/usr/share/bash-completions/completions/crunchy-cli
+  install -Dm644 completions/_crunchy-cli $pkgdir/usr/share/zsh/site-functions/_crunchy-cli
+  install -Dm644 completions/crunchy-cli.fish $pkgdir/usr/share/fish/vendor_completions.d/crunchy-cli.fish
+  install -Dm644 LICENSE $pkgdir/usr/share/licenses/crunchy-cli/LICENSE
+}

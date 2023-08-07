@@ -1,0 +1,69 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish-aur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get version
+        run: echo "RELEASE_VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)" >> $GITHUB_ENV
+
+      - name: Generate crunchy-cli sha sum
+        run: |
+          curl -LO https://github.com/crunchy-labs/crunchy-cli/archive/refs/tags/${{ github.ref_name }}.tar.gz
+          echo "CRUNCHY_CLI_SHA256=$(sha256sum ${{ github.ref_name }}.tar.gz | cut -f 1 -d ' ')" >> $GITHUB_ENV
+
+      - name: Generate crunchy-cli PKGBUILD
+        env:
+          CI_PKG_VERSION: ${{ env.RELEASE_VERSION }}
+          CI_SHA_SUM: ${{ env.CRUNCHY_CLI_SHA256 }}
+        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM' < .github/scripts/PKGBUILD.source > PKGBUILD
+
+      - name: Publish crunchy-cli to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@2.7.0
+        with:
+          pkgname: crunchy-cli
+          pkgbuild: ./PKGBUILD
+          commit_username: release-action
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update to version {{ env.RELEASE_VERSION }}
+          test: true
+
+      - name: Generate crunchy-cli-bin sha sums
+        run: |
+          curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-x86_64-linux
+          curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-completions.zip
+          curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-manpages.zip
+          curl -LO https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/${{ github.ref_name }}/LICENSE
+          echo "CRUNCHY_CLI_BIN_SHA256=$(sha256sum crunchy-cli-${{ github.ref_name }}-x86_64-linux | cut -f 1 -d ' ')" >> $GITHUB_ENV
+          echo "CRUNCHY_CLI_BIN_COMPLETIONS_SHA256=$(sha256sum crunchy-cli-${{ github.ref_name }}-completions.zip | cut -f 1 -d ' ')" >> $GITHUB_ENV
+          echo "CRUNCHY_CLI_BIN_MANPAGES_SHA256=$(sha256sum crunchy-cli-${{ github.ref_name }}-manpages.zip | cut -f 1 -d ' ')" >> $GITHUB_ENV
+          echo "CRUNCHY_CLI_BIN_LICENSE_SHA256=$(sha256sum LICENSE | cut -f 1 -d ' ')" >> $GITHUB_ENV
+
+      - name: Generate crunchy-cli-bin PKGBUILD
+        env:
+          CI_PKG_VERSION: ${{ env.RELEASE_VERSION }}
+          CI_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_SHA256 }}
+          CI_MANPAGES_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_MANPAGES_SHA256 }}
+          CI_COMPLETIONS_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_COMPLETIONS_SHA256 }}
+          CI_LICENSE_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_LICENSE_SHA256 }}
+        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
+
+      - name: Publish crunchy-cli-bin to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@2.7.0
+        with:
+          pkgname: crunchy-cli-bin
+          pkgbuild: ./PKGBUILD
+          commit_username: release-action
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update to version {{ env.RELEASE_VERSION }}
+          test: true

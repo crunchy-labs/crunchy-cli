@@ -1,7 +1,7 @@
 # Maintainer: ByteDream
 pkgname=crunchy-cli-bin
 pkgdesc="Command-line downloader for Crunchyroll"
-arch=('x86_64')
+arch=('x86_64', 'aarch64')
 url="https://github.com/crunchy-labs/crunchy-cli"
 license=('MIT')
 
@@ -11,14 +11,21 @@ pkgrel=1
 depends=('ffmpeg')
 provides=('crunchy-cli')
 conflicts=('crunchy-cli')
-source=(
+source_x86_64=(
   "crunchy-cli::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-linux-x86_64"
   "manpages.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-manpages.zip"
   "completions.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-completions.zip"
   "LICENSE::https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/v${pkgver}/LICENSE"
 )
+source_aarch64=(
+  "crunchy-cli::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-linux-aarch64"
+  "manpages.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-manpages.zip"
+  "completions.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-completions.zip"
+  "LICENSE::https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/v${pkgver}/LICENSE"
+)
 noextract=("manpages.zip" "completions.zip")
-sha256sums=('$CI_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
+sha256sums_x86_64=('$CI_x86_64_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
+sha256sums_aarch64=('$CI_aarch64_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
 
 package() {
   cd "$srcdir"

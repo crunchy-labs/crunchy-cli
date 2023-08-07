@@ -33,7 +33,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cross
-        run: cargo install cross
+        run: cargo install --force cross
 
       - name: Build
         run: cross build --release --all-features --target ${{ matrix.toolchain }}

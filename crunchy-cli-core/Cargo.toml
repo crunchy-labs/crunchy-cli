@@ -1,8 +1,9 @@
 [package]
 name = "crunchy-cli-core"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.0-dev.15"
+version = "3.0.0"
 edition = "2021"
+license = "MIT"
 
 [features]
 openssl = ["dep:native-tls", "reqwest/native-tls-alpn"]
@@ -25,12 +26,12 @@ log = { version = "0.4", features = ["std"] }
 num_cpus = "1.16"
 regex = "1.9"
 reqwest = { version = "0.11", default-features = false, features = ["socks"] }
-sanitize-filename = "0.4"
+sanitize-filename = "0.5"
 serde = "1.0"
 serde_json = "1.0"
 serde_plain = "1.0"
 shlex = "1.1"
-tempfile = "3.6"
+tempfile = "3.7"
 tokio = { version = "1.29", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.3"
 

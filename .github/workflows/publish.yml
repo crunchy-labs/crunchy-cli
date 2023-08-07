@@ -27,7 +27,7 @@ jobs:
         run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM' < .github/scripts/PKGBUILD.source > PKGBUILD
 
       - name: Publish crunchy-cli to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@2.7.0
+        uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: crunchy-cli
           pkgbuild: ./PKGBUILD
@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate crunchy-cli-bin sha sums
         run: |
-          curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-x86_64-linux
+          curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-linux-x86_64
           curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-completions.zip
           curl -LO https://github.com/crunchy-labs/crunchy-cli/releases/download/${{ github.ref_name }}/crunchy-cli-${{ github.ref_name }}-manpages.zip
           curl -LO https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/${{ github.ref_name }}/LICENSE
@@ -55,10 +55,10 @@ jobs:
           CI_MANPAGES_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_MANPAGES_SHA256 }}
           CI_COMPLETIONS_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_COMPLETIONS_SHA256 }}
           CI_LICENSE_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_LICENSE_SHA256 }}
-        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
+        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM,$CI_LICENSE_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
 
       - name: Publish crunchy-cli-bin to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@2.7.0
+        uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: crunchy-cli-bin
           pkgbuild: ./PKGBUILD

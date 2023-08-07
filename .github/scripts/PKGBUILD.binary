@@ -9,6 +9,8 @@ pkgver=$CI_PKG_VERSION
 pkgrel=1
 
 depends=('ffmpeg')
+provides=('crunchy-cli')
+conflicts=('crunchy-cli')
 source=(
   "crunchy-cli::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-linux-x86_64"
   "manpages.zip::https://github.com/crunchy-labs/crunchy-cli/releases/download/v${pkgver}/crunchy-cli-v${pkgver}-manpages.zip"
@@ -32,8 +34,8 @@ package() {
 
   install -Dm755 crunchy-cli $pkgdir/usr/bin/crunchy-cli
   install -Dm644 manpages/* -t $pkgdir/usr/share/man/man1
-  install -Dm644 completions/crunchy-cli.bash $pkgdir/usr/share/bash-completions/completions/crunchy-cli
-  install -Dm644 completions/_crunchy-cli $pkgdir/usr/share/zsh/site-functions/_crunchy-cli
-  install -Dm644 completions/crunchy-cli.fish $pkgdir/usr/share/fish/vendor_completions.d/crunchy-cli.fish
-  install -Dm644 LICENSE $pkgdir/usr/share/licenses/crunchy-cli/LICENSE
+  install -Dm644 completions/crunchy-cli.bash -t $pkgdir/usr/share/bash-completions/completions/crunchy-cli
+  install -Dm644 completions/_crunchy-cli -t $pkgdir/usr/share/zsh/site-functions/_crunchy-cli
+  install -Dm644 completions/crunchy-cli.fish -t $pkgdir/usr/share/fish/vendor_completions.d/crunchy-cli.fish
+  install -Dm644 LICENSE -t $pkgdir/usr/share/licenses/crunchy-cli/LICENSE
 }

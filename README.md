@@ -67,6 +67,14 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
   $ nix <run|shell|develop> github:crunchy-labs/crunchy-cli
   ```
 
+- [Scoop](https://scoop.sh/)
+
+  For Windows users, we support the [scoop](https://scoop.sh/#/) command-line installer.
+  ```shell
+  $ scoop bucket add extras
+  $ scoop install extras/crunchy-cli
+  ```
+
 ### 🛠 Build it yourself
 
 Since we do not support every platform and architecture you may have to build the project yourself.

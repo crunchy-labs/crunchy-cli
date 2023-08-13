@@ -5,7 +5,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use crunchyroll_rs::crunchyroll::CrunchyrollBuilder;
-use crunchyroll_rs::error::CrunchyrollError;
+use crunchyroll_rs::error::Error;
 use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
 use reqwest::Proxy;
@@ -205,20 +205,17 @@ async fn pre_check_executor(executor: &mut impl Execute) {
 }
 
 async fn execute_executor(executor: impl Execute, ctx: Context) {
-    if let Err(err) = executor.execute(ctx).await {
-        error!("a unexpected error occurred: {}", err);
-
-        if let Some(crunchy_error) = err.downcast_ref::<CrunchyrollError>() {
-            let message = match crunchy_error {
-                CrunchyrollError::Internal(i) => &i.message,
-                CrunchyrollError::Request(r) => &r.message,
-                CrunchyrollError::Decode(d) => &d.message,
-                CrunchyrollError::Authentication(a) => &a.message,
-                CrunchyrollError::Input(i) => &i.message,
-            };
-            if message.contains("content.get_video_streams_v2.cms_service_error") {
-                error!("You've probably hit a rate limit. Try again later, generally after 10-20 minutes the rate limit is over and you can continue to use the cli")
+    if let Err(mut err) = executor.execute(ctx).await {
+        if let Some(crunchy_error) = err.downcast_mut::<Error>() {
+            if let Error::Block { message, .. } = crunchy_error {
+                *message = "Triggered Cloudflare bot protection. Try again later or use a VPN or proxy to spoof your location".to_string()
+            } else if let Error::Request { message, .. } = crunchy_error {
+                *message = "You've probably hit a rate limit. Try again later, generally after 10-20 minutes the rate limit is over and you can continue to use the cli".to_string()
             }
+
+            error!("An error occurred: {}", crunchy_error)
+        } else {
+            error!("An error occurred: {}", err)
         }
 
         std::process::exit(1)

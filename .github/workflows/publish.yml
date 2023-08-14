@@ -35,7 +35,6 @@ jobs:
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: Update to version {{ env.RELEASE_VERSION }}
-          test: true
 
       - name: Generate crunchy-cli-bin sha sums
         run: |
@@ -69,4 +68,3 @@ jobs:
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: Update to version {{ env.RELEASE_VERSION }}
-          test: true

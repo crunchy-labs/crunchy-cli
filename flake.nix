@@ -30,6 +30,9 @@
             allowBuiltinFetchGit = true;
           };
 
+          buildNoDefaultFeatures = true;
+          buildFeatures = [ "openssl" ];
+
           nativeBuildInputs = [
             pkgs.pkg-config
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [

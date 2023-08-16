@@ -4,17 +4,12 @@
     utils.url = "flake:flake-utils";
   };
 
-  outputs = { self, nixpkgs, utils, ... }: utils.lib.eachSystem [
-    "aarch64-darwin"
-    "x86_64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ]
+  outputs = { self, nixpkgs, utils }: utils.lib.eachDefaultSystem
     (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        # enable musl on Linux makes the build time 100x slower
-        # since it will trigger a toolchain rebuild
+        # enable musl on Linux will trigger a toolchain rebuild
+        # making the build very slow
+        pkgs = import nixpkgs { inherit system; };
         # if nixpkgs.legacyPackages.${system}.stdenv.hostPlatform.isLinux
         # then nixpkgs.legacyPackages.${system}.pkgsMusl
         # else nixpkgs.legacyPackages.${system};
@@ -49,10 +44,6 @@
       {
         packages.default = crunchy-cli;
 
-        overlays.default = _: prev: {
-          crunchy-cli = prev.crunchy-cli.override { };
-        };
-
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             cargo
@@ -77,5 +68,9 @@
 
         formatter = pkgs.nixpkgs-fmt;
       }
-    );
+    ) // {
+    overlays.default = final: prev: {
+      inherit (self.packages.${final.system}) crunchy-cli;
+    };
+  };
 }

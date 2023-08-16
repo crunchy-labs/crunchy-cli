@@ -24,11 +24,6 @@ clap_mangen = "0.2"
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
-[patch.crates-io]
-# fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
-# `rustls` and `native-tls` as tls backend
-native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "570100d" }
-
 [profile.release]
 strip = true
 opt-level = "z"

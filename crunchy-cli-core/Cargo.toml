@@ -6,8 +6,8 @@ edition = "2021"
 license = "MIT"
 
 [features]
-openssl = ["dep:native-tls", "reqwest/native-tls-alpn"]
-openssl-static = ["dep:native-tls", "native-tls?/vendored", "reqwest/native-tls-alpn", "reqwest/native-tls-vendored"]
+openssl = ["reqwest/native-tls-alpn"]
+openssl-static = ["reqwest/native-tls-alpn", "reqwest/native-tls-vendored"]
 
 [dependencies]
 anyhow = "1.0"
@@ -35,12 +35,10 @@ tempfile = "3.7"
 tokio = { version = "1.31", features = ["macros", "rt-multi-thread", "time"] }
 sys-locale = "0.3"
 
-# fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
-# `rustls` and `native-tls` as tls backend
-native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "570100d", features = ["alpn"], optional = true }
-
 [build-dependencies]
 chrono = "0.4"
 
 [patch.crates-io]
+# fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
+# `rustls` and `native-tls` as tls backend
 native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "570100d" }

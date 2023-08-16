@@ -399,7 +399,6 @@ dependencies = [
  "indicatif",
  "lazy_static",
  "log",
- "native-tls 0.2.11 (git+https://github.com/crunchy-labs/rust-not-so-native-tls.git?rev=570100d)",
  "num_cpus",
  "regex",
  "reqwest",
@@ -888,7 +887,7 @@ checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
 dependencies = [
  "bytes",
  "hyper",
- "native-tls 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "native-tls",
  "tokio",
  "tokio-native-tls",
 ]
@@ -1142,17 +1141,6 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
-]
-
-[[package]]
-name = "native-tls"
-version = "0.2.11"
-source = "git+https://github.com/crunchy-labs/rust-not-so-native-tls.git?rev=570100d#570100d3391bd9aab7a390cfef0d1a28e8efe200"
-dependencies = [
- "log",
- "openssl",
- "openssl-probe",
- "openssl-sys",
 ]
 
 [[package]]
@@ -1432,7 +1420,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
- "native-tls 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -1876,7 +1864,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
- "native-tls 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "native-tls",
  "tokio",
 ]
 

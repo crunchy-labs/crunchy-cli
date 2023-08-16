@@ -358,7 +358,6 @@ dependencies = [
  "indicatif",
  "lazy_static",
  "log",
- "native-tls",
  "num_cpus",
  "regex",
  "reqwest",

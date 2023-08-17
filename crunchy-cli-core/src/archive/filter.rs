@@ -18,7 +18,7 @@ pub(crate) struct ArchiveFilter {
     url_filter: UrlFilter,
     archive: Archive,
     interactive_input: bool,
-    season_episode_count: HashMap<u32, Vec<String>>,
+    season_episode_count: HashMap<String, Vec<String>>,
     season_subtitles_missing: Vec<u32>,
     season_sorting: Vec<String>,
     visited: Visited,
@@ -229,7 +229,7 @@ impl Filter for ArchiveFilter {
         if Format::has_relative_episodes_fmt(&self.archive.output) {
             for episode in episodes.iter() {
                 self.season_episode_count
-                    .entry(episode.season_number)
+                    .entry(episode.season_id.clone())
                     .or_insert(vec![])
                     .push(episode.id.clone())
             }
@@ -300,20 +300,16 @@ impl Filter for ArchiveFilter {
         }
 
         let relative_episode_number = if Format::has_relative_episodes_fmt(&self.archive.output) {
-            if self
-                .season_episode_count
-                .get(&episode.season_number)
-                .is_none()
-            {
+            if self.season_episode_count.get(&episode.season_id).is_none() {
                 let season_episodes = episode.season().await?.episodes().await?;
                 self.season_episode_count.insert(
-                    episode.season_number,
+                    episode.season_id.clone(),
                     season_episodes.into_iter().map(|e| e.id).collect(),
                 );
             }
             let relative_episode_number = self
                 .season_episode_count
-                .get(&episode.season_number)
+                .get(&episode.season_id)
                 .unwrap()
                 .iter()
                 .position(|id| id == &episode.id)

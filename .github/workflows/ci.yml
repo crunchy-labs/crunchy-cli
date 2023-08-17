@@ -30,7 +30,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.toolchain }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cross
         run: cargo install --force cross
@@ -74,7 +74,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: x86_64-apple-darwin-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -107,7 +107,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: x86_64-pc-windows-gnu-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install system dependencies
         uses: msys2/setup-msys2@v2

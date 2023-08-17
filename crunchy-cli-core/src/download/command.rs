@@ -81,6 +81,7 @@ pub struct Download {
     pub(crate) force_hardsub: bool,
 
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
+    #[arg(required = true)]
     pub(crate) urls: Vec<String>,
 }
 

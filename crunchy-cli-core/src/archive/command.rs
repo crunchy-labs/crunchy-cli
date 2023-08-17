@@ -99,6 +99,7 @@ pub struct Archive {
     pub(crate) yes: bool,
 
     #[arg(help = "Crunchyroll series url(s)")]
+    #[arg(required = true)]
     pub(crate) urls: Vec<String>,
 }
 

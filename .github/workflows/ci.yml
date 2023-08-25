@@ -76,12 +76,6 @@ jobs:
             target/
           key: x86_64-apple-darwin-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: x86_64-apple-darwin
-
       - name: Build
         run: cargo build --release --all-features --target x86_64-apple-darwin
 

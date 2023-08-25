@@ -297,8 +297,8 @@ impl Iterator for SingleFormatCollectionIterator {
     type Item = Vec<SingleFormat>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((_, episodes)) = self.0.0.iter_mut().next() else {
-            return None
+        let Some((_, episodes)) = self.0 .0.iter_mut().next() else {
+            return None;
         };
 
         let value = episodes.pop_first().unwrap().1;

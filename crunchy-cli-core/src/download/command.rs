@@ -185,7 +185,8 @@ async fn get_format(
     single_format: &SingleFormat,
 ) -> Result<(DownloadFormat, Format)> {
     let stream = single_format.stream().await?;
-    let Some((video, audio)) = variant_data_from_stream(&stream, &download.resolution).await? else {
+    let Some((video, audio)) = variant_data_from_stream(&stream, &download.resolution).await?
+    else {
         if single_format.is_episode() {
             bail!(
                 "Resolution ({}) is not available for episode {} ({}) of {} season {}",

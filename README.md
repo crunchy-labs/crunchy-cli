@@ -1,6 +1,6 @@
 # crunchy-cli
 
-👇 A Command-line downloader for Crunchyroll  [Crunchyroll](https://www.crunchyroll.com).
+👇 A Command-line downloader for [Crunchyroll](https://www.crunchyroll.com).
 
 <p align="center">
   <a href="https://github.com/crunchy-labs/crunchy-cli">

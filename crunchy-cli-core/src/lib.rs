@@ -271,7 +271,17 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
                 CrunchyrollBuilder::predefined_client_builder()
             };
             #[cfg(any(feature = "openssl", feature = "openssl-static"))]
-            let client = builder.use_native_tls().build().unwrap();
+            let client = {
+                let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
+
+                for certificate in rustls_native_certs::load_native_certs().unwrap() {
+                    builder = builder.add_root_certificate(
+                        reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
+                    )
+                }
+
+                builder.build().unwrap()
+            };
             #[cfg(not(any(feature = "openssl", feature = "openssl-static")))]
             let client = builder.build().unwrap();
 

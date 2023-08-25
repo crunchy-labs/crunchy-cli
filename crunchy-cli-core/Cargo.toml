@@ -6,15 +6,15 @@ edition = "2021"
 license = "MIT"
 
 [features]
-openssl = ["reqwest/native-tls-alpn"]
-openssl-static = ["reqwest/native-tls-alpn", "reqwest/native-tls-vendored"]
+openssl = ["reqwest/native-tls-alpn", "dep:rustls-native-certs"]
+openssl-static = ["reqwest/native-tls-alpn", "reqwest/native-tls-vendored", "dep:rustls-native-certs"]
 
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
 clap = { version = "4.3", features = ["derive", "string"] }
 chrono = "0.4"
-crunchyroll-rs = { version = "0.6.1", features = ["dash-stream"] }
+crunchyroll-rs = { version = "0.6.2", features = ["dash-stream"] }
 ctrlc = "3.4"
 dialoguer = { version = "0.10", default-features = false }
 dirs = "5.0"
@@ -31,9 +31,10 @@ serde = "1.0"
 serde_json = "1.0"
 serde_plain = "1.0"
 shlex = "1.1"
+sys-locale = "0.3"
 tempfile = "3.7"
 tokio = { version = "1.31", features = ["macros", "rt-multi-thread", "time"] }
-sys-locale = "0.3"
+rustls-native-certs = { version = "0.6", optional = true }
 
 [build-dependencies]
 chrono = "0.4"

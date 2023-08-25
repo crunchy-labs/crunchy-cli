@@ -37,8 +37,3 @@ sys-locale = "0.3"
 
 [build-dependencies]
 chrono = "0.4"
-
-[patch.crates-io]
-# fork of the `native-tls` crate which uses openssl as backend on every platform. this is done as `reqwest` only supports
-# `rustls` and `native-tls` as tls backend
-native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "570100d" }

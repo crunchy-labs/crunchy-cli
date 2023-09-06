@@ -63,6 +63,10 @@ pub struct Cli {
     #[arg(value_parser = crate::utils::clap::clap_parse_proxy)]
     proxy: Option<Proxy>,
 
+    #[arg(help = "Use custom user agent")]
+    #[clap(long)]
+    user_agent: Option<String>,
+
     #[clap(subcommand)]
     command: Command,
 }
@@ -261,15 +265,17 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
         lang
     };
 
-    let proxy = cli.proxy.clone();
     let mut builder = Crunchyroll::builder()
         .locale(locale)
         .client({
-            let builder = if let Some(p) = &proxy {
-                CrunchyrollBuilder::predefined_client_builder().proxy(p.clone())
-            } else {
-                CrunchyrollBuilder::predefined_client_builder()
-            };
+            let mut builder = CrunchyrollBuilder::predefined_client_builder();
+            if let Some(p) = &cli.proxy {
+                builder = builder.proxy(p.clone())
+            }
+            if let Some(ua) = &cli.user_agent {
+                builder = builder.user_agent(ua)
+            }
+
             #[cfg(any(feature = "openssl", feature = "openssl-static"))]
             let client = {
                 let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
@@ -291,14 +297,6 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
         .stabilization_season_number(cli.experimental_fixes);
     if let Command::Download(download) = &cli.command {
         builder = builder.preferred_audio_locale(download.audio.clone())
-    }
-    if let Some(p) = &cli.proxy {
-        builder = builder.client(
-            CrunchyrollBuilder::predefined_client_builder()
-                .proxy(p.clone())
-                .build()
-                .unwrap(),
-        )
     }
 
     let root_login_methods_count = cli.login_method.credentials.is_some() as u8

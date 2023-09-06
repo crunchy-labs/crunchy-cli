@@ -163,25 +163,37 @@ impl From<&Concert> for FormatConcert {
 struct FormatStream {
     pub locale: Locale,
     pub dash_url: String,
+    pub drm_dash_url: String,
     pub hls_url: String,
+    pub drm_hls_url: String,
 }
 
 impl From<&Stream> for FormatStream {
     fn from(value: &Stream) -> Self {
-        let (dash_url, hls_url) = value.variants.get(&Locale::Custom("".to_string())).map_or(
-            ("".to_string(), "".to_string()),
-            |v| {
+        let (dash_url, drm_dash_url, hls_url, drm_hls_url) =
+            value.variants.get(&Locale::Custom("".to_string())).map_or(
                 (
-                    v.adaptive_dash.clone().unwrap_or_default().url,
-                    v.adaptive_hls.clone().unwrap_or_default().url,
-                )
-            },
-        );
+                    "".to_string(),
+                    "".to_string(),
+                    "".to_string(),
+                    "".to_string(),
+                ),
+                |v| {
+                    (
+                        v.adaptive_dash.clone().unwrap_or_default().url,
+                        v.drm_adaptive_dash.clone().unwrap_or_default().url,
+                        v.adaptive_hls.clone().unwrap_or_default().url,
+                        v.drm_adaptive_hls.clone().unwrap_or_default().url,
+                    )
+                },
+            );
 
         Self {
             locale: value.audio_locale.clone(),
             dash_url,
+            drm_dash_url,
             hls_url,
+            drm_hls_url,
         }
     }
 }

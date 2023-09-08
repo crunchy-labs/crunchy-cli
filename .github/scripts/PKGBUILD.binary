@@ -1,7 +1,7 @@
 # Maintainer: ByteDream
 pkgname=crunchy-cli-bin
 pkgdesc="Command-line downloader for Crunchyroll"
-arch=('x86_64', 'aarch64')
+arch=('x86_64' 'aarch64')
 url="https://github.com/crunchy-labs/crunchy-cli"
 license=('MIT')
 

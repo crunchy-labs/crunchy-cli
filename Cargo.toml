@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.1"
+version = "3.0.2"
 edition = "2021"
 license = "MIT"
 
@@ -12,14 +12,14 @@ openssl = ["crunchy-cli-core/openssl"]
 openssl-static = ["crunchy-cli-core/openssl-static"]
 
 [dependencies]
-tokio = { version = "1.31", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.32", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [build-dependencies]
 chrono = "0.4"
-clap = { version = "4.3", features = ["string"] }
-clap_complete = "4.3"
+clap = { version = "4.4", features = ["string"] }
+clap_complete = "4.4"
 clap_mangen = "0.2"
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }

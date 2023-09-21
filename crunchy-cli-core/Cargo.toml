@@ -6,8 +6,10 @@ edition = "2021"
 license = "MIT"
 
 [features]
-openssl = ["reqwest/native-tls-alpn", "dep:rustls-native-certs"]
-openssl-static = ["reqwest/native-tls-alpn", "reqwest/native-tls-vendored", "dep:rustls-native-certs"]
+rustls-tls = ["reqwest/rustls-tls"]
+native-tls = ["reqwest/native-tls", "reqwest/native-tls-alpn"]
+openssl-tls = ["reqwest/native-tls", "reqwest/native-tls-alpn", "dep:rustls-native-certs"]
+openssl-tls-static = ["reqwest/native-tls", "reqwest/native-tls-alpn", "reqwest/native-tls-vendored", "dep:rustls-native-certs"]
 
 [dependencies]
 anyhow = "1.0"

@@ -276,7 +276,7 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
                 builder = builder.user_agent(ua)
             }
 
-            #[cfg(any(feature = "openssl", feature = "openssl-static"))]
+            #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
             let client = {
                 let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
 
@@ -288,7 +288,7 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
 
                 builder.build().unwrap()
             };
-            #[cfg(not(any(feature = "openssl", feature = "openssl-static")))]
+            #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
             let client = builder.build().unwrap();
 
             client

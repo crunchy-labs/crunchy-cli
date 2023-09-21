@@ -19,7 +19,7 @@ build() {
   export CARGO_HOME="$srcdir/cargo-home"
   export RUSTUP_TOOLCHAIN=stable
 
-  cargo build --release --no-default-features --features openssl
+  cargo build --release
 }
 
 package() {

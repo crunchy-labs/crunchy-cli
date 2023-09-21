@@ -36,7 +36,7 @@ jobs:
         run: cargo install --force cross
 
       - name: Build
-        run: cross build --release --all-features --target ${{ matrix.toolchain }}
+        run: cross build --release --no-default-features --features openssl-tls-static --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
@@ -77,7 +77,7 @@ jobs:
           key: x86_64-apple-darwin-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
-        run: cargo build --release --all-features --target x86_64-apple-darwin
+        run: cargo build --release --target x86_64-apple-darwin
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
@@ -110,7 +110,7 @@ jobs:
 
       - name: Build
         shell: msys2 {0}
-        run: cargo build --release --all-features --target x86_64-pc-windows-gnu
+        run: cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3

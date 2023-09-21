@@ -10,8 +10,8 @@ default = ["native-tls"]
 
 rustls-tls = ["crunchy-cli-core/rustls-tls"]
 native-tls = ["crunchy-cli-core/native-tls"]
-openssl-tls = ["dep:native-tls", "native-tls/openssl", "crunchy-cli-core/openssl-tls"]
-openssl-tls-static = ["dep:native-tls", "native-tls/openssl", "crunchy-cli-core/openssl-tls-static"]
+openssl-tls = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls"]
+openssl-tls-static = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls-static"]
 
 # deprecated
 openssl = ["openssl-tls"]
@@ -20,7 +20,7 @@ openssl-static = ["openssl-tls-static"]
 [dependencies]
 tokio = { version = "1.32", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
-native-tls = { version = "0.2.11", optional = true }
+native-tls-crate = { package = "native-tls", version = "0.2.11", optional = true }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 

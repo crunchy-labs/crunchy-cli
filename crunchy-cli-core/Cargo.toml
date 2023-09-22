@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli-core"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.0.2"
+version = "3.0.3"
 edition = "2021"
 license = "MIT"
 
@@ -18,7 +18,7 @@ clap = { version = "4.4", features = ["derive", "string"] }
 chrono = "0.4"
 crunchyroll-rs = { version = "0.6.2", features = ["dash-stream"] }
 ctrlc = "3.4"
-dialoguer = { version = "0.10", default-features = false }
+dialoguer = { version = "0.11", default-features = false }
 dirs = "5.0"
 derive_setters = "0.1"
 fs2 = "0.4"

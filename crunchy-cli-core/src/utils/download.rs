@@ -17,9 +17,11 @@ use std::env;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempPath;
+use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 
 #[derive(Clone, Debug)]
@@ -576,7 +578,7 @@ pub async fn download_segments(
         segs[i - ((i / cpus) * cpus)].push(segment);
     }
 
-    let (sender, receiver) = mpsc::channel();
+    let (sender, mut receiver) = unbounded_channel();
 
     let mut join_set: JoinSet<Result<()>> = JoinSet::new();
     for num in 0..cpus {
@@ -629,7 +631,7 @@ pub async fn download_segments(
 
                     buf = VariantSegment::decrypt(buf.borrow_mut(), segment.key)?.to_vec();
 
-                    let mut c = thread_count.lock().unwrap();
+                    let mut c = thread_count.lock().await;
                     debug!(
                         "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
                         num + (i * cpus) + 1,
@@ -663,7 +665,7 @@ pub async fn download_segments(
     // the segment number and the values the corresponding bytes
     let mut data_pos = 0;
     let mut buf: BTreeMap<i32, Vec<u8>> = BTreeMap::new();
-    for (pos, bytes) in receiver.iter() {
+    while let Some((pos, bytes)) = receiver.recv().await {
         // if the position is lower than 0, an error occurred in the sending download thread
         if pos < 0 {
             break;

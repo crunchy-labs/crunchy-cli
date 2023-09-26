@@ -24,8 +24,8 @@ source_aarch64=(
   "LICENSE::https://raw.githubusercontent.com/crunchy-labs/crunchy-cli/v${pkgver}/LICENSE"
 )
 noextract=("manpages.zip" "completions.zip")
-sha256sums_x86_64=('$CI_x86_64_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
-sha256sums_aarch64=('$CI_aarch64_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
+sha256sums_x86_64=('$CI_AMD_BINARY_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
+sha256sums_aarch64=('$CI_ARM_BINARY_SHA_SUM' '$CI_MANPAGES_SHA_SUM' '$CI_COMPLETIONS_SHA_SUM' '$CI_LICENSE_SHA_SUM')
 
 package() {
   cd "$srcdir"

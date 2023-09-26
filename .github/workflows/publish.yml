@@ -52,12 +52,12 @@ jobs:
       - name: Generate crunchy-cli-bin PKGBUILD
         env:
           CI_PKG_VERSION: ${{ env.RELEASE_VERSION }}
-          CI_x86_64_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_x86_64_SHA256 }}
-          CI_aarch64_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_aarch64_SHA256 }}
+          CI_AMD_BINARY_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_x86_64_SHA256 }}
+          CI_ARM_BINARY_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_aarch64_SHA256 }}
           CI_MANPAGES_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_MANPAGES_SHA256 }}
           CI_COMPLETIONS_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_COMPLETIONS_SHA256 }}
           CI_LICENSE_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_LICENSE_SHA256 }}
-        run: envsubst '$CI_PKG_VERSION,$CI_x86_64_SHA_SUM,$CI_aarch64_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM,$CI_LICENSE_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
+        run: envsubst '$CI_PKG_VERSION,$CI_AMD_BINARY_SHA_SUM,$CI_ARM_BINARY_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM,$CI_LICENSE_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
 
       - name: Publish crunchy-cli-bin to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0

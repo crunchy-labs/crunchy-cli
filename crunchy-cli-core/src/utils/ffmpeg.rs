@@ -66,7 +66,8 @@ ffmpeg_enum! {
 
 ffmpeg_enum! {
     enum FFmpegHwAccel {
-        Nvidia
+        Nvidia,
+        Apple
     }
 }
 
@@ -275,6 +276,9 @@ impl FFmpegPreset {
                                     ]);
                                     output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
                                 }
+                                FFmpegHwAccel::Apple => {
+                                    output.extend(["-c:v", "h264_videotoolbox", "-c:a", "copy"])
+                                }
                             }
                         } else {
                             output.extend(["-c:v", "libx264", "-c:a", "copy"])
@@ -299,6 +303,9 @@ impl FFmpegPreset {
                                         "h264_cuvid",
                                     ]);
                                     output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"])
+                                }
+                                FFmpegHwAccel::Apple => {
+                                    output.extend(["-c:v", "hevc_videotoolbox", "-c:a", "copy"])
                                 }
                             }
                         } else {

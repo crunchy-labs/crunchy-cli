@@ -148,7 +148,8 @@ impl Execute for Download {
                     Some("mpegts".to_string())
                 } else {
                     None
-                });
+                })
+                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default());
 
             for mut single_formats in single_format_collection.into_iter() {
                 // the vec contains always only one item

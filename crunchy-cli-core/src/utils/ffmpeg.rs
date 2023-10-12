@@ -302,14 +302,26 @@ impl FFmpegPreset {
                                         "-c:v",
                                         "h264_cuvid",
                                     ]);
-                                    output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"])
+                                    output.extend([
+                                        "-c:v",
+                                        "hevc_nvenc",
+                                        "-c:a",
+                                        "copy",
+                                        "-tag:v",
+                                        "hvc1",
+                                    ])
                                 }
-                                FFmpegHwAccel::Apple => {
-                                    output.extend(["-c:v", "hevc_videotoolbox", "-c:a", "copy"])
-                                }
+                                FFmpegHwAccel::Apple => output.extend([
+                                    "-c:v",
+                                    "hevc_videotoolbox",
+                                    "-c:a",
+                                    "copy",
+                                    "-tag:v",
+                                    "hvc1",
+                                ]),
                             }
                         } else {
-                            output.extend(["-c:v", "libx265", "-c:a", "copy"])
+                            output.extend(["-c:v", "libx265", "-c:a", "copy", "-tag:v", "hvc1"])
                         }
 
                         match quality {

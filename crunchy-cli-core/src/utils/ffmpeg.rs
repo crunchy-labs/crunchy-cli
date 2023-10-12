@@ -66,7 +66,8 @@ ffmpeg_enum! {
 
 ffmpeg_enum! {
     enum FFmpegHwAccel {
-        Nvidia
+        Nvidia,
+        Apple
     }
 }
 
@@ -262,31 +263,12 @@ impl FFmpegPreset {
 
                 match codec {
                     FFmpegCodec::H264 => {
-                        if let Some(hwaccel) = hwaccel_opt {
-                            match hwaccel {
-                                FFmpegHwAccel::Nvidia => {
-                                    input.extend([
-                                        "-hwaccel",
-                                        "cuda",
-                                        "-hwaccel_output_format",
-                                        "cuda",
-                                        "-c:v",
-                                        "h264_cuvid",
-                                    ]);
-                                    output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
-                                }
-                            }
-                        } else {
-                            output.extend(["-c:v", "libx264", "-c:a", "copy"])
-                        }
-
-                        match quality {
+                        let mut crf_quality = || match quality {
                             FFmpegQuality::Lossless => output.extend(["-crf", "18"]),
                             FFmpegQuality::Normal => (),
                             FFmpegQuality::Low => output.extend(["-crf", "35"]),
-                        }
-                    }
-                    FFmpegCodec::H265 => {
+                        };
+
                         if let Some(hwaccel) = hwaccel_opt {
                             match hwaccel {
                                 FFmpegHwAccel::Nvidia => {
@@ -298,17 +280,79 @@ impl FFmpegPreset {
                                         "-c:v",
                                         "h264_cuvid",
                                     ]);
-                                    output.extend(["-c:v", "hevc_nvenc", "-c:a", "copy"])
+                                    crf_quality();
+                                    output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
+                                }
+                                FFmpegHwAccel::Apple => {
+                                    // Apple's Video Toolbox encoders ignore `-crf`,
+                                    // use `-q:v` instead. It's on a scale of 1-100,
+                                    // 100 being lossless. Just did some math
+                                    // ((-a/51+1)*99+1 where `a` is the old crf value)
+                                    // so these settings very likely need some more
+                                    // tweeking.
+                                    match quality {
+                                        FFmpegQuality::Lossless => output.extend(["-q:v", "65"]),
+                                        FFmpegQuality::Normal => (),
+                                        FFmpegQuality::Low => output.extend(["-q:v", "32"]),
+                                    }
+
+                                    output.extend(["-c:v", "h264_videotoolbox", "-c:a", "copy"])
                                 }
                             }
                         } else {
-                            output.extend(["-c:v", "libx265", "-c:a", "copy"])
+                            crf_quality();
+                            output.extend(["-c:v", "libx264", "-c:a", "copy"])
                         }
-
-                        match quality {
+                    }
+                    FFmpegCodec::H265 => {
+                        let mut crf_quality = || match quality {
                             FFmpegQuality::Lossless => output.extend(["-crf", "20"]),
                             FFmpegQuality::Normal => (),
                             FFmpegQuality::Low => output.extend(["-crf", "35"]),
+                        };
+
+                        if let Some(hwaccel) = hwaccel_opt {
+                            match hwaccel {
+                                FFmpegHwAccel::Nvidia => {
+                                    input.extend([
+                                        "-hwaccel",
+                                        "cuda",
+                                        "-hwaccel_output_format",
+                                        "cuda",
+                                        "-c:v",
+                                        "h264_cuvid",
+                                    ]);
+                                    crf_quality();
+                                    output.extend([
+                                        "-c:v",
+                                        "hevc_nvenc",
+                                        "-c:a",
+                                        "copy",
+                                        "-tag:v",
+                                        "hvc1",
+                                    ])
+                                }
+                                FFmpegHwAccel::Apple => {
+                                    // See the comment that starts on line 287.
+                                    match quality {
+                                        FFmpegQuality::Lossless => output.extend(["-q:v", "61"]),
+                                        FFmpegQuality::Normal => (),
+                                        FFmpegQuality::Low => output.extend(["-q:v", "32"]),
+                                    }
+
+                                    output.extend([
+                                        "-c:v",
+                                        "hevc_videotoolbox",
+                                        "-c:a",
+                                        "copy",
+                                        "-tag:v",
+                                        "hvc1",
+                                    ])
+                                }
+                            }
+                        } else {
+                            crf_quality();
+                            output.extend(["-c:v", "libx265", "-c:a", "copy", "-tag:v", "hvc1"])
                         }
                     }
                     FFmpegCodec::Av1 => {

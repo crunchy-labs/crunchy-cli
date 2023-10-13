@@ -98,6 +98,10 @@ pub struct Archive {
     #[arg(short, long, default_value_t = false)]
     pub(crate) yes: bool,
 
+    #[arg(help = "Download using only one thread")]
+    #[arg(short = 't', long, default_value_t = false)]
+    pub(crate) single_threaded: bool,
+
     #[arg(help = "Crunchyroll series url(s)")]
     #[arg(required = true)]
     pub(crate) urls: Vec<String>,
@@ -158,7 +162,8 @@ impl Execute for Archive {
                 .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
                 .output_format(Some("matroska".to_string()))
                 .audio_sort(Some(self.audio.clone()))
-                .subtitle_sort(Some(self.subtitle.clone()));
+                .subtitle_sort(Some(self.subtitle.clone()))
+                .single_threaded(self.single_threaded);
 
             for single_formats in single_format_collection.into_iter() {
                 let (download_formats, mut format) = get_format(&self, &single_formats).await?;

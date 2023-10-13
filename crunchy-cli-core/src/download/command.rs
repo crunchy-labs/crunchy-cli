@@ -80,6 +80,10 @@ pub struct Download {
     #[arg(long, default_value_t = false)]
     pub(crate) force_hardsub: bool,
 
+    #[arg(help = "Download using only one thread")]
+    #[arg(short = 't', long, default_value_t = false)]
+    pub(crate) single_threaded: bool,
+
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     #[arg(required = true)]
     pub(crate) urls: Vec<String>,
@@ -149,7 +153,8 @@ impl Execute for Download {
                 } else {
                     None
                 })
-                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default());
+                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                .single_threaded(self.single_threaded);
 
             for mut single_formats in single_format_collection.into_iter() {
                 // the vec contains always only one item

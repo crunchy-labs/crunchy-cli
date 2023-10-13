@@ -371,51 +371,43 @@ impl Format {
     /// Formats the given string if it has specific pattern in it. It's possible to sanitize it which
     /// removes characters which can cause failures if the output string is used as a file name.
     pub fn format_path(&self, path: PathBuf, sanitize: bool) -> PathBuf {
-        let sanitize_func = if sanitize {
-            |s: &str| sanitize_filename::sanitize(s)
+        let path = path
+            .to_string_lossy()
+            .to_string()
+            .replace("{title}", &self.title)
+            .replace(
+                "{audio}",
+                &self
+                    .locales
+                    .iter()
+                    .map(|(a, _)| a.to_string())
+                    .collect::<Vec<String>>()
+                    .join("|"),
+            )
+            .replace("{resolution}", &self.resolution.to_string())
+            .replace("{series_id}", &self.series_id)
+            .replace("{series_name}", &self.series_name)
+            .replace("{season_id}", &self.season_id)
+            .replace("{season_name}", &self.season_title)
+            .replace(
+                "{season_number}",
+                &format!("{:0>2}", self.season_number.to_string()),
+            )
+            .replace("{episode_id}", &self.episode_id)
+            .replace(
+                "{episode_number}",
+                &format!("{:0>2}", self.episode_number.to_string()),
+            )
+            .replace(
+                "{relative_episode_number}",
+                &self.relative_episode_number.unwrap_or_default().to_string(),
+            );
+
+        if sanitize {
+            PathBuf::from(sanitize_filename::sanitize(path))
         } else {
-            // converting this to a string is actually unnecessary
-            |s: &str| s.to_string()
-        };
-
-        let as_string = path.to_string_lossy().to_string();
-
-        PathBuf::from(
-            as_string
-                .replace("{title}", &sanitize_func(&self.title))
-                .replace(
-                    "{audio}",
-                    &sanitize_func(
-                        &self
-                            .locales
-                            .iter()
-                            .map(|(a, _)| a.to_string())
-                            .collect::<Vec<String>>()
-                            .join("|"),
-                    ),
-                )
-                .replace("{resolution}", &sanitize_func(&self.resolution.to_string()))
-                .replace("{series_id}", &sanitize_func(&self.series_id))
-                .replace("{series_name}", &sanitize_func(&self.series_name))
-                .replace("{season_id}", &sanitize_func(&self.season_id))
-                .replace("{season_name}", &sanitize_func(&self.season_title))
-                .replace(
-                    "{season_number}",
-                    &sanitize_func(&format!("{:0>2}", self.season_number.to_string())),
-                )
-                .replace("{episode_id}", &sanitize_func(&self.episode_id))
-                .replace(
-                    "{episode_number}",
-                    &sanitize_func(&format!("{:0>2}", self.episode_number.to_string())),
-                )
-                .replace(
-                    "{relative_episode_number}",
-                    &sanitize_func(&format!(
-                        "{:0>2}",
-                        self.relative_episode_number.unwrap_or_default().to_string()
-                    )),
-                ),
-        )
+            PathBuf::from(path)
+        }
     }
 
     pub fn visual_output(&self, dst: &Path) {

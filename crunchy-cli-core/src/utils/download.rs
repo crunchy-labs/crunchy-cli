@@ -576,11 +576,7 @@ impl Downloader {
         };
 
         // If `threads` is specified, use that many CPU cores(?).
-        let cpus = if let Some(threads) = self.threads {
-            threads
-        } else {
-            num_cpus::get()
-        };
+        let cpus = self.threads.unwrap_or(num_cpus::get());
         let mut segs: Vec<Vec<VariantSegment>> = Vec::with_capacity(cpus);
         for _ in 0..cpus {
             segs.push(vec![])

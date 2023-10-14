@@ -50,7 +50,7 @@ pub struct DownloadBuilder {
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
     force_hardsub: bool,
-    single_threaded: bool,
+    threads: Option<usize>,
 }
 
 impl DownloadBuilder {
@@ -62,7 +62,7 @@ impl DownloadBuilder {
             audio_sort: None,
             subtitle_sort: None,
             force_hardsub: false,
-            single_threaded: false,
+            threads: None,
         }
     }
 
@@ -75,7 +75,7 @@ impl DownloadBuilder {
             subtitle_sort: self.subtitle_sort,
 
             force_hardsub: self.force_hardsub,
-            single_threaded: self.single_threaded,
+            threads: self.threads,
 
             formats: vec![],
         }
@@ -102,7 +102,7 @@ pub struct Downloader {
     subtitle_sort: Option<Vec<Locale>>,
 
     force_hardsub: bool,
-    single_threaded: bool,
+    threads: Option<usize>,
 
     formats: Vec<DownloadFormat>,
 }
@@ -575,9 +575,9 @@ impl Downloader {
             None
         };
 
-        // Only use 1 CPU (core?) if `single-threaded` option is enabled
-        let cpus = if self.single_threaded {
-            1
+        // If `threads` is specified, use that many CPU cores(?).
+        let cpus = if let Some(threads) = self.threads {
+            threads
         } else {
             num_cpus::get()
         };

@@ -50,7 +50,7 @@ pub struct DownloadBuilder {
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
     force_hardsub: bool,
-    threads: Option<usize>,
+    threads: usize,
 }
 
 impl DownloadBuilder {
@@ -62,7 +62,7 @@ impl DownloadBuilder {
             audio_sort: None,
             subtitle_sort: None,
             force_hardsub: false,
-            threads: None,
+            threads: num_cpus::get(),
         }
     }
 
@@ -102,7 +102,7 @@ pub struct Downloader {
     subtitle_sort: Option<Vec<Locale>>,
 
     force_hardsub: bool,
-    threads: Option<usize>,
+    threads: usize,
 
     formats: Vec<DownloadFormat>,
 }
@@ -575,8 +575,7 @@ impl Downloader {
             None
         };
 
-        // If `threads` is specified, use that many CPU cores(?).
-        let cpus = self.threads.unwrap_or(num_cpus::get());
+        let cpus = self.threads;
         let mut segs: Vec<Vec<VariantSegment>> = Vec::with_capacity(cpus);
         for _ in 0..cpus {
             segs.push(vec![])

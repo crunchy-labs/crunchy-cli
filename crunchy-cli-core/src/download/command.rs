@@ -80,9 +80,9 @@ pub struct Download {
     #[arg(long, default_value_t = false)]
     pub(crate) force_hardsub: bool,
 
-    #[arg(help = "Override the number of threads used to download")]
-    #[arg(short, long)]
-    pub(crate) threads: Option<usize>,
+    #[arg(help = "The number of threads used to download")]
+    #[arg(short, long, default_value_t = num_cpus::get())]
+    pub(crate) threads: usize,
 
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     #[arg(required = true)]

@@ -98,9 +98,9 @@ pub struct Archive {
     #[arg(short, long, default_value_t = false)]
     pub(crate) yes: bool,
 
-    #[arg(help = "Override the number of threads used to download")]
-    #[arg(short, long)]
-    pub(crate) threads: Option<usize>,
+    #[arg(help = "The number of threads used to download")]
+    #[arg(short, long, default_value_t = num_cpus::get())]
+    pub(crate) threads: usize,
 
     #[arg(help = "Crunchyroll series url(s)")]
     #[arg(required = true)]

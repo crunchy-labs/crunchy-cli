@@ -1,6 +1,6 @@
 use crate::utils::filter::real_dedup_vec;
 use crate::utils::log::tab_info;
-use crate::utils::os::is_special_file;
+use crate::utils::os::{is_special_file, sanitize};
 use anyhow::Result;
 use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Stream, Subtitle, VariantData};
@@ -368,46 +368,45 @@ impl Format {
         }
     }
 
-    /// Formats the given string if it has specific pattern in it. It's possible to sanitize it which
-    /// removes characters which can cause failures if the output string is used as a file name.
-    pub fn format_path(&self, path: PathBuf, sanitize: bool) -> PathBuf {
-        let path = path
-            .to_string_lossy()
-            .to_string()
-            .replace("{title}", &self.title)
+    /// Formats the given string if it has specific pattern in it. It also sanitizes the filename.
+    pub fn format_path(&self, path: PathBuf) -> PathBuf {
+        let mut path = sanitize(path.to_string_lossy(), false);
+        path = path
+            .replace("{title}", &sanitize(&self.title, true))
             .replace(
                 "{audio}",
-                &self
-                    .locales
-                    .iter()
-                    .map(|(a, _)| a.to_string())
-                    .collect::<Vec<String>>()
-                    .join("|"),
+                &sanitize(
+                    self.locales
+                        .iter()
+                        .map(|(a, _)| a.to_string())
+                        .collect::<Vec<String>>()
+                        .join("|"),
+                    true,
+                ),
             )
-            .replace("{resolution}", &self.resolution.to_string())
-            .replace("{series_id}", &self.series_id)
-            .replace("{series_name}", &self.series_name)
-            .replace("{season_id}", &self.season_id)
-            .replace("{season_name}", &self.season_title)
+            .replace("{resolution}", &sanitize(self.resolution.to_string(), true))
+            .replace("{series_id}", &sanitize(&self.series_id, true))
+            .replace("{series_name}", &sanitize(&self.series_name, true))
+            .replace("{season_id}", &sanitize(&self.season_id, true))
+            .replace("{season_name}", &sanitize(&self.season_title, true))
             .replace(
                 "{season_number}",
-                &format!("{:0>2}", self.season_number.to_string()),
+                &format!("{:0>2}", sanitize(self.season_number.to_string(), true)),
             )
-            .replace("{episode_id}", &self.episode_id)
+            .replace("{episode_id}", &sanitize(&self.episode_id, true))
             .replace(
                 "{episode_number}",
-                &format!("{:0>2}", self.episode_number.to_string()),
+                &format!("{:0>2}", sanitize(&self.episode_number, true)),
             )
             .replace(
                 "{relative_episode_number}",
-                &self.relative_episode_number.unwrap_or_default().to_string(),
+                &sanitize(
+                    self.relative_episode_number.unwrap_or_default().to_string(),
+                    true,
+                ),
             );
 
-        if sanitize {
-            PathBuf::from(sanitize_filename::sanitize(path))
-        } else {
-            PathBuf::from(path)
-        }
+        PathBuf::from(path)
     }
 
     pub fn visual_output(&self, dst: &Path) {

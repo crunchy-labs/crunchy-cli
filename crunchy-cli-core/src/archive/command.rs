@@ -173,7 +173,7 @@ impl Execute for Archive {
                     downloader.add_format(download_format)
                 }
 
-                let formatted_path = format.format_path((&self.output).into(), true);
+                let formatted_path = format.format_path((&self.output).into());
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

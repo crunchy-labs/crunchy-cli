@@ -24,7 +24,7 @@ impl FilterOptions {
             self.check_audio_language(&vec![e.audio_locale.clone()])
                 && self
                     .url_filter
-                    .is_episode_valid(e.episode_number, e.season_number)
+                    .is_episode_valid(e.sequence_number, e.season_number)
         });
         episodes
     }

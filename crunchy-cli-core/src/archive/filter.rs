@@ -241,7 +241,7 @@ impl Filter for ArchiveFilter {
     async fn visit_episode(&mut self, mut episode: Episode) -> Result<Option<Self::T>> {
         if !self
             .url_filter
-            .is_episode_valid(episode.episode_number, episode.season_number)
+            .is_episode_valid(episode.sequence_number, episode.season_number)
         {
             return Ok(None);
         }

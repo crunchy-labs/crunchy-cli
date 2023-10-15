@@ -192,3 +192,13 @@ pub fn parse_resolution(mut resolution: String) -> Result<Resolution> {
         bail!("Could not find resolution")
     }
 }
+
+/// Dirty implementation of [`f32::fract`] with more accuracy.
+pub fn fract(input: f32) -> f32 {
+    if input.fract() == 0.0 {
+        return 0.0;
+    }
+    format!("0.{}", input.to_string().split('.').last().unwrap())
+        .parse::<f32>()
+        .unwrap()
+}

@@ -2,7 +2,7 @@ use crate::download::Download;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
 use crate::utils::interactive_select::{check_for_duplicated_seasons, get_duplicated_seasons};
-use crate::utils::parse::UrlFilter;
+use crate::utils::parse::{fract, UrlFilter};
 use anyhow::{bail, Result};
 use crunchyroll_rs::{Concert, Episode, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{error, info, warn};
@@ -211,8 +211,10 @@ impl Filter for DownloadFilter {
                 }
                 if ep.id == episode.id {
                     relative_episode_number = Some(i + 1);
-                    relative_sequence_number =
-                        Some((i + 1 - non_integer_sequence_number_count) as f32);
+                    relative_sequence_number = Some(
+                        (i + 1 - non_integer_sequence_number_count) as f32
+                            + fract(ep.sequence_number),
+                    );
                     break;
                 }
             }

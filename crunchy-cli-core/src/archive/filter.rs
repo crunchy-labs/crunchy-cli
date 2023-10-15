@@ -2,7 +2,7 @@ use crate::archive::command::Archive;
 use crate::utils::filter::{real_dedup_vec, Filter};
 use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
 use crate::utils::interactive_select::{check_for_duplicated_seasons, get_duplicated_seasons};
-use crate::utils::parse::UrlFilter;
+use crate::utils::parse::{fract, UrlFilter};
 use anyhow::Result;
 use crunchyroll_rs::{Concert, Episode, Locale, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{info, warn};
@@ -321,8 +321,10 @@ impl Filter for ArchiveFilter {
                 }
                 if ep.id == episode.id {
                     relative_episode_number = Some(i + 1);
-                    relative_sequence_number =
-                        Some((i + 1 - non_integer_sequence_number_count) as f32);
+                    relative_sequence_number = Some(
+                        (i + 1 - non_integer_sequence_number_count) as f32
+                            + fract(ep.sequence_number),
+                    );
                     break;
                 }
             }

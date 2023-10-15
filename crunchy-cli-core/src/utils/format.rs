@@ -408,22 +408,28 @@ impl Format {
             )
             .replace(
                 "{relative_episode_number}",
-                &sanitize(
-                    self.relative_episode_number.unwrap_or_default().to_string(),
-                    true,
+                &format!(
+                    "{:0>2}",
+                    sanitize(
+                        self.relative_episode_number.unwrap_or_default().to_string(),
+                        true,
+                    )
                 ),
             )
             .replace(
                 "{sequence_number}",
-                &sanitize(self.sequence_number.to_string(), true),
+                &format!("{:0>2}", sanitize(self.sequence_number.to_string(), true)),
             )
             .replace(
                 "{relative_sequence_number}",
-                &sanitize(
-                    self.relative_sequence_number
-                        .unwrap_or_default()
-                        .to_string(),
-                    true,
+                &format!(
+                    "{:0>2}",
+                    sanitize(
+                        self.relative_sequence_number
+                            .unwrap_or_default()
+                            .to_string(),
+                        true,
+                    )
                 ),
             );
 

@@ -401,7 +401,6 @@ dependencies = [
  "regex",
  "reqwest",
  "rustls-native-certs",
- "sanitize-filename",
  "serde",
  "serde_json",
  "serde_plain",
@@ -1516,16 +1515,6 @@ name = "ryu"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ad4cc8da4ef723ed60bced201181d83791ad433213d8c24efffda1eec85d741"
-
-[[package]]
-name = "sanitize-filename"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ed72fbaf78e6f2d41744923916966c4fbe3d7c74e3037a8ee482f1115572603"
-dependencies = [
- "lazy_static",
- "regex",
-]
 
 [[package]]
 name = "schannel"

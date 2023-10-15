@@ -82,6 +82,10 @@ pub struct Download {
     #[arg(long, default_value_t = false)]
     pub(crate) force_hardsub: bool,
 
+    #[arg(help = "The number of threads used to download")]
+    #[arg(short, long, default_value_t = num_cpus::get())]
+    pub(crate) threads: usize,
+
     #[arg(help = "Url(s) to Crunchyroll episodes or series")]
     #[arg(required = true)]
     pub(crate) urls: Vec<String>,
@@ -151,7 +155,8 @@ impl Execute for Download {
                 } else {
                     None
                 })
-                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default());
+                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                .threads(self.threads);
 
             for mut single_formats in single_format_collection.into_iter() {
                 // the vec contains always only one item
@@ -162,7 +167,7 @@ impl Execute for Download {
                 let mut downloader = download_builder.clone().build();
                 downloader.add_format(download_format);
 
-                let formatted_path = format.format_path((&self.output).into(), true);
+                let formatted_path = format.format_path((&self.output).into());
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

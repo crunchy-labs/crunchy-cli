@@ -1,4 +1,6 @@
 use log::debug;
+use regex::{Regex, RegexBuilder};
+use std::borrow::Cow;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -77,4 +79,50 @@ pub fn free_file(mut path: PathBuf) -> (PathBuf, bool) {
 /// ¯\_(ツ)_/¯
 pub fn is_special_file<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().exists() && !path.as_ref().is_file() && !path.as_ref().is_dir()
+}
+
+lazy_static::lazy_static! {
+    static ref ILLEGAL_RE: Regex = Regex::new(r#"[\?<>:\*\|":]"#).unwrap();
+    static ref CONTROL_RE: Regex = Regex::new(r"[\x00-\x1f\x80-\x9f]").unwrap();
+    static ref RESERVED_RE: Regex = Regex::new(r"^\.+$").unwrap();
+    static ref WINDOWS_RESERVED_RE: Regex = RegexBuilder::new(r"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$")
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    static ref WINDOWS_TRAILING_RE: Regex = Regex::new(r"[\. ]+$").unwrap();
+}
+
+/// Sanitizes a filename with the option to include/exclude the path separator from sanitizing. This
+/// is based of the implementation of the
+/// [`sanitize-filename`](https://crates.io/crates/sanitize-filename) crate.
+pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String {
+    let path = Cow::from(path.as_ref());
+
+    let path = ILLEGAL_RE.replace_all(&path, "");
+    let path = CONTROL_RE.replace_all(&path, "");
+    let path = RESERVED_RE.replace(&path, "");
+
+    let collect = |name: String| {
+        if name.len() > 255 {
+            name[..255].to_string()
+        } else {
+            name
+        }
+    };
+
+    if cfg!(windows) {
+        let path = WINDOWS_RESERVED_RE.replace(&path, "");
+        let path = WINDOWS_TRAILING_RE.replace(&path, "");
+        let mut path = path.to_string();
+        if include_path_separator {
+            path = path.replace(['\\', '/'], "");
+        }
+        collect(path)
+    } else {
+        let mut path = path.to_string();
+        if include_path_separator {
+            path = path.replace('/', "");
+        }
+        collect(path)
+    }
 }

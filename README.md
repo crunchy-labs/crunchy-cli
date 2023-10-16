@@ -92,6 +92,8 @@ $ cargo install --force --path .
 
 > All shown commands are examples 🧑🏼‍🍳
 
+### Global Flags
+
 crunchy-cli requires you to log in.
 Though you can use a non-premium account, you will not have access to premium content without a subscription.
 You can authenticate with your credentials (user:password) or by using a refresh token.
@@ -99,7 +101,7 @@ You can authenticate with your credentials (user:password) or by using a refresh
 - Credentials
 
   ```shell
-  $ crunchy-cli --credentials "user:password"
+  $ crunchy-cli --credentials "user:password" <command>
   ```
 - Refresh Token
 
@@ -107,13 +109,13 @@ You can authenticate with your credentials (user:password) or by using a refresh
   The easiest way to get it is via a browser extension which lets you export your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) / [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
   When installed, look for the `etp_rt` entry and extract its value.
   ```shell
-  $ crunchy-cli --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d"
+  $ crunchy-cli --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d" <command>
   ```
 - Stay Anonymous
 
   Login without an account (you won't be able to access premium content):
   ```shell 
-  $ crunchy-cli --anonymous
+  $ crunchy-cli --anonymous <command>
   ```
 
 ### Global settings
@@ -124,7 +126,7 @@ You can set specific settings which will be
 
   If you want to include debug information in the output, use the `-v` / `--verbose` flag to show it.
   ```shell
-  $ crunchy-cli -v
+  $ crunchy-cli -v <command>
   ```
   This flag can't be used with `-q` / `--quiet`.
 
@@ -133,7 +135,7 @@ You can set specific settings which will be
   If you want to hide all output, use the `-q` / `--quiet` flag to do so.
   This is especially useful if you want to pipe the output video to an external program (like a video player).
   ```shell
-  $ crunchy-cli -q
+  $ crunchy-cli -q <command>
   ```
 
 - Language
@@ -141,7 +143,7 @@ You can set specific settings which will be
   By default, the resulting metadata like title or description are shown in your system language (if Crunchyroll supports it, else in English).
   If you want to show the results in another language, use the `--lang` flag to set it.
   ```shell
-  $ crunchy-cli --lang de-DE
+  $ crunchy-cli --lang de-DE <command>
   ```
 
 - Experimental fixes
@@ -150,7 +152,7 @@ You can set specific settings which will be
   The `--experimental-fixes` flag tries to fix some of those issues.
   As the *experimental* in `--experimental-fixes` states, these fixes may or may not break other functionality.
   ```shell
-  $ crunchy-cli --experimental-fixes
+  $ crunchy-cli --experimental-fixes <command>
   ```
   For an overview which parts this flag affects, see the [documentation](https://docs.rs/crunchyroll-rs/latest/crunchyroll_rs/crunchyroll/struct.CrunchyrollBuilder.html) of the underlying Crunchyroll library, all functions beginning with `stabilization_` are applied.
 
@@ -159,7 +161,7 @@ You can set specific settings which will be
   The `--proxy` flag supports https and socks5 proxies to route all your traffic through.
   This may be helpful to bypass the geo-restrictions Crunchyroll has on certain series.
   ```shell
-  $ crunchy-cli --proxy socks5://127.0.0.1:8080
+  $ crunchy-cli --proxy socks5://127.0.0.1:8080 <command>
   ```
   Make sure that proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself.
 
@@ -204,7 +206,7 @@ The `download` command lets you download episodes with a specific audio language
 - Subtitle language
 
   Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
-  The subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
+  In formats that support it (.mp4, .mov and .mkv ), subtitles are stored as soft-subs. All other formats are hardsubbed: the subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
   ```shell
   $ crunchy-cli download -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```

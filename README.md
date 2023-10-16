@@ -206,7 +206,7 @@ The `download` command lets you download episodes with a specific audio language
 - Subtitle language
 
   Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
-  In formats that support it, (.mp4, .mov and .mkv ) subtitles are stored as soft-subs. All other formats are hardsubbed: the subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
+  In formats that support it (.mp4, .mov and .mkv ), subtitles are stored as soft-subs. All other formats are hardsubbed: the subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
   ```shell
   $ crunchy-cli download -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```

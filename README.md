@@ -53,6 +53,7 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
 
   If you're using Arch or an Arch based Linux distribution you are able to install our [AUR](https://aur.archlinux.org/) package.
   You need an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers) like [yay](https://github.com/Jguer/yay) to install it.
+
   ```shell
   # this package builds crunchy-cli manually (recommended)
   $ yay -S crunchy-cli
@@ -63,6 +64,7 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
 - [Nix](https://nixos.org/)
 
   This requires [nix](https://nixos.org) and you'll probably need `--extra-experimental-features "nix-command flakes"`, depending on your configurations.
+
   ```shell
   $ nix <run|shell|develop> github:crunchy-labs/crunchy-cli
   ```
@@ -70,15 +72,27 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
 - [Scoop](https://scoop.sh/)
 
   For Windows users, we support the [scoop](https://scoop.sh/#/) command-line installer.
+
   ```shell
   $ scoop bucket add extras
   $ scoop install extras/crunchy-cli
   ```
 
+- [Homebrew](https://brew.sh/)
+
+  For macOS/linux users, we support the [brew](https://brew.sh/#/) command-line installer. Packages are compile by the [homebrew project](https://github.com/Homebrew/homebrew-core/pkgs/container/core%2Fcrunchy-cli), and will also install the `openssl@3` and `ffmpeg` dependencies.
+
+  ```shell
+  $ brew install crunchy-cli
+  ```
+
+  Supported archs: `x86_64_linux`, `arm64_monterey`, `sonoma`, `ventura`
+
 ### 🛠 Build it yourself
 
 Since we do not support every platform and architecture you may have to build the project yourself.
 This requires [git](https://git-scm.com/) and [Cargo](https://doc.rust-lang.org/cargo).
+
 ```shell
 $ git clone https://github.com/crunchy-labs/crunchy-cli
 $ cd crunchy-cli
@@ -103,18 +117,22 @@ You can authenticate with your credentials (user:password) or by using a refresh
   ```shell
   $ crunchy-cli --credentials "user:password" <command>
   ```
+
 - Refresh Token
 
   To obtain a refresh token, you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie.
   The easiest way to get it is via a browser extension which lets you export your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) / [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
   When installed, look for the `etp_rt` entry and extract its value.
+
   ```shell
   $ crunchy-cli --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d" <command>
   ```
+
 - Stay Anonymous
 
   Login without an account (you won't be able to access premium content):
-  ```shell 
+
+  ```shell
   $ crunchy-cli --anonymous <command>
   ```
 
@@ -125,15 +143,18 @@ You can set specific settings which will be
 - Verbose output
 
   If you want to include debug information in the output, use the `-v` / `--verbose` flag to show it.
+
   ```shell
   $ crunchy-cli -v <command>
   ```
+
   This flag can't be used with `-q` / `--quiet`.
 
 - Quiet output
 
   If you want to hide all output, use the `-q` / `--quiet` flag to do so.
   This is especially useful if you want to pipe the output video to an external program (like a video player).
+
   ```shell
   $ crunchy-cli -q <command>
   ```
@@ -142,6 +163,7 @@ You can set specific settings which will be
 
   By default, the resulting metadata like title or description are shown in your system language (if Crunchyroll supports it, else in English).
   If you want to show the results in another language, use the `--lang` flag to set it.
+
   ```shell
   $ crunchy-cli --lang de-DE <command>
   ```
@@ -151,18 +173,22 @@ You can set specific settings which will be
   Crunchyroll constantly changes and breaks its services or just delivers incorrect answers.
   The `--experimental-fixes` flag tries to fix some of those issues.
   As the *experimental* in `--experimental-fixes` states, these fixes may or may not break other functionality.
+
   ```shell
   $ crunchy-cli --experimental-fixes <command>
   ```
+
   For an overview which parts this flag affects, see the [documentation](https://docs.rs/crunchyroll-rs/latest/crunchyroll_rs/crunchyroll/struct.CrunchyrollBuilder.html) of the underlying Crunchyroll library, all functions beginning with `stabilization_` are applied.
 
 - Proxy
 
   The `--proxy` flag supports https and socks5 proxies to route all your traffic through.
   This may be helpful to bypass the geo-restrictions Crunchyroll has on certain series.
+
   ```shell
   $ crunchy-cli --proxy socks5://127.0.0.1:8080 <command>
   ```
+
   Make sure that proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself.
 
 ### Login
@@ -184,6 +210,7 @@ With the session stored, you do not need to pass `--credentials` / `--etp-rt` / 
 The `download` command lets you download episodes with a specific audio language and optional subtitles.
 
 **Supported urls**
+
 - Single episode (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy-cli download https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
@@ -194,38 +221,47 @@ The `download` command lets you download episodes with a specific audio language
   ```
 
 **Options**
+
 - Audio language
 
   Set the audio language with the `-a` / `--audio` flag.
   This only works if the url points to a series since episode urls are language specific.
+
   ```shell
   $ crunchy-cli download -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is your system locale. If not supported by Crunchyroll, `en-US` (American English) is the default.
 
 - Subtitle language
 
   Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
   In formats that support it (.mp4, .mov and .mkv ), subtitles are stored as soft-subs. All other formats are hardsubbed: the subtitles will be burned into the video track (cf. [hardsub](https://www.urbandictionary.com/define.php?term=hardsub)) and thus can not be turned off.
+
   ```shell
   $ crunchy-cli download -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is none.
 
 - Output template
 
   Define an output template by using the `-o` / `--output` flag.
+
   ```shell
   $ crunchy-cli download -o "ditf.mp4" https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
+
   Default is `{title}.mp4`. See the [Template Options section](#output-template-options) below for more options.
 
 - Resolution
 
   The resolution for videos can be set via the `-r` / `--resolution` flag.
+
   ```shell
   $ crunchy-cli download -r worst https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
+
   Default is `best`.
 
 - FFmpeg Preset
@@ -233,6 +269,7 @@ The `download` command lets you download episodes with a specific audio language
   You can specify specific built-in presets with the `--ffmpeg-preset` flag to convert videos to a specific coding while downloading.
   Multiple predefined presets how videos should be encoded (h264, h265, av1, ...) are available, you can see them with `crunchy-cli download --help`.
   If you need more specific ffmpeg customizations you could either convert the output file manually or use ffmpeg output arguments as value for this flag.
+
   ```shell
   $ crunchy-cli downlaod --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
@@ -240,6 +277,7 @@ The `download` command lets you download episodes with a specific audio language
 - Skip existing
 
   If you re-download a series but want to skip episodes you've already downloaded, the `--skip-existing` flag skips the already existing/downloaded files.
+
   ```shell
   $ crunchy-cli download --skip-existing https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -248,14 +286,17 @@ The `download` command lets you download episodes with a specific audio language
 
   Sometimes different seasons have the same season number (e.g. Sword Art Online Alicization and Alicization War of Underworld are both marked as season 3), in such cases an interactive prompt is shown which needs user further user input to decide which season to download.
   The `--yes` flag suppresses this interactive prompt and just downloads all seasons.
+
   ```shell
   $ crunchy-cli download --yes https://www.crunchyroll.com/series/GR49G9VP6/sword-art-online
   ```
+
   If you've passed the `-q` / `--quiet` [global flag](#global-settings), this flag is automatically set.
 
 - Force hardsub
 
   If you want to burn-in the subtitles, even if the output format/container supports soft-subs (e.g. `.mp4`), use the `--force-hardsub` flag to do so.
+
   ```shell
   $ crunchy-cli download --force-hardsub -s en-US https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
@@ -265,6 +306,7 @@ The `download` command lets you download episodes with a specific audio language
 The `archive` command lets you download episodes with multiple audios and subtitles and merges it into a `.mkv` file.
 
 **Supported urls**
+
 - Single episode (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy-cli archive https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
@@ -275,37 +317,46 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
 
 **Options**
+
 - Audio languages
 
   Set the audio language with the `-a` / `--audio` flag. Can be used multiple times.
+
   ```shell
   $ crunchy-cli archive -a ja-JP -a de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is your system locale (if not supported by Crunchyroll, `en-US` (American English) and `ja-JP` (Japanese) are used).
 
 - Subtitle languages
 
   Besides the audio, you can specify the subtitle language by using the `-s` / `--subtitle` flag.
+
   ```shell
   $ crunchy-cli archive -s de-DE https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is `all` subtitles.
 
 - Output template
 
   Define an output template by using the `-o` / `--output` flag.
   crunchy-cli uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of it's ability to store multiple audio, video and subtitle tracks at once.
+
   ```shell
   $ crunchy-cli archive -o "{title}.mkv" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is `{title}.mkv`. See the [Template Options section](#output-template-options) below for more options.
 
 - Resolution
 
   The resolution for videos can be set via the `-r` / `--resolution` flag.
+
   ```shell
   $ crunchy-cli archive -r worst https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is `best`.
 
 - Merge behavior
@@ -316,9 +367,11 @@ The `archive` command lets you download episodes with multiple audios and subtit
   With the `-m` / `--merge` flag you can define the behaviour when an episodes' video tracks differ in length.
   Valid options are `audio` - store one video and all other languages as audio only; `video` - store the video + audio for every language; `auto` - detect if videos differ in length: if so, behave like `video` - otherwise like `audio`.
   Subtitles will always match the primary audio and video.
+
   ```shell
   $ crunchy-cli archive -m audio https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is `auto`.
 
 - FFmpeg Preset
@@ -326,6 +379,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
   You can specify specific built-in presets with the `--ffmpeg-preset` flag to convert videos to a specific coding while downloading.
   Multiple predefined presets how videos should be encoded (h264, h265, av1, ...) are available, you can see them with `crunchy-cli archive --help`.
   If you need more specific ffmpeg customizations you could either convert the output file manually or use ffmpeg output arguments as value for this flag.
+
   ```shell
   $ crunchy-cli archive --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
@@ -333,14 +387,17 @@ The `archive` command lets you download episodes with multiple audios and subtit
 - Default subtitle
 
   `--default-subtitle` Set which subtitle language is to be flagged as **default** and **forced**.
+
   ```shell
   $ crunchy-cli archive --default-subtitle en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is none.
 
 - Skip existing
 
   If you re-download a series but want to skip episodes you've already downloaded, the `--skip-existing` flag skips the already existing/downloaded files.
+
   ```shell
   $ crunchy-cli archive --skip-existing https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
@@ -349,14 +406,17 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
   Sometimes different seasons have the same season number (e.g. Sword Art Online Alicization and Alicization War of Underworld are both marked as season 3), in such cases an interactive prompt is shown which needs user further user input to decide which season to download.
   The `--yes` flag suppresses this interactive prompt and just downloads all seasons.
+
   ```shell
   $ crunchy-cli archive --yes https://www.crunchyroll.com/series/GR49G9VP6/sword-art-online
   ```
+
   If you've passed the `-q` / `--quiet` [global flag](#global-settings), this flag is automatically set.
 
 ### Search
 
 **Supported urls/input**
+
 - Single episode (with [episode filtering](#episode-filtering))
   ```shell
   $ crunchy-cli search https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
@@ -371,12 +431,15 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
 
 **Options**
+
 - Audio
 
   Set the audio language to search via the `--audio` flag. Can be used multiple times.
+
   ```shell
   $ crunchy-cli search --audio en-US https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is your system locale.
 
 - Result limit
@@ -384,6 +447,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
   If your input is a search term instead of an url, you have multiple options to control which results to process.
   The `--search-top-results-limit` flag sets the limit of top search results to process.
   `--search-series-limit` sets the limit of only series, `--search-movie-listing-limit` of only movie listings, `--search-episode-limit` of only episodes and `--search-music-limit` of only concerts and music videos.
+
   ```shell
   $ crunchy-cli search --search-top-results-limit 10 "darling in the franxx"
   # only return series which have 'darling' in it. do not return top results which might also be non-series items
@@ -391,6 +455,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
   # this returns 2 top results, 3 movie listings, 5 episodes and 1 music item as result
   $ crunchy-cli search --search-top-results-limit 2 --search-movie-listing-limit 3 --search-episode-limit 5 --search-music-limit 1 "test"
   ```
+
   Default is `5` for `--search-top-results-limit`, `0` for all others.
 
 - Output template
@@ -401,9 +466,11 @@ The `archive` command lets you download episodes with multiple audios and subtit
   The required pattern for this begins with `{{`, then the keyword, and closes with `}}` (e.g. `{{episode.title}}`).
   For example, if you want to get the title of an episode, you can use `Title: {{episode.title}}` and `{{episode.title}}` will be replaced with the episode title.
   You can see all supported keywords with `crunchy-cli search --help`.
+
   ```shell
   $ crunchy-cli search -o "{{series.title}}" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
+
   Default is `S{{season.number}}E{{episode.number}} - {{episode.title}}`.
 
 ---
@@ -425,6 +492,7 @@ You can use various template options to change how the filename is processed. Th
 - `{episode_id}`              → ID of the episode
 
 Example:
+
 ```shell
 $ crunchy-cli archive -o "[S{season_number}E{episode_number}] {title}.mkv" https://www.crunchyroll.com/series/G8DHV7W21/dragon-ball
 # Output file: '[S01E01] Secret of the Dragon Ball.mkv'
@@ -438,6 +506,7 @@ A filter pattern may consist of either a season, an episode, or a combination of
 When used in combination, seasons `S` must be defined before episodes `E`.
 
 There are many possible patterns, for example:
+
 - `...[E5]` - Download the fifth episode.
 - `...[S1]` - Download the whole first season.
 - `...[-S2]` - Download the first two seasons.
@@ -447,6 +516,7 @@ There are many possible patterns, for example:
 - `...[S1-S3,S4E2-S4E6]` - Download season one to three, then episodes two to six from season four.
 
 In practice, it would look like this:
+
 ```
 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx[E1-E5]
 ```

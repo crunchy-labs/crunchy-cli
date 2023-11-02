@@ -80,7 +80,7 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
 
 - [Homebrew](https://brew.sh/)
 
-  For macOS/linux users, we support the [brew](https://brew.sh/#/) command-line installer. Packages are compile by the [homebrew project](https://github.com/Homebrew/homebrew-core/pkgs/container/core%2Fcrunchy-cli), and will also install the `openssl@3` and `ffmpeg` dependencies.
+  For macOS/linux users, we support the [brew](https://brew.sh/#/) command-line installer. Packages are compiled by the [homebrew project](https://formulae.brew.sh/formula/crunchy-cli), and will also install the `openssl@3` and `ffmpeg` dependencies.
 
   ```shell
   $ brew install crunchy-cli

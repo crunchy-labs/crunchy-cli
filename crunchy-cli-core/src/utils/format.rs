@@ -473,6 +473,10 @@ impl Format {
         tab_info!("FPS: {:.2}", self.fps)
     }
 
+    pub fn is_special(&self) -> bool {
+        self.sequence_number == 0.0 || self.sequence_number.fract() != 0.0
+    }
+
     pub fn has_relative_fmt<S: AsRef<str>>(s: S) -> bool {
         return s.as_ref().contains("{relative_episode_number}")
             || s.as_ref().contains("{relative_sequence_number}");

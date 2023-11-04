@@ -12,17 +12,24 @@ pub(crate) struct DownloadFilter {
     url_filter: UrlFilter,
     download: Download,
     interactive_input: bool,
+    skip_special: bool,
     season_episodes: HashMap<u32, Vec<Episode>>,
     season_subtitles_missing: Vec<u32>,
     season_visited: bool,
 }
 
 impl DownloadFilter {
-    pub(crate) fn new(url_filter: UrlFilter, download: Download, interactive_input: bool) -> Self {
+    pub(crate) fn new(
+        url_filter: UrlFilter,
+        download: Download,
+        interactive_input: bool,
+        skip_special: bool,
+    ) -> Self {
         Self {
             url_filter,
             download,
             interactive_input,
+            skip_special,
             season_episodes: HashMap::new(),
             season_subtitles_missing: vec![],
             season_visited: false,
@@ -128,6 +135,13 @@ impl Filter for DownloadFilter {
         if !self
             .url_filter
             .is_episode_valid(episode.sequence_number, episode.season_number)
+        {
+            return Ok(None);
+        }
+
+        // skip the episode if it's a special
+        if self.skip_special
+            && (episode.sequence_number == 0.0 || episode.sequence_number.fract() != 0.0)
         {
             return Ok(None);
         }

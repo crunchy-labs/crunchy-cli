@@ -54,6 +54,11 @@ pub struct Archive {
       {episode_id}               → ID of the episode")]
     #[arg(short, long, default_value = "{title}.mkv")]
     pub(crate) output: String,
+    #[arg(help = "Name of the output file if the episode is a special")]
+    #[arg(long_help = "Name of the output file if the episode is a special. \
+    If not set, the '-o'/'--output' flag will be used as name template")]
+    #[arg(long)]
+    pub(crate) special_output: Option<String>,
 
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution.\
@@ -95,6 +100,9 @@ pub struct Archive {
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
+    #[arg(help = "Skip special episodes")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) skip_specials: bool,
 
     #[arg(help = "Skip any interactive input")]
     #[arg(short, long, default_value_t = false)]
@@ -123,6 +131,17 @@ impl Execute for Archive {
             && self.output != "-"
         {
             bail!("File extension is not '.mkv'. Currently only matroska / '.mkv' files are supported")
+        } else if let Some(special_output) = &self.special_output {
+            if PathBuf::from(special_output)
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                != "mkv"
+                && !is_special_file(special_output)
+                && special_output != "-"
+            {
+                bail!("File extension for special episodes is not '.mkv'. Currently only matroska / '.mkv' files are supported")
+            }
         }
 
         self.audio = all_locale_in_locales(self.audio.clone());
@@ -147,9 +166,10 @@ impl Execute for Archive {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection = ArchiveFilter::new(url_filter, self.clone(), !self.yes)
-                .visit(media_collection)
-                .await?;
+            let single_format_collection =
+                ArchiveFilter::new(url_filter, self.clone(), !self.yes, self.skip_specials)
+                    .visit(media_collection)
+                    .await?;
 
             if single_format_collection.is_empty() {
                 progress_handler.stop(format!("Skipping url {} (no matching videos found)", i + 1));
@@ -175,7 +195,15 @@ impl Execute for Archive {
                     downloader.add_format(download_format)
                 }
 
-                let formatted_path = format.format_path((&self.output).into());
+                let formatted_path = if format.is_special() {
+                    format.format_path(
+                        self.special_output
+                            .as_ref()
+                            .map_or((&self.output).into(), |so| so.into()),
+                    )
+                } else {
+                    format.format_path((&self.output).into())
+                };
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

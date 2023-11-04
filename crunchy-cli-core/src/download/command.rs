@@ -50,6 +50,11 @@ pub struct Download {
       {episode_id}               → ID of the episode")]
     #[arg(short, long, default_value = "{title}.mp4")]
     pub(crate) output: String,
+    #[arg(help = "Name of the output file if the episode is a special")]
+    #[arg(long_help = "Name of the output file if the episode is a special. \
+    If not set, the '-o'/'--output' flag will be used as name template")]
+    #[arg(long)]
+    pub(crate) special_output: Option<String>,
 
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution.\
@@ -73,6 +78,9 @@ pub struct Download {
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
+    #[arg(help = "Skip special episodes")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) skip_specials: bool,
 
     #[arg(help = "Skip any interactive input")]
     #[arg(short, long, default_value_t = false)]
@@ -116,6 +124,25 @@ impl Execute for Download {
             }
         }
 
+        if let Some(special_output) = &self.special_output {
+            if Path::new(special_output)
+                .extension()
+                .unwrap_or_default()
+                .is_empty()
+                && !is_special_file(special_output)
+                && special_output != "-"
+            {
+                bail!("No file extension found. Please specify a file extension (via `--special-output`) for the output file")
+            }
+            if let Some(ext) = Path::new(special_output).extension() {
+                if self.force_hardsub {
+                    warn!("Hardsubs are forced for special episodes. Adding subtitles may take a while")
+                } else if !["mkv", "mov", "mp4"].contains(&ext.to_string_lossy().as_ref()) {
+                    warn!("Detected a container which does not support softsubs. Adding subtitles for special episodes may take a while")
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -135,9 +162,10 @@ impl Execute for Download {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection = DownloadFilter::new(url_filter, self.clone(), !self.yes)
-                .visit(media_collection)
-                .await?;
+            let single_format_collection =
+                DownloadFilter::new(url_filter, self.clone(), !self.yes, self.skip_specials)
+                    .visit(media_collection)
+                    .await?;
 
             if single_format_collection.is_empty() {
                 progress_handler.stop(format!("Skipping url {} (no matching videos found)", i + 1));
@@ -167,7 +195,15 @@ impl Execute for Download {
                 let mut downloader = download_builder.clone().build();
                 downloader.add_format(download_format);
 
-                let formatted_path = format.format_path((&self.output).into());
+                let formatted_path = if format.is_special() {
+                    format.format_path(
+                        self.special_output
+                            .as_ref()
+                            .map_or((&self.output).into(), |so| so.into()),
+                    )
+                } else {
+                    format.format_path((&self.output).into())
+                };
                 let (path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {

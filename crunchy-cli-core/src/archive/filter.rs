@@ -18,6 +18,7 @@ pub(crate) struct ArchiveFilter {
     url_filter: UrlFilter,
     archive: Archive,
     interactive_input: bool,
+    skip_special: bool,
     season_episodes: HashMap<String, Vec<Episode>>,
     season_subtitles_missing: Vec<u32>,
     season_sorting: Vec<String>,
@@ -25,11 +26,17 @@ pub(crate) struct ArchiveFilter {
 }
 
 impl ArchiveFilter {
-    pub(crate) fn new(url_filter: UrlFilter, archive: Archive, interactive_input: bool) -> Self {
+    pub(crate) fn new(
+        url_filter: UrlFilter,
+        archive: Archive,
+        interactive_input: bool,
+        skip_special: bool,
+    ) -> Self {
         Self {
             url_filter,
             archive,
             interactive_input,
+            skip_special,
             season_episodes: HashMap::new(),
             season_subtitles_missing: vec![],
             season_sorting: vec![],
@@ -242,6 +249,13 @@ impl Filter for ArchiveFilter {
         if !self
             .url_filter
             .is_episode_valid(episode.sequence_number, episode.season_number)
+        {
+            return Ok(None);
+        }
+
+        // skip the episode if it's a special
+        if self.skip_special
+            && (episode.sequence_number == 0.0 || episode.sequence_number.fract() != 0.0)
         {
             return Ok(None);
         }

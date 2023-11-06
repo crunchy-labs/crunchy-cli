@@ -10,8 +10,8 @@ use regex::Regex;
 /// If `to_*` is [`None`] they're set to [`u32::MAX`].
 #[derive(Debug, Default)]
 pub struct InnerUrlFilter {
-    from_episode: Option<u32>,
-    to_episode: Option<u32>,
+    from_episode: Option<f32>,
+    to_episode: Option<f32>,
     from_season: Option<u32>,
     to_season: Option<u32>,
 }
@@ -39,10 +39,10 @@ impl UrlFilter {
         })
     }
 
-    pub fn is_episode_valid(&self, episode: u32, season: u32) -> bool {
+    pub fn is_episode_valid(&self, episode: f32, season: u32) -> bool {
         self.inner.iter().any(|f| {
-            let from_episode = f.from_episode.unwrap_or(u32::MIN);
-            let to_episode = f.to_episode.unwrap_or(u32::MAX);
+            let from_episode = f.from_episode.unwrap_or(f32::MIN);
+            let to_episode = f.to_episode.unwrap_or(f32::MAX);
             let from_season = f.from_season.unwrap_or(u32::MIN);
             let to_season = f.to_season.unwrap_or(u32::MAX);
 
@@ -191,4 +191,14 @@ pub fn parse_resolution(mut resolution: String) -> Result<Resolution> {
     } else {
         bail!("Could not find resolution")
     }
+}
+
+/// Dirty implementation of [`f32::fract`] with more accuracy.
+pub fn fract(input: f32) -> f32 {
+    if input.fract() == 0.0 {
+        return 0.0;
+    }
+    format!("0.{}", input.to_string().split('.').last().unwrap())
+        .parse::<f32>()
+        .unwrap()
 }

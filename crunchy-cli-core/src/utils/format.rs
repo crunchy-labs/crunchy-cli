@@ -29,8 +29,9 @@ pub struct SingleFormat {
 
     pub episode_id: String,
     pub episode_number: String,
-    pub sequence_number: f32,
     pub relative_episode_number: Option<u32>,
+    pub sequence_number: f32,
+    pub relative_sequence_number: Option<f32>,
 
     pub duration: Duration,
 
@@ -42,6 +43,7 @@ impl SingleFormat {
         episode: Episode,
         subtitles: Vec<Locale>,
         relative_episode_number: Option<u32>,
+        relative_sequence_number: Option<f32>,
     ) -> Self {
         Self {
             identifier: if episode.identifier.is_empty() {
@@ -73,6 +75,7 @@ impl SingleFormat {
             },
             sequence_number: episode.sequence_number,
             relative_episode_number,
+            relative_sequence_number,
             duration: episode.duration,
             source: episode.into(),
         }
@@ -92,8 +95,9 @@ impl SingleFormat {
             season_number: 1,
             episode_id: movie.id.clone(),
             episode_number: "1".to_string(),
-            sequence_number: 1.0,
             relative_episode_number: Some(1),
+            sequence_number: 1.0,
+            relative_sequence_number: Some(1.0),
             duration: movie.duration,
             source: movie.into(),
         }
@@ -113,8 +117,9 @@ impl SingleFormat {
             season_number: 1,
             episode_id: music_video.id.clone(),
             episode_number: "1".to_string(),
-            sequence_number: 1.0,
             relative_episode_number: Some(1),
+            sequence_number: 1.0,
+            relative_sequence_number: Some(1.0),
             duration: music_video.duration,
             source: music_video.into(),
         }
@@ -134,8 +139,9 @@ impl SingleFormat {
             season_number: 1,
             episode_id: concert.id.clone(),
             episode_number: "1".to_string(),
-            sequence_number: 1.0,
             relative_episode_number: Some(1),
+            sequence_number: 1.0,
+            relative_sequence_number: Some(1.0),
             duration: concert.duration,
             source: concert.into(),
         }
@@ -328,8 +334,9 @@ pub struct Format {
 
     pub episode_id: String,
     pub episode_number: String,
-    pub sequence_number: f32,
     pub relative_episode_number: Option<u32>,
+    pub sequence_number: f32,
+    pub relative_sequence_number: Option<f32>,
 }
 
 impl Format {
@@ -363,8 +370,9 @@ impl Format {
             season_number: first_format.season_number,
             episode_id: first_format.episode_id,
             episode_number: first_format.episode_number,
-            sequence_number: first_format.sequence_number,
             relative_episode_number: first_format.relative_episode_number,
+            sequence_number: first_format.sequence_number,
+            relative_sequence_number: first_format.relative_sequence_number,
         }
     }
 
@@ -400,9 +408,28 @@ impl Format {
             )
             .replace(
                 "{relative_episode_number}",
-                &sanitize(
-                    self.relative_episode_number.unwrap_or_default().to_string(),
-                    true,
+                &format!(
+                    "{:0>2}",
+                    sanitize(
+                        self.relative_episode_number.unwrap_or_default().to_string(),
+                        true,
+                    )
+                ),
+            )
+            .replace(
+                "{sequence_number}",
+                &format!("{:0>2}", sanitize(self.sequence_number.to_string(), true)),
+            )
+            .replace(
+                "{relative_sequence_number}",
+                &format!(
+                    "{:0>2}",
+                    sanitize(
+                        self.relative_sequence_number
+                            .unwrap_or_default()
+                            .to_string(),
+                        true,
+                    )
                 ),
             );
 
@@ -446,7 +473,12 @@ impl Format {
         tab_info!("FPS: {:.2}", self.fps)
     }
 
-    pub fn has_relative_episodes_fmt<S: AsRef<str>>(s: S) -> bool {
-        return s.as_ref().contains("{relative_episode_number}");
+    pub fn is_special(&self) -> bool {
+        self.sequence_number == 0.0 || self.sequence_number.fract() != 0.0
+    }
+
+    pub fn has_relative_fmt<S: AsRef<str>>(s: S) -> bool {
+        return s.as_ref().contains("{relative_episode_number}")
+            || s.as_ref().contains("{relative_sequence_number}");
     }
 }

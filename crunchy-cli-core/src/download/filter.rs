@@ -2,7 +2,7 @@ use crate::download::Download;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat, SingleFormatCollection};
 use crate::utils::interactive_select::{check_for_duplicated_seasons, get_duplicated_seasons};
-use crate::utils::parse::UrlFilter;
+use crate::utils::parse::{fract, UrlFilter};
 use anyhow::{bail, Result};
 use crunchyroll_rs::{Concert, Episode, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{error, info, warn};
@@ -12,18 +12,25 @@ pub(crate) struct DownloadFilter {
     url_filter: UrlFilter,
     download: Download,
     interactive_input: bool,
-    season_episode_count: HashMap<u32, Vec<String>>,
+    skip_special: bool,
+    season_episodes: HashMap<u32, Vec<Episode>>,
     season_subtitles_missing: Vec<u32>,
     season_visited: bool,
 }
 
 impl DownloadFilter {
-    pub(crate) fn new(url_filter: UrlFilter, download: Download, interactive_input: bool) -> Self {
+    pub(crate) fn new(
+        url_filter: UrlFilter,
+        download: Download,
+        interactive_input: bool,
+        skip_special: bool,
+    ) -> Self {
         Self {
             url_filter,
             download,
             interactive_input,
-            season_episode_count: HashMap::new(),
+            skip_special,
+            season_episodes: HashMap::new(),
             season_subtitles_missing: vec![],
             season_visited: false,
         }
@@ -107,18 +114,18 @@ impl Filter for DownloadFilter {
 
         let mut episodes = season.episodes().await?;
 
-        if Format::has_relative_episodes_fmt(&self.download.output) {
+        if Format::has_relative_fmt(&self.download.output) {
             for episode in episodes.iter() {
-                self.season_episode_count
+                self.season_episodes
                     .entry(episode.season_number)
                     .or_insert(vec![])
-                    .push(episode.id.clone())
+                    .push(episode.clone())
             }
         }
 
         episodes.retain(|e| {
             self.url_filter
-                .is_episode_valid(e.episode_number, season.season_number)
+                .is_episode_valid(e.sequence_number, season.season_number)
         });
 
         Ok(episodes)
@@ -127,7 +134,14 @@ impl Filter for DownloadFilter {
     async fn visit_episode(&mut self, mut episode: Episode) -> Result<Option<Self::T>> {
         if !self
             .url_filter
-            .is_episode_valid(episode.episode_number, episode.season_number)
+            .is_episode_valid(episode.sequence_number, episode.season_number)
+        {
+            return Ok(None);
+        }
+
+        // skip the episode if it's a special
+        if self.skip_special
+            && (episode.sequence_number == 0.0 || episode.sequence_number.fract() != 0.0)
         {
             return Ok(None);
         }
@@ -189,28 +203,36 @@ impl Filter for DownloadFilter {
             }
         }
 
+        let mut relative_episode_number = None;
+        let mut relative_sequence_number = None;
         // get the relative episode number. only done if the output string has the pattern to include
         // the relative episode number as this requires some extra fetching
-        let relative_episode_number = if Format::has_relative_episodes_fmt(&self.download.output) {
-            if self
-                .season_episode_count
-                .get(&episode.season_number)
-                .is_none()
-            {
-                let season_episodes = episode.season().await?.episodes().await?;
-                self.season_episode_count.insert(
-                    episode.season_number,
-                    season_episodes.into_iter().map(|e| e.id).collect(),
-                );
+        if Format::has_relative_fmt(&self.download.output) {
+            let season_eps = match self.season_episodes.get(&episode.season_number) {
+                Some(eps) => eps,
+                None => {
+                    self.season_episodes.insert(
+                        episode.season_number,
+                        episode.season().await?.episodes().await?,
+                    );
+                    self.season_episodes.get(&episode.season_number).unwrap()
+                }
+            };
+            let mut non_integer_sequence_number_count = 0;
+            for (i, ep) in season_eps.iter().enumerate() {
+                if ep.sequence_number.fract() != 0.0 || ep.sequence_number == 0.0 {
+                    non_integer_sequence_number_count += 1;
+                }
+                if ep.id == episode.id {
+                    relative_episode_number = Some(i + 1);
+                    relative_sequence_number = Some(
+                        (i + 1 - non_integer_sequence_number_count) as f32
+                            + fract(ep.sequence_number),
+                    );
+                    break;
+                }
             }
-            let relative_episode_number = self
-                .season_episode_count
-                .get(&episode.season_number)
-                .unwrap()
-                .iter()
-                .position(|id| id == &episode.id)
-                .map(|index| index + 1);
-            if relative_episode_number.is_none() {
+            if relative_episode_number.is_none() || relative_sequence_number.is_none() {
                 warn!(
                     "Failed to get relative episode number for episode {} ({}) of {} season {}",
                     episode.episode_number,
@@ -219,10 +241,7 @@ impl Filter for DownloadFilter {
                     episode.season_number,
                 )
             }
-            relative_episode_number
-        } else {
-            None
-        };
+        }
 
         Ok(Some(SingleFormat::new_from_episode(
             episode.clone(),
@@ -234,6 +253,7 @@ impl Filter for DownloadFilter {
                 }
             }),
             relative_episode_number.map(|n| n as u32),
+            relative_sequence_number,
         )))
     }
 

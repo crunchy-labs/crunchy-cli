@@ -33,7 +33,7 @@ pub struct Download {
     pub(crate) subtitle: Option<Locale>,
 
     #[arg(help = "Name of the output file")]
-    #[arg(long_help = "Name of the output file.\
+    #[arg(long_help = "Name of the output file. \
     If you use one of the following pattern they will get replaced:\n  \
       {title}                    → Title of the video\n  \
       {series_name}              → Name of the series\n  \

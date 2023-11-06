@@ -37,7 +37,7 @@ pub struct Archive {
     pub(crate) subtitle: Vec<Locale>,
 
     #[arg(help = "Name of the output file")]
-    #[arg(long_help = "Name of the output file.\
+    #[arg(long_help = "Name of the output file. \
     If you use one of the following pattern they will get replaced:\n  \
       {title}                    → Title of the video\n  \
       {series_name}              → Name of the series\n  \
@@ -61,7 +61,7 @@ pub struct Archive {
     pub(crate) output_specials: Option<String>,
 
     #[arg(help = "Video resolution")]
-    #[arg(long_help = "The video resolution.\
+    #[arg(long_help = "The video resolution. \
     Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or 'common-use' words (e.g. best). \
     Specifying the exact pixels is not recommended, use one of the other options instead. \
     Crunchyroll let you choose the quality with pixel abbreviation on their clients, so you might be already familiar with the available options. \

@@ -61,14 +61,6 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
   $ yay -S crunchy-cli-bin
   ```
 
-- [Nix](https://nixos.org/)
-
-  This requires [nix](https://nixos.org) and you'll probably need `--extra-experimental-features "nix-command flakes"`, depending on your configurations.
-
-  ```shell
-  $ nix <run|shell|develop> github:crunchy-labs/crunchy-cli
-  ```
-
 - [Scoop](https://scoop.sh/)
 
   For Windows users, we support the [scoop](https://scoop.sh/#/) command-line installer.
@@ -87,6 +79,14 @@ Check out the [releases](https://github.com/crunchy-labs/crunchy-cli/releases) t
   ```
 
   Supported archs: `x86_64_linux`, `arm64_monterey`, `sonoma`, `ventura`
+
+- [Nix](https://nixos.org/)
+
+  This requires [nix](https://nixos.org) and you'll probably need `--extra-experimental-features "nix-command flakes"`, depending on your configurations.
+
+  ```shell
+  $ nix <run|shell|develop> github:crunchy-labs/crunchy-cli
+  ```
 
 ### 🛠 Build it yourself
 
@@ -191,6 +191,17 @@ You can set specific settings which will be
 
   Make sure that proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself.
 
+- User Agent
+
+  There might be cases where a custom user agent is necessary, e.g. to bypass the cloudflare bot protection (#104).
+  In such cases, the `--user-agent` flag can be used to set a custom user agent.
+
+  ```shell
+  $ crunchy-cli --user-agent "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0)" <command>
+  ```
+  
+  Default is the user agent, defined in the underlying [library](https://github.com/crunchy-labs/crunchyroll-rs).
+
 ### Login
 
 The `login` command can store your session, so you don't have to authenticate every time you execute a command.
@@ -254,6 +265,16 @@ The `download` command lets you download episodes with a specific audio language
 
   Default is `{title}.mp4`. See the [Template Options section](#output-template-options) below for more options.
 
+- Output template for special episodes
+
+  Define an output template which only gets used when the episode is a special (episode number is 0 or has non-zero decimal places) by using the `--output-special` flag.
+
+  ```shell
+  $ crunchy-cli download --output-specials -o "Special EP: {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  ```
+  
+  Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
+
 - Resolution
 
   The resolution for videos can be set via the `-r` / `--resolution` flag.
@@ -282,6 +303,14 @@ The `download` command lets you download episodes with a specific audio language
   $ crunchy-cli download --skip-existing https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
+- Skip specials
+
+  If you doesn't want to download special episodes, use the `--skip-specials` flag to skip the download of them.
+
+  ```shell
+  $ crunchy-cli download --skip-specials https://www.crunchyroll.com/series/GYZJ43JMR/that-time-i-got-reincarnated-as-a-slime[S2]
+  ```
+
 - Yes
 
   Sometimes different seasons have the same season number (e.g. Sword Art Online Alicization and Alicization War of Underworld are both marked as season 3), in such cases an interactive prompt is shown which needs user further user input to decide which season to download.
@@ -300,6 +329,17 @@ The `download` command lets you download episodes with a specific audio language
   ```shell
   $ crunchy-cli download --force-hardsub -s en-US https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
+
+- Threads
+
+  To increase the download speed, video segments are downloaded simultaneously by creating multiple threads.
+  If you want to manually specify how many threads to use when downloading, do this with the `-t` / `--threads` flag.
+
+  ```shell
+  $ crunchy-cli download -t 1 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+
+  The default thread count is the count of cpu threads your pc has.
 
 ### Archive
 
@@ -341,13 +381,24 @@ The `archive` command lets you download episodes with multiple audios and subtit
 - Output template
 
   Define an output template by using the `-o` / `--output` flag.
-  crunchy-cli uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of it's ability to store multiple audio, video and subtitle tracks at once.
+  _crunchy-cli_ exclusively uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of its ability to store multiple audio, video and subtitle tracks at once.
 
   ```shell
   $ crunchy-cli archive -o "{title}.mkv" https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
   Default is `{title}.mkv`. See the [Template Options section](#output-template-options) below for more options.
+
+- Output template for special episodes
+
+  Define an output template which only gets used when the episode is a special (episode number is 0 or has non-zero decimal places) by using the `--output-special` flag.
+  _crunchy-cli_ exclusively uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of its ability to store multiple audio, video and subtitle tracks at once.
+
+  ```shell
+  $ crunchy-cli archive --output-specials -o "Special EP: {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  ```
+
+  Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
 
 - Resolution
 
@@ -402,6 +453,14 @@ The `archive` command lets you download episodes with multiple audios and subtit
   $ crunchy-cli archive --skip-existing https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
+- Skip specials
+
+  If you doesn't want to download special episodes, use the `--skip-specials` flag to skip the download of them.
+
+  ```shell
+  $ crunchy-cli archive --skip-specials https://www.crunchyroll.com/series/GYZJ43JMR/that-time-i-got-reincarnated-as-a-slime[S2]
+  ```
+
 - Yes
 
   Sometimes different seasons have the same season number (e.g. Sword Art Online Alicization and Alicization War of Underworld are both marked as season 3), in such cases an interactive prompt is shown which needs user further user input to decide which season to download.
@@ -412,6 +471,17 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
 
   If you've passed the `-q` / `--quiet` [global flag](#global-settings), this flag is automatically set.
+
+- Threads
+
+  To increase the download speed, video segments are downloaded simultaneously by creating multiple threads.
+  If you want to manually specify how many threads to use when downloading, do this with the `-t` / `--threads` flag.
+
+  ```shell
+  $ crunchy-cli archive -t 1 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  
+  The default thread count is the count of cpu threads your pc has.
 
 ### Search
 
@@ -479,17 +549,19 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
 You can use various template options to change how the filename is processed. The following tags are available:
 
-- `{title}`                   → Title of the video
-- `{series_name}`             → Name of the series
-- `{season_name}`             → Name of the season
-- `{audio}`                   → Audio language of the video
-- `{resolution}`              → Resolution of the video
-- `{season_number}`           → Number of the season
-- `{episode_number}`          → Number of the episode
-- `{relative_episode_number}` → Number of the episode relative to its season
-- `{series_id}`               → ID of the series
-- `{season_id}`               → ID of the season
-- `{episode_id}`              → ID of the episode
+- `{title}`                    → Title of the video
+- `{series_name}`              → Name of the series
+- `{season_name}`              → Name of the season
+- `{audio}`                    → Audio language of the video
+- `{resolution}`               → Resolution of the video
+- `{season_number}`            → Number of the season
+- `{episode_number}`           → Number of the episode
+- `{relative_episode_number}`  → Number of the episode relative to its season
+- `{sequence_number}`          → Like `{episode_number}` but without possible non-number characters
+- `{relative_sequence_number}` → Like `{relative_episode_number}` but with support for episode 0's and .5's
+- `{series_id}`                → ID of the series
+- `{season_id}`                → ID of the season
+- `{episode_id}`               → ID of the episode
 
 Example:
 

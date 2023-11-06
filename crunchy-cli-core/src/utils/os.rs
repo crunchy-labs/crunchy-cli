@@ -96,7 +96,7 @@ lazy_static::lazy_static! {
 /// is based of the implementation of the
 /// [`sanitize-filename`](https://crates.io/crates/sanitize-filename) crate.
 pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String {
-    let path = Cow::from(path.as_ref());
+    let path = Cow::from(path.as_ref().trim());
 
     let path = ILLEGAL_RE.replace_all(&path, "");
     let path = CONTROL_RE.replace_all(&path, "");

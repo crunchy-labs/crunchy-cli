@@ -378,8 +378,27 @@ impl Downloader {
                     output_presets.extend([
                         "-vf".to_string(),
                         format!(
-                            "ass={}",
-                            subtitles.get(position).unwrap().path.to_str().unwrap()
+                            "ass='{}'",
+                            // ffmpeg doesn't removes all ':' and '\' from the filename when using
+                            // the ass filter. well, on windows these characters are used in
+                            // absolute paths, so they have to be correctly escaped here
+                            if cfg!(windows) {
+                                subtitles
+                                    .get(position)
+                                    .unwrap()
+                                    .path
+                                    .to_str()
+                                    .unwrap()
+                                    .replace('\\', "\\\\")
+                                    .replace(':', "\\:")
+                            } else {
+                                subtitles
+                                    .get(position)
+                                    .unwrap()
+                                    .path
+                                    .to_string_lossy()
+                                    .to_string()
+                            }
                         ),
                     ])
                 }

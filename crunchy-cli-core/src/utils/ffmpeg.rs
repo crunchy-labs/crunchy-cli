@@ -134,7 +134,7 @@ impl FFmpegPreset {
                 description_details.push(format!("{} video quality/compression", q.to_string()))
             }
 
-            let description = if description_details.len() == 0 {
+            let description = if description_details.is_empty() {
                 format!(
                     "{} encoded with default video quality/compression",
                     codec.to_string()
@@ -239,7 +239,7 @@ impl FFmpegPreset {
                 hwaccel.clone(),
                 quality.clone(),
             )) {
-                return Err(format!("ffmpeg preset is not supported"));
+                return Err("ffmpeg preset is not supported".to_string());
             }
             Ok(FFmpegPreset::Predefined(
                 c,
@@ -247,7 +247,7 @@ impl FFmpegPreset {
                 quality.unwrap_or(FFmpegQuality::Normal),
             ))
         } else {
-            Err(format!("cannot use ffmpeg preset with without a codec"))
+            Err("cannot use ffmpeg preset with without a codec".to_string())
         }
     }
 

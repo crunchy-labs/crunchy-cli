@@ -19,8 +19,7 @@ pub fn system_locale() -> Locale {
 pub fn all_locale_in_locales(locales: Vec<Locale>) -> Vec<Locale> {
     if locales
         .iter()
-        .find(|l| l.to_string().to_lowercase().trim() == "all")
-        .is_some()
+        .any(|l| l.to_string().to_lowercase().trim() == "all")
     {
         Locale::all()
     } else {

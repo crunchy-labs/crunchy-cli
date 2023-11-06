@@ -306,8 +306,8 @@ async fn get_format(
         }
         MergeBehavior::Audio => download_formats.push(DownloadFormat {
             video: (
-                (*format_pairs.first().unwrap()).1.clone(),
-                (*format_pairs.first().unwrap()).0.audio.clone(),
+                format_pairs.first().unwrap().1.clone(),
+                format_pairs.first().unwrap().0.audio.clone(),
             ),
             audios: format_pairs
                 .iter()

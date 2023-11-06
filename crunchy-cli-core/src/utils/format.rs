@@ -170,10 +170,7 @@ impl SingleFormat {
     }
 
     pub fn is_episode(&self) -> bool {
-        match self.source {
-            MediaCollection::Episode(_) => true,
-            _ => false,
-        }
+        matches!(self.source, MediaCollection::Episode(_))
     }
 }
 
@@ -181,7 +178,7 @@ struct SingleFormatCollectionEpisodeKey(f32);
 
 impl PartialOrd for SingleFormatCollectionEpisodeKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 impl Ord for SingleFormatCollectionEpisodeKey {
@@ -198,6 +195,7 @@ impl Eq for SingleFormatCollectionEpisodeKey {}
 
 struct SingleFormatCollectionSeasonKey((u32, String));
 
+#[allow(clippy::incorrect_partial_ord_impl_on_ord_type)]
 impl PartialOrd for SingleFormatCollectionSeasonKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let mut cmp = self.0 .0.partial_cmp(&other.0 .0);
@@ -250,7 +248,7 @@ impl SingleFormatCollection {
                 format.season_number,
                 format.season_id.clone(),
             )))
-            .or_insert(BTreeMap::new())
+            .or_default()
             .insert(
                 SingleFormatCollectionEpisodeKey(format.sequence_number),
                 single_formats,
@@ -340,6 +338,7 @@ pub struct Format {
 }
 
 impl Format {
+    #[allow(clippy::type_complexity)]
     pub fn from_single_formats(
         mut single_formats: Vec<(SingleFormat, VariantData, Vec<(Subtitle, bool)>)>,
     ) -> Self {
@@ -349,7 +348,7 @@ impl Format {
                 (
                     single_format.audio.clone(),
                     subtitles
-                        .into_iter()
+                        .iter()
                         .map(|(s, _)| s.locale.clone())
                         .collect::<Vec<Locale>>(),
                 )
@@ -440,7 +439,7 @@ impl Format {
         info!(
             "Downloading {} to {}",
             self.title,
-            if is_special_file(&dst) || dst.to_str().unwrap() == "-" {
+            if is_special_file(dst) || dst.to_str().unwrap() == "-" {
                 dst.to_string_lossy().to_string()
             } else {
                 format!("'{}'", dst.to_str().unwrap())

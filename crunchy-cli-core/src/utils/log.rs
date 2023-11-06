@@ -57,7 +57,6 @@ macro_rules! tab_info {
 }
 pub(crate) use tab_info;
 
-#[allow(clippy::type_complexity)]
 pub struct CliLogger {
     level: LevelFilter,
     progress: Mutex<Option<ProgressBar>>,

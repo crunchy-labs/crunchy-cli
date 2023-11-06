@@ -21,7 +21,7 @@ impl FilterOptions {
 
     pub fn filter_episodes(&self, mut episodes: Vec<Episode>) -> Vec<Episode> {
         episodes.retain(|e| {
-            self.check_audio_language(&vec![e.audio_locale.clone()])
+            self.check_audio_language(&[e.audio_locale.clone()])
                 && self
                     .url_filter
                     .is_episode_valid(e.sequence_number, e.season_number)
@@ -38,7 +38,7 @@ impl FilterOptions {
         )
     }
 
-    fn check_audio_language(&self, audio: &Vec<Locale>) -> bool {
+    fn check_audio_language(&self, audio: &[Locale]) -> bool {
         if !self.audio.is_empty() {
             return self.audio.iter().any(|a| audio.contains(a));
         }

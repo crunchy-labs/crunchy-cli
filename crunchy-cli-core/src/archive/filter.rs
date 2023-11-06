@@ -103,7 +103,7 @@ impl Filter for ArchiveFilter {
         seasons.retain(|s| !remove_ids.contains(&s.id));
 
         let duplicated_seasons = get_duplicated_seasons(&seasons);
-        if duplicated_seasons.len() > 0 {
+        if !duplicated_seasons.is_empty() {
             if self.interactive_input {
                 check_for_duplicated_seasons(&mut seasons);
             } else {
@@ -139,8 +139,7 @@ impl Filter for ArchiveFilter {
         if !matches!(self.visited, Visited::Series) {
             let mut audio_locales: Vec<Locale> = seasons
                 .iter()
-                .map(|s| s.audio_locales.clone())
-                .flatten()
+                .flat_map(|s| s.audio_locales.clone())
                 .collect();
             real_dedup_vec(&mut audio_locales);
             let missing_audio = missing_locales(&audio_locales, &self.archive.audio);
@@ -158,8 +157,7 @@ impl Filter for ArchiveFilter {
 
             let subtitle_locales: Vec<Locale> = seasons
                 .iter()
-                .map(|s| s.subtitle_locales.clone())
-                .flatten()
+                .flat_map(|s| s.subtitle_locales.clone())
                 .collect();
             let missing_subtitle = missing_locales(&subtitle_locales, &self.archive.subtitle);
             if !missing_subtitle.is_empty() {
@@ -211,7 +209,7 @@ impl Filter for ArchiveFilter {
                 }
             }
             if eps.len() < before_len {
-                if eps.len() == 0 {
+                if eps.is_empty() {
                     if matches!(self.visited, Visited::Series) {
                         warn!(
                             "Season {} is not available with {} audio",
@@ -237,7 +235,7 @@ impl Filter for ArchiveFilter {
             for episode in episodes.iter() {
                 self.season_episodes
                     .entry(episode.season_id.clone())
-                    .or_insert(vec![])
+                    .or_default()
                     .push(episode.clone())
             }
         }
@@ -290,7 +288,7 @@ impl Filter for ArchiveFilter {
             }
 
             let mut subtitle_locales: Vec<Locale> =
-                episodes.iter().map(|(_, s)| s.clone()).flatten().collect();
+                episodes.iter().flat_map(|(_, s)| s.clone()).collect();
             real_dedup_vec(&mut subtitle_locales);
             let missing_subtitles = missing_locales(&subtitle_locales, &self.archive.subtitle);
             if !missing_subtitles.is_empty()
@@ -435,6 +433,6 @@ impl Filter for ArchiveFilter {
     }
 }
 
-fn missing_locales<'a>(available: &Vec<Locale>, searched: &'a Vec<Locale>) -> Vec<&'a Locale> {
+fn missing_locales<'a>(available: &[Locale], searched: &'a [Locale]) -> Vec<&'a Locale> {
     searched.iter().filter(|p| !available.contains(p)).collect()
 }

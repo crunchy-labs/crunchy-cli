@@ -24,7 +24,7 @@ pub fn has_ffmpeg() -> bool {
 /// Get the temp directory either by the specified `CRUNCHY_CLI_TEMP_DIR` env variable or the dir
 /// provided by the os.
 pub fn temp_directory() -> PathBuf {
-    env::var("CRUNCHY_CLI_TEMP_DIR").map_or(env::temp_dir(), |d| PathBuf::from(d))
+    env::var("CRUNCHY_CLI_TEMP_DIR").map_or(env::temp_dir(), PathBuf::from)
 }
 
 /// Any tempfile should be created with this function. The prefix and directory of every file

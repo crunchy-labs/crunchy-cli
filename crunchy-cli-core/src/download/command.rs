@@ -251,7 +251,7 @@ async fn get_format(
     };
 
     let subtitle = if let Some(subtitle_locale) = &download.subtitle {
-        stream.subtitles.get(subtitle_locale).map(|s| s.clone())
+        stream.subtitles.get(subtitle_locale).cloned()
     } else {
         None
     };

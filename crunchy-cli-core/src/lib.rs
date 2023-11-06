@@ -77,7 +77,7 @@ fn version() -> String {
     let build_date = env!("BUILD_DATE");
 
     if git_commit_hash.is_empty() {
-        format!("{}", package_version)
+        package_version.to_string()
     } else {
         format!("{} ({} {})", package_version, git_commit_hash, build_date)
     }
@@ -250,7 +250,7 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
                 "Via `--lang` specified language is not supported. Supported languages: {}",
                 supported_langs
                     .iter()
-                    .map(|l| format!("`{}` ({})", l.to_string(), l.to_human_readable()))
+                    .map(|l| format!("`{}` ({})", l, l.to_human_readable()))
                     .collect::<Vec<String>>()
                     .join(", ")
             )

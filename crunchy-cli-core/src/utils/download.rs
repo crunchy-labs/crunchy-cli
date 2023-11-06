@@ -296,7 +296,7 @@ impl Downloader {
             ]);
             // the empty language metadata is created to avoid that metadata from the original track
             // is copied
-            metadata.extend([format!("-metadata:s:v:{}", i), format!("language=")])
+            metadata.extend([format!("-metadata:s:v:{}", i), "language=".to_string()])
         }
         for (i, meta) in audios.iter().enumerate() {
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
@@ -675,7 +675,7 @@ impl Downloader {
 
                 let result = download().await;
                 if result.is_err() {
-                    after_download_sender.send((-1 as i32, vec![]))?;
+                    after_download_sender.send((-1, vec![]))?;
                 }
 
                 result
@@ -747,7 +747,7 @@ impl Downloader {
     }
 }
 
-fn estimate_variant_file_size(variant_data: &VariantData, segments: &Vec<VariantSegment>) -> u64 {
+fn estimate_variant_file_size(variant_data: &VariantData, segments: &[VariantSegment]) -> u64 {
     (variant_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>()
 }
 
@@ -788,9 +788,8 @@ pub fn get_video_length(path: &Path) -> Result<NaiveTime> {
 /// [crunchy-labs/crunchy-cli#208](https://github.com/crunchy-labs/crunchy-cli/issues/208) for more
 /// information.
 fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
-    let re =
-        Regex::new(r#"^Dialogue:\s\d+,(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),"#)
-            .unwrap();
+    let re = Regex::new(r"^Dialogue:\s\d+,(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),")
+        .unwrap();
 
     // chrono panics if we try to format NaiveTime with `%2f` and the nano seconds has more than 2
     // digits so them have to be reduced manually to avoid the panic
@@ -832,7 +831,7 @@ fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
                         line,
                         format!(
                             "Dialogue: {},{},",
-                            format_naive_time(start.clone()),
+                            format_naive_time(start),
                             &length_as_string
                         ),
                     )

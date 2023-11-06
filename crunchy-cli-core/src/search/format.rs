@@ -372,6 +372,7 @@ impl Format {
         let stream_empty = self.check_pattern_count_empty(Scope::Stream)
             && self.check_pattern_count_empty(Scope::Subtitle);
 
+        #[allow(clippy::type_complexity)]
         let mut tree: Vec<(Season, Vec<(Episode, Vec<Stream>)>)> = vec![];
 
         let series = if !series_empty {

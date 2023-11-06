@@ -45,14 +45,13 @@ impl Filter for DownloadFilter {
     async fn visit_series(&mut self, series: Series) -> Result<Vec<Season>> {
         // `series.audio_locales` isn't always populated b/c of crunchyrolls api. so check if the
         // audio is matching only if the field is populated
-        if !series.audio_locales.is_empty() {
-            if !series.audio_locales.contains(&self.download.audio) {
-                error!(
-                    "Series {} is not available with {} audio",
-                    series.title, self.download.audio
-                );
-                return Ok(vec![]);
-            }
+        if !series.audio_locales.is_empty() && !series.audio_locales.contains(&self.download.audio)
+        {
+            error!(
+                "Series {} is not available with {} audio",
+                series.title, self.download.audio
+            );
+            return Ok(vec![]);
         }
 
         let mut seasons = vec![];
@@ -91,7 +90,7 @@ impl Filter for DownloadFilter {
         }
 
         let duplicated_seasons = get_duplicated_seasons(&seasons);
-        if duplicated_seasons.len() > 0 {
+        if !duplicated_seasons.is_empty() {
             if self.interactive_input {
                 check_for_duplicated_seasons(&mut seasons);
             } else {
@@ -118,7 +117,7 @@ impl Filter for DownloadFilter {
             for episode in episodes.iter() {
                 self.season_episodes
                     .entry(episode.season_number)
-                    .or_insert(vec![])
+                    .or_default()
                     .push(episode.clone())
             }
         }

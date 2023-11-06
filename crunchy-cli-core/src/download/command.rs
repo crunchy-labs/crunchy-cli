@@ -54,7 +54,7 @@ pub struct Download {
     #[arg(long_help = "Name of the output file if the episode is a special. \
     If not set, the '-o'/'--output' flag will be used as name template")]
     #[arg(long)]
-    pub(crate) special_output: Option<String>,
+    pub(crate) output_specials: Option<String>,
 
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution.\
@@ -124,7 +124,7 @@ impl Execute for Download {
             }
         }
 
-        if let Some(special_output) = &self.special_output {
+        if let Some(special_output) = &self.output_specials {
             if Path::new(special_output)
                 .extension()
                 .unwrap_or_default()
@@ -132,7 +132,7 @@ impl Execute for Download {
                 && !is_special_file(special_output)
                 && special_output != "-"
             {
-                bail!("No file extension found. Please specify a file extension (via `--special-output`) for the output file")
+                bail!("No file extension found. Please specify a file extension (via `--output-specials`) for the output file")
             }
             if let Some(ext) = Path::new(special_output).extension() {
                 if self.force_hardsub {
@@ -197,7 +197,7 @@ impl Execute for Download {
 
                 let formatted_path = if format.is_special() {
                     format.format_path(
-                        self.special_output
+                        self.output_specials
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
                     )

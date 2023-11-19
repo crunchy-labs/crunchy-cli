@@ -2,6 +2,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::str::FromStr;
 
+pub const SOFTSUB_CONTAINERS: [&str; 3] = ["mkv", "mov", "mp4"];
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FFmpegPreset {
     Predefined(FFmpegCodec, Option<FFmpegHwAccel>, FFmpegQuality),

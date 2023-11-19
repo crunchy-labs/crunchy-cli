@@ -172,6 +172,10 @@ impl SingleFormat {
     pub fn is_episode(&self) -> bool {
         matches!(self.source, MediaCollection::Episode(_))
     }
+
+    pub fn is_special(&self) -> bool {
+        self.sequence_number == 0.0 || self.sequence_number.fract() != 0.0
+    }
 }
 
 struct SingleFormatCollectionEpisodeKey(f32);

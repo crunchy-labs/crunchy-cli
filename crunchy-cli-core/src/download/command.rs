@@ -1,7 +1,7 @@
 use crate::download::filter::DownloadFilter;
 use crate::utils::context::Context;
 use crate::utils::download::{DownloadBuilder, DownloadFormat};
-use crate::utils::ffmpeg::FFmpegPreset;
+use crate::utils::ffmpeg::{FFmpegPreset, SOFTSUB_CONTAINERS};
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat};
 use crate::utils::log::progress;
@@ -149,6 +149,25 @@ impl Execute for Download {
     async fn execute(self, ctx: Context) -> Result<()> {
         let mut parsed_urls = vec![];
 
+        let output_supports_softsubs = SOFTSUB_CONTAINERS.contains(
+            &Path::new(&self.output)
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .as_ref(),
+        );
+        let special_output_supports_softsubs = if let Some(so) = &self.output_specials {
+            SOFTSUB_CONTAINERS.contains(
+                &Path::new(so)
+                    .extension()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .as_ref(),
+            )
+        } else {
+            output_supports_softsubs
+        };
+
         for (i, url) in self.urls.clone().into_iter().enumerate() {
             let progress_handler = progress!("Parsing url {}", i + 1);
             match parse_url(&ctx.crunchy, url.clone(), true).await {
@@ -190,7 +209,18 @@ impl Execute for Download {
                 // the vec contains always only one item
                 let single_format = single_formats.remove(0);
 
-                let (download_format, format) = get_format(&self, &single_format).await?;
+                let (download_format, format) = get_format(
+                    &self,
+                    &single_format,
+                    if self.force_hardsub {
+                        true
+                    } else if single_format.is_special() {
+                        !special_output_supports_softsubs
+                    } else {
+                        !output_supports_softsubs
+                    },
+                )
+                .await?;
 
                 let mut downloader = download_builder.clone().build();
                 downloader.add_format(download_format);
@@ -227,9 +257,19 @@ impl Execute for Download {
 async fn get_format(
     download: &Download,
     single_format: &SingleFormat,
+    try_peer_hardsubs: bool,
 ) -> Result<(DownloadFormat, Format)> {
     let stream = single_format.stream().await?;
-    let Some((video, audio)) = variant_data_from_stream(&stream, &download.resolution).await?
+    let Some((video, audio, contains_hardsub)) = variant_data_from_stream(
+        &stream,
+        &download.resolution,
+        if try_peer_hardsubs {
+            download.subtitle.clone()
+        } else {
+            None
+        },
+    )
+    .await?
     else {
         if single_format.is_episode() {
             bail!(
@@ -250,7 +290,9 @@ async fn get_format(
         }
     };
 
-    let subtitle = if let Some(subtitle_locale) = &download.subtitle {
+    let subtitle = if contains_hardsub {
+        None
+    } else if let Some(subtitle_locale) = &download.subtitle {
         stream.subtitles.get(subtitle_locale).cloned()
     } else {
         None
@@ -266,7 +308,7 @@ async fn get_format(
             )]
         }),
     };
-    let format = Format::from_single_formats(vec![(
+    let mut format = Format::from_single_formats(vec![(
         single_format.clone(),
         video,
         subtitle.map_or(vec![], |s| {
@@ -276,6 +318,10 @@ async fn get_format(
             )]
         }),
     )]);
+    if contains_hardsub {
+        let (_, subs) = format.locales.get_mut(0).unwrap();
+        subs.push(download.subtitle.clone().unwrap())
+    }
 
     Ok((download_format, format))
 }

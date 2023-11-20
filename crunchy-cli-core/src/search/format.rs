@@ -70,7 +70,7 @@ impl From<&Episode> for FormatEpisode {
             title: value.title.clone(),
             description: value.description.clone(),
             locale: value.audio_locale.clone(),
-            number: value.episode_number,
+            number: value.episode_number.unwrap_or_default(),
             sequence_number: value.sequence_number,
             duration: value.duration.num_milliseconds(),
             air_date: value.episode_air_date.timestamp(),

@@ -158,7 +158,7 @@ impl Filter for DownloadFilter {
             {
                 let error_message = format!(
                     "Episode {} ({}) of {} season {} is not available with {} audio",
-                    episode.episode_number,
+                    episode.sequence_number,
                     episode.title,
                     episode.series_title,
                     episode.season_number,
@@ -234,7 +234,7 @@ impl Filter for DownloadFilter {
             if relative_episode_number.is_none() || relative_sequence_number.is_none() {
                 warn!(
                     "Failed to get relative episode number for episode {} ({}) of {} season {}",
-                    episode.episode_number,
+                    episode.sequence_number,
                     episode.title,
                     episode.series_title,
                     episode.season_number,

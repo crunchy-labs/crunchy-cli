@@ -223,7 +223,7 @@ impl Filter for ArchiveFilter {
                         "Season {} is only available with {} audio until episode {} ({})",
                         season.season_number,
                         season_locale.unwrap_or(Locale::ja_JP),
-                        last_episode.episode_number,
+                        last_episode.sequence_number,
                         last_episode.title
                     )
                 }
@@ -278,7 +278,7 @@ impl Filter for ArchiveFilter {
             if !missing_audio.is_empty() {
                 warn!(
                     "Episode {} is not available with {} audio",
-                    episode.episode_number,
+                    episode.sequence_number,
                     missing_audio
                         .into_iter()
                         .map(|l| l.to_string())
@@ -298,7 +298,7 @@ impl Filter for ArchiveFilter {
             {
                 warn!(
                     "Episode {} is not available with {} subtitles",
-                    episode.episode_number,
+                    episode.sequence_number,
                     missing_subtitles
                         .into_iter()
                         .map(|l| l.to_string())
@@ -343,7 +343,7 @@ impl Filter for ArchiveFilter {
             if relative_episode_number.is_none() || relative_sequence_number.is_none() {
                 warn!(
                     "Failed to get relative episode number for episode {} ({}) of {} season {}",
-                    episode.episode_number,
+                    episode.sequence_number,
                     episode.title,
                     episode.series_title,
                     episode.season_number,

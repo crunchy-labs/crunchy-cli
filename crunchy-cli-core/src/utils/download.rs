@@ -17,6 +17,7 @@ use std::env;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempPath;
@@ -788,8 +789,10 @@ pub fn get_video_length(path: &Path) -> Result<NaiveTime> {
 /// [crunchy-labs/crunchy-cli#208](https://github.com/crunchy-labs/crunchy-cli/issues/208) for more
 /// information.
 fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
-    let re = Regex::new(r"^Dialogue:\s\d+,(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),")
-        .unwrap();
+    let re = Regex::new(
+        r"^Dialogue:\s(?P<layer>\d+),(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),",
+    )
+    .unwrap();
 
     // chrono panics if we try to format NaiveTime with `%2f` and the nano seconds has more than 2
     // digits so them have to be reduced manually to avoid the panic
@@ -804,9 +807,9 @@ fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
                 formatted_time.split_at(2).0.parse().unwrap()
             }
         )
+        .split_off(1) // <- in the ASS spec, the hour has only one digit
     }
 
-    let length_as_string = format_naive_time(max_length);
     let mut entries = (vec![], vec![]);
 
     let mut as_lines: Vec<String> = String::from_utf8_lossy(raw.as_slice())
@@ -818,21 +821,33 @@ fn fix_subtitles(raw: &mut Vec<u8>, max_length: NaiveTime) {
         if line.trim() == "[Script Info]" {
             line.push_str("\nScaledBorderAndShadow: yes")
         } else if let Some(capture) = re.captures(line) {
-            let start = capture.name("start").map_or(NaiveTime::default(), |s| {
+            let mut start = capture.name("start").map_or(NaiveTime::default(), |s| {
                 NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
             });
-            let end = capture.name("end").map_or(NaiveTime::default(), |s| {
-                NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
+            let mut end = capture.name("end").map_or(NaiveTime::default(), |e| {
+                NaiveTime::parse_from_str(e.as_str(), "%H:%M:%S.%f").unwrap()
             });
 
-            if end > max_length {
+            if start > max_length || end > max_length {
+                let layer = capture
+                    .name("layer")
+                    .map_or(0, |l| i32::from_str(l.as_str()).unwrap());
+
+                if start > max_length {
+                    start = max_length;
+                }
+                if start > max_length || end > max_length {
+                    end = max_length;
+                }
+
                 *line = re
                     .replace(
                         line,
                         format!(
-                            "Dialogue: {},{},",
+                            "Dialogue: {},{},{},",
+                            layer,
                             format_naive_time(start),
-                            &length_as_string
+                            format_naive_time(end)
                         ),
                     )
                     .to_string()

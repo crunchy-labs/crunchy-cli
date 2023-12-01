@@ -768,7 +768,13 @@ pub fn get_video_length(path: &Path) -> Result<NaiveTime> {
         .args(["-i", path.to_str().unwrap()])
         .output()?;
     let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
-    let caps = video_length.captures(ffmpeg_output.as_str()).unwrap();
+    let caps = video_length.captures(ffmpeg_output.as_str()).map_or(
+        Err(anyhow::anyhow!(
+            "failed to get video length: {}",
+            ffmpeg_output
+        )),
+        Ok,
+    )?;
 
     Ok(NaiveTime::parse_from_str(caps.name("time").unwrap().as_str(), "%H:%M:%S%.f").unwrap())
 }

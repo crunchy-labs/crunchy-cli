@@ -229,7 +229,7 @@ impl FFmpegPreset {
                 quality = Some(q)
             } else {
                 return Err(format!(
-                    "'{}' is not a valid ffmpeg preset (unknown token '{}'",
+                    "'{}' is not a valid ffmpeg preset (unknown token '{}')",
                     s, token
                 ));
             }
@@ -286,12 +286,10 @@ impl FFmpegPreset {
                                     output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
                                 }
                                 FFmpegHwAccel::Apple => {
-                                    // Apple's Video Toolbox encoders ignore `-crf`,
-                                    // use `-q:v` instead. It's on a scale of 1-100,
-                                    // 100 being lossless. Just did some math
-                                    // ((-a/51+1)*99+1 where `a` is the old crf value)
-                                    // so these settings very likely need some more
-                                    // tweeking.
+                                    // Apple's Video Toolbox encoders ignore `-crf`, use `-q:v`
+                                    // instead. It's on a scale of 1-100, 100 being lossless. Just
+                                    // did some math ((-a/51+1)*99+1 where `a` is the old crf value)
+                                    // so these settings very likely need some more tweaking
                                     match quality {
                                         FFmpegQuality::Lossless => output.extend(["-q:v", "65"]),
                                         FFmpegQuality::Normal => (),

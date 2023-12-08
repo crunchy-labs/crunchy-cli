@@ -3,9 +3,12 @@ use regex::{Regex, RegexBuilder};
 use std::borrow::Cow;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::process::{Command, Stdio};
+use std::task::{Context, Poll};
 use std::{env, io};
 use tempfile::{Builder, NamedTempFile};
+use tokio::io::{AsyncRead, ReadBuf};
 
 pub fn has_ffmpeg() -> bool {
     if let Err(e) = Command::new("ffmpeg").stderr(Stdio::null()).spawn() {
@@ -41,6 +44,63 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
         tempfile.path().to_string_lossy()
     );
     Ok(tempfile)
+}
+
+pub struct TempNamedPipe {
+    name: String,
+
+    #[cfg(not(target_os = "windows"))]
+    reader: tokio::net::unix::pipe::Receiver,
+    #[cfg(target_os = "windows")]
+    reader: tokio::net::windows::named_pipe::NamedPipeServer,
+}
+
+impl TempNamedPipe {
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl AsyncRead for TempNamedPipe {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.reader).poll_read(cx, buf)
+    }
+}
+
+impl Drop for TempNamedPipe {
+    fn drop(&mut self) {
+        #[cfg(not(target_os = "windows"))]
+        let _ = nix::unistd::unlink(self.name.as_str());
+    }
+}
+
+pub fn temp_named_pipe() -> io::Result<TempNamedPipe> {
+    let (_, path) = tempfile("")?.keep()?;
+    let path = path.to_string_lossy().to_string();
+    let _ = std::fs::remove_file(path.clone());
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        nix::unistd::mkfifo(path.as_str(), nix::sys::stat::Mode::S_IRWXU)?;
+
+        Ok(TempNamedPipe {
+            reader: tokio::net::unix::pipe::OpenOptions::new().open_receiver(&path)?,
+            name: path,
+        })
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let path = format!(r"\\.\pipe\{}", &path);
+
+        Ok(TempNamedPipe {
+            reader: tokio::net::windows::named_pipe::ServerOptions::new().create(&path)?,
+            name: path,
+        })
+    }
 }
 
 /// Check if the given path exists and rename it until the new (renamed) file does not exist.

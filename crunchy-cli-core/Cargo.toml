@@ -34,8 +34,11 @@ serde_plain = "1.0"
 shlex = "1.2"
 sys-locale = "0.3"
 tempfile = "3.8"
-tokio = { version = "1.34", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.34", features = ["io-util", "macros", "net", "rt-multi-thread", "time"] }
 rustls-native-certs = { version = "0.6", optional = true }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+nix = { version = "0.27", features = ["fs"] }
 
 [build-dependencies]
 chrono = "0.4"

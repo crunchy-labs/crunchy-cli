@@ -397,6 +397,7 @@ dependencies = [
  "indicatif",
  "lazy_static",
  "log",
+ "nix",
  "num_cpus",
  "regex",
  "reqwest",

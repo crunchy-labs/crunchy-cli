@@ -162,7 +162,7 @@ pub async fn cli_entrypoint() {
 
     ctrlc::set_handler(move || {
         debug!("Ctrl-c detected");
-        if let Ok(dir) = fs::read_dir(&env::temp_dir()) {
+        if let Ok(dir) = fs::read_dir(env::temp_dir()) {
             for file in dir.flatten() {
                 if file
                     .path()

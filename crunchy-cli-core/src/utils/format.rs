@@ -199,7 +199,7 @@ impl Eq for SingleFormatCollectionEpisodeKey {}
 
 struct SingleFormatCollectionSeasonKey((u32, String));
 
-#[allow(clippy::incorrect_partial_ord_impl_on_ord_type)]
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for SingleFormatCollectionSeasonKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let mut cmp = self.0 .0.partial_cmp(&other.0 .0);

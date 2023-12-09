@@ -48,13 +48,13 @@ pub struct LoginMethod {
     #[arg(
         help = "Login with credentials (email and password). Must be provided as email:password"
     )]
-    #[arg(long)]
+    #[arg(global = true, long)]
     pub credentials: Option<String>,
     #[arg(help = "Login with the etp-rt cookie")]
     #[arg(
         long_help = "Login with the etp-rt cookie. This can be obtained when you login on crunchyroll.com and extract it from there"
     )]
-    #[arg(long)]
+    #[arg(global = true, long)]
     pub etp_rt: Option<String>,
     #[arg(help = "Login anonymously / without an account")]
     #[arg(long, default_value_t = false)]

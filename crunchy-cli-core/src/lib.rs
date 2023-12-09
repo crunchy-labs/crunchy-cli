@@ -41,7 +41,7 @@ pub struct Cli {
     #[arg(
         help = "Overwrite the language in which results are returned. Default is your system language"
     )]
-    #[arg(long)]
+    #[arg(global = true, long)]
     lang: Option<Locale>,
 
     #[arg(help = "Enable experimental fixes which may resolve some unexpected errors")]
@@ -50,7 +50,7 @@ pub struct Cli {
             If everything works as intended this option isn't needed, but sometimes Crunchyroll mislabels \
             the audio of a series/season or episode or returns a wrong season number. This is when using this option might help to solve the issue"
     )]
-    #[arg(long, default_value_t = false)]
+    #[arg(global = true, long, default_value_t = false)]
     experimental_fixes: bool,
 
     #[clap(flatten)]
@@ -59,12 +59,11 @@ pub struct Cli {
     #[arg(help = "Use a proxy to route all traffic through")]
     #[arg(long_help = "Use a proxy to route all traffic through. \
             Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself")]
-    #[clap(long)]
-    #[arg(value_parser = crate::utils::clap::clap_parse_proxy)]
+    #[arg(global = true, long, value_parser = crate::utils::clap::clap_parse_proxy)]
     proxy: Option<Proxy>,
 
     #[arg(help = "Use custom user agent")]
-    #[clap(long)]
+    #[arg(global = true, long)]
     user_agent: Option<String>,
 
     #[clap(subcommand)]
@@ -94,14 +93,14 @@ enum Command {
 #[derive(Debug, Parser)]
 struct Verbosity {
     #[arg(help = "Verbose output")]
-    #[arg(short, long)]
+    #[arg(global = true, short, long)]
     verbose: bool,
 
     #[arg(help = "Quiet output. Does not print anything unless it's a error")]
     #[arg(
         long_help = "Quiet output. Does not print anything unless it's a error. Can be helpful if you pipe the output to stdout"
     )]
-    #[arg(short, long)]
+    #[arg(global = true, short, long)]
     quiet: bool,
 }
 

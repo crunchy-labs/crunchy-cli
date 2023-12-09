@@ -90,6 +90,16 @@ pub struct Archive {
     #[arg(long)]
     #[arg(value_parser = FFmpegPreset::parse)]
     pub(crate) ffmpeg_preset: Option<FFmpegPreset>,
+    #[arg(
+        help = "The number of threads used by ffmpeg to generate the output file. Does not work with every codec/preset"
+    )]
+    #[arg(
+        long_help = "The number of threads used by ffmpeg to generate the output file. \
+    Does not work with every codec/preset and is skipped entirely when specifying custom ffmpeg output arguments instead of a preset for `--ffmpeg-preset`. \
+    By default, ffmpeg chooses the thread count which works best for the output codec"
+    )]
+    #[arg(long)]
+    pub(crate) ffmpeg_threads: Option<usize>,
 
     #[arg(
         help = "Set which subtitle language should be set as default / auto shown when starting a video"
@@ -182,6 +192,7 @@ impl Execute for Archive {
             let download_builder = DownloadBuilder::new()
                 .default_subtitle(self.default_subtitle.clone())
                 .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                .ffmpeg_threads(self.ffmpeg_threads)
                 .output_format(Some("matroska".to_string()))
                 .audio_sort(Some(self.audio.clone()))
                 .subtitle_sort(Some(self.subtitle.clone()))

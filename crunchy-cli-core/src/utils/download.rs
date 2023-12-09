@@ -51,6 +51,7 @@ pub struct DownloadBuilder {
     subtitle_sort: Option<Vec<Locale>>,
     force_hardsub: bool,
     threads: usize,
+    ffmpeg_threads: Option<usize>,
 }
 
 impl DownloadBuilder {
@@ -63,6 +64,7 @@ impl DownloadBuilder {
             subtitle_sort: None,
             force_hardsub: false,
             threads: num_cpus::get(),
+            ffmpeg_threads: None,
         }
     }
 
@@ -75,7 +77,9 @@ impl DownloadBuilder {
             subtitle_sort: self.subtitle_sort,
 
             force_hardsub: self.force_hardsub,
-            threads: self.threads,
+
+            download_threads: self.threads,
+            ffmpeg_threads: self.ffmpeg_threads,
 
             formats: vec![],
         }
@@ -102,7 +106,9 @@ pub struct Downloader {
     subtitle_sort: Option<Vec<Locale>>,
 
     force_hardsub: bool,
-    threads: usize,
+
+    download_threads: usize,
+    ffmpeg_threads: Option<usize>,
 
     formats: Vec<DownloadFormat>,
 }
@@ -343,6 +349,7 @@ impl Downloader {
             }
         }
 
+        let preset_custom = matches!(self.ffmpeg_preset, FFmpegPreset::Custom(_));
         let (input_presets, mut output_presets) = self.ffmpeg_preset.into_input_output_args();
         let fifo = temp_named_pipe()?;
 
@@ -356,6 +363,11 @@ impl Downloader {
         command_args.extend(input);
         command_args.extend(maps);
         command_args.extend(metadata);
+        if !preset_custom {
+            if let Some(ffmpeg_threads) = self.ffmpeg_threads {
+                command_args.extend(vec!["-threads".to_string(), ffmpeg_threads.to_string()])
+            }
+        }
 
         // set default subtitle
         if let Some(default_subtitle) = self.default_subtitle {
@@ -618,7 +630,7 @@ impl Downloader {
             None
         };
 
-        let cpus = self.threads;
+        let cpus = self.download_threads;
         let mut segs: Vec<Vec<VariantSegment>> = Vec::with_capacity(cpus);
         for _ in 0..cpus {
             segs.push(vec![])

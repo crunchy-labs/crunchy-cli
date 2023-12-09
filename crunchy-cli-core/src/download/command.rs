@@ -57,7 +57,7 @@ pub struct Download {
     pub(crate) output_specials: Option<String>,
 
     #[arg(help = "Video resolution")]
-    #[arg(long_help = "The video resolution.\
+    #[arg(long_help = "The video resolution. \
     Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or 'common-use' words (e.g. best). \
     Specifying the exact pixels is not recommended, use one of the other options instead. \
     Crunchyroll let you choose the quality with pixel abbreviation on their clients, so you might be already familiar with the available options. \
@@ -74,6 +74,16 @@ pub struct Download {
     #[arg(long)]
     #[arg(value_parser = FFmpegPreset::parse)]
     pub(crate) ffmpeg_preset: Option<FFmpegPreset>,
+    #[arg(
+        help = "The number of threads used by ffmpeg to generate the output file. Does not work with every codec/preset"
+    )]
+    #[arg(
+        long_help = "The number of threads used by ffmpeg to generate the output file. \
+    Does not work with every codec/preset and is skipped entirely when specifying custom ffmpeg output arguments instead of a preset for `--ffmpeg-preset`. \
+    By default, ffmpeg chooses the thread count which works best for the output codec"
+    )]
+    #[arg(long)]
+    pub(crate) ffmpeg_threads: Option<usize>,
 
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
@@ -203,6 +213,7 @@ impl Execute for Download {
                     None
                 })
                 .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                .ffmpeg_threads(self.ffmpeg_threads)
                 .threads(self.threads);
 
             for mut single_formats in single_format_collection.into_iter() {

@@ -46,7 +46,7 @@ impl Execute for Login {
 #[derive(Clone, Debug, Parser)]
 pub struct LoginMethod {
     #[arg(
-        help = "Login with credentials (username or email and password). Must be provided as user:password"
+        help = "Login with credentials (email and password). Must be provided as email:password"
     )]
     #[arg(long)]
     pub credentials: Option<String>,

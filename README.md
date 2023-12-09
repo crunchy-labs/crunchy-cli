@@ -110,12 +110,12 @@ $ cargo install --force --path .
 
 crunchy-cli requires you to log in.
 Though you can use a non-premium account, you will not have access to premium content without a subscription.
-You can authenticate with your credentials (user:password) or by using a refresh token.
+You can authenticate with your credentials (email:password) or by using a refresh token.
 
 - Credentials
 
   ```shell
-  $ crunchy-cli --credentials "user:password" <command>
+  $ crunchy-cli --credentials "email:password" <command>
   ```
 
 - Refresh Token
@@ -208,8 +208,8 @@ The `login` command can store your session, so you don't have to authenticate ev
 
 ```shell
 # save the refresh token which gets generated when login with credentials.
-# your username/email and password won't be stored at any time on disk
-$ crunchy-cli login --credentials "user:password"
+# your email and password won't be stored at any time on disk
+$ crunchy-cli login --credentials "email:password"
 # save etp-rt cookie
 $ crunchy-cli login --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d"
 ```

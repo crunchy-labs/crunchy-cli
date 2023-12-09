@@ -342,10 +342,10 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     };
 
     let crunchy = if let Some(credentials) = &login_method.credentials {
-        if let Some((user, password)) = credentials.split_once(':') {
-            builder.login_with_credentials(user, password).await?
+        if let Some((email, password)) = credentials.split_once(':') {
+            builder.login_with_credentials(email, password).await?
         } else {
-            bail!("Invalid credentials format. Please provide your credentials as user:password")
+            bail!("Invalid credentials format. Please provide your credentials as email:password")
         }
     } else if let Some(etp_rt) = &login_method.etp_rt {
         builder.login_with_etp_rt(etp_rt).await?

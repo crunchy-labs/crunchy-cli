@@ -434,10 +434,21 @@ impl Downloader {
                 {
                     command_args.extend([
                         format!("-disposition:s:s:{}", position),
-                        "forced".to_string(),
+                        "default".to_string(),
                     ])
                 }
             }
+        }
+
+        // set the 'forced' flag to CC subtitles
+        for (i, subtitle) in subtitles.iter().enumerate() {
+            // well, checking if the title contains '(CC)' might not be the best solutions from a
+            // performance perspective but easier than adjusting the `FFmpegMeta` struct
+            if !subtitle.title.contains("(CC)") {
+                continue;
+            }
+
+            command_args.extend([format!("-disposition:s:s:{}", i), "forced".to_string()])
         }
 
         command_args.extend(output_presets);

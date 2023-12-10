@@ -242,7 +242,7 @@ impl Execute for Archive {
 
                 format.visual_output(&path);
 
-                downloader.download(&ctx, &path).await?
+                downloader.download(&path).await?
             }
         }
 

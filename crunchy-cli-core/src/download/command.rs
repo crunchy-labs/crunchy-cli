@@ -257,7 +257,7 @@ impl Execute for Download {
 
                 format.visual_output(&path);
 
-                downloader.download(&ctx, &path).await?
+                downloader.download(&path).await?
             }
         }
 

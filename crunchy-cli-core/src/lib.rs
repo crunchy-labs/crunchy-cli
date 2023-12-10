@@ -17,6 +17,7 @@ mod login;
 mod search;
 mod utils;
 
+use crate::utils::rate_limit::RateLimiterService;
 pub use archive::Archive;
 use dialoguer::console::Term;
 pub use download::Download;
@@ -65,6 +66,15 @@ pub struct Cli {
     #[arg(help = "Use custom user agent")]
     #[arg(global = true, long)]
     user_agent: Option<String>,
+
+    #[arg(
+        help = "Maximal speed to download/request (may be a bit off here and there). Must be in format of <number>[B|KB|MB]"
+    )]
+    #[arg(
+        long_help = "Maximal speed to download/request (may be a bit off here and there). Must be in format of <number>[B|KB|MB] (e.g. 500KB or 10MB)"
+    )]
+    #[arg(global = true, long, value_parser = crate::utils::clap::clap_parse_speed_limit)]
+    speed_limit: Option<u32>,
 
     #[clap(subcommand)]
     command: Command,
@@ -264,38 +274,43 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
         lang
     };
 
+    let client = {
+        let mut builder = CrunchyrollBuilder::predefined_client_builder();
+        if let Some(p) = &cli.proxy {
+            builder = builder.proxy(p.clone())
+        }
+        if let Some(ua) = &cli.user_agent {
+            builder = builder.user_agent(ua)
+        }
+
+        #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
+        let client = {
+            let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
+
+            for certificate in rustls_native_certs::load_native_certs().unwrap() {
+                builder = builder.add_root_certificate(
+                    reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
+                )
+            }
+
+            builder.build().unwrap()
+        };
+        #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
+        let client = builder.build().unwrap();
+
+        client
+    };
+
     let mut builder = Crunchyroll::builder()
         .locale(locale)
-        .client({
-            let mut builder = CrunchyrollBuilder::predefined_client_builder();
-            if let Some(p) = &cli.proxy {
-                builder = builder.proxy(p.clone())
-            }
-            if let Some(ua) = &cli.user_agent {
-                builder = builder.user_agent(ua)
-            }
-
-            #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
-            let client = {
-                let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
-
-                for certificate in rustls_native_certs::load_native_certs().unwrap() {
-                    builder = builder.add_root_certificate(
-                        reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
-                    )
-                }
-
-                builder.build().unwrap()
-            };
-            #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
-            let client = builder.build().unwrap();
-
-            client
-        })
+        .client(client.clone())
         .stabilization_locales(cli.experimental_fixes)
         .stabilization_season_number(cli.experimental_fixes);
     if let Command::Download(download) = &cli.command {
         builder = builder.preferred_audio_locale(download.audio.clone())
+    }
+    if let Some(speed_limit) = cli.speed_limit {
+        builder = builder.middleware(RateLimiterService::new(speed_limit, client));
     }
 
     let root_login_methods_count = cli.login_method.credentials.is_some() as u8

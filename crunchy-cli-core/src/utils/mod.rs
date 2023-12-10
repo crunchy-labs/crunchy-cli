@@ -9,4 +9,5 @@ pub mod locale;
 pub mod log;
 pub mod os;
 pub mod parse;
+pub mod rate_limit;
 pub mod video;

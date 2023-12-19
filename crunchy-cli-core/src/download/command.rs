@@ -204,7 +204,7 @@ impl Execute for Download {
 
             single_format_collection.full_visual_output();
 
-            let download_builder = DownloadBuilder::new()
+            let download_builder = DownloadBuilder::new(ctx.crunchy.client())
                 .default_subtitle(self.subtitle.clone())
                 .force_hardsub(self.force_hardsub)
                 .output_format(if is_special_file(&self.output) || self.output == "-" {

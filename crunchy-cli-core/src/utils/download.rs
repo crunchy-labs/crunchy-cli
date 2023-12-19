@@ -1,5 +1,6 @@
 use crate::utils::ffmpeg::FFmpegPreset;
-use crate::utils::os::{is_special_file, temp_directory, temp_named_pipe, tempfile};
+use crate::utils::filter::real_dedup_vec;
+use crate::utils::os::{cache_dir, is_special_file, temp_directory, temp_named_pipe, tempfile};
 use anyhow::{bail, Result};
 use chrono::NaiveTime;
 use crunchyroll_rs::media::{Subtitle, VariantData, VariantSegment};
@@ -7,16 +8,17 @@ use crunchyroll_rs::Locale;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressFinish, ProgressStyle};
 use log::{debug, warn, LevelFilter};
 use regex::Regex;
+use reqwest::Client;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
-use std::env;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{env, fs};
 use tempfile::TempPath;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::select;
@@ -45,25 +47,29 @@ impl MergeBehavior {
 
 #[derive(Clone, derive_setters::Setters)]
 pub struct DownloadBuilder {
+    client: Client,
     ffmpeg_preset: FFmpegPreset,
     default_subtitle: Option<Locale>,
     output_format: Option<String>,
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
     force_hardsub: bool,
+    download_fonts: bool,
     threads: usize,
     ffmpeg_threads: Option<usize>,
 }
 
 impl DownloadBuilder {
-    pub fn new() -> DownloadBuilder {
+    pub fn new(client: Client) -> DownloadBuilder {
         Self {
+            client,
             ffmpeg_preset: FFmpegPreset::default(),
             default_subtitle: None,
             output_format: None,
             audio_sort: None,
             subtitle_sort: None,
             force_hardsub: false,
+            download_fonts: false,
             threads: num_cpus::get(),
             ffmpeg_threads: None,
         }
@@ -71,6 +77,7 @@ impl DownloadBuilder {
 
     pub fn build(self) -> Downloader {
         Downloader {
+            client: self.client,
             ffmpeg_preset: self.ffmpeg_preset,
             default_subtitle: self.default_subtitle,
             output_format: self.output_format,
@@ -78,6 +85,7 @@ impl DownloadBuilder {
             subtitle_sort: self.subtitle_sort,
 
             force_hardsub: self.force_hardsub,
+            download_fonts: self.download_fonts,
 
             download_threads: self.threads,
             ffmpeg_threads: self.ffmpeg_threads,
@@ -100,6 +108,8 @@ pub struct DownloadFormat {
 }
 
 pub struct Downloader {
+    client: Client,
+
     ffmpeg_preset: FFmpegPreset,
     default_subtitle: Option<Locale>,
     output_format: Option<String>,
@@ -107,6 +117,7 @@ pub struct Downloader {
     subtitle_sort: Option<Vec<Locale>>,
 
     force_hardsub: bool,
+    download_fonts: bool,
 
     download_threads: usize,
     ffmpeg_threads: Option<usize>,
@@ -183,6 +194,7 @@ impl Downloader {
         let mut videos = vec![];
         let mut audios = vec![];
         let mut subtitles = vec![];
+        let mut fonts = vec![];
         let mut max_frames = 0f64;
         let fmt_space = self
             .formats
@@ -296,8 +308,64 @@ impl Downloader {
             });
         }
 
+        if self.download_fonts
+            && !self.force_hardsub
+            && dst.extension().unwrap_or_default().to_str().unwrap() == "mkv"
+        {
+            let mut font_names = vec![];
+            for subtitle in subtitles.iter() {
+                font_names.extend(get_subtitle_stats(&subtitle.path)?)
+            }
+            real_dedup_vec(&mut font_names);
+
+            let progress_spinner = if log::max_level() == LevelFilter::Info {
+                let progress_spinner = ProgressBar::new_spinner()
+                    .with_style(
+                        ProgressStyle::with_template(
+                            format!(
+                                ":: {:<1$}  {{msg}} {{spinner}}",
+                                "Downloading fonts", fmt_space
+                            )
+                            .as_str(),
+                        )
+                        .unwrap()
+                        .tick_strings(&["—", "\\", "|", "/", ""]),
+                    )
+                    .with_finish(ProgressFinish::Abandon);
+                progress_spinner.enable_steady_tick(Duration::from_millis(100));
+                Some(progress_spinner)
+            } else {
+                None
+            };
+            for font_name in font_names {
+                if let Some(pb) = &progress_spinner {
+                    let mut progress_message = pb.message();
+                    if !progress_message.is_empty() {
+                        progress_message += ", "
+                    }
+                    progress_message += &font_name;
+                    pb.set_message(progress_message)
+                }
+                if let Some((font, cached)) = self.download_font(&font_name).await? {
+                    if cached {
+                        if let Some(pb) = &progress_spinner {
+                            let mut progress_message = pb.message();
+                            progress_message += " (cached)";
+                            pb.set_message(progress_message)
+                        }
+                        debug!("Downloaded font {} (cached)", font_name);
+                    } else {
+                        debug!("Downloaded font {}", font_name);
+                    }
+
+                    fonts.push(font)
+                }
+            }
+        }
+
         let mut input = vec![];
         let mut maps = vec![];
+        let mut attachments = vec![];
         let mut metadata = vec![];
 
         for (i, meta) in videos.iter().enumerate() {
@@ -322,6 +390,14 @@ impl Downloader {
                 format!("-metadata:s:a:{}", i),
                 format!("title={}", meta.title),
             ]);
+        }
+
+        for (i, font) in fonts.iter().enumerate() {
+            attachments.extend(["-attach".to_string(), font.to_string_lossy().to_string()]);
+            metadata.extend([
+                format!("-metadata:s:t:{}", i),
+                "mimetype=font/woff2".to_string(),
+            ])
         }
 
         // this formats are supporting embedding subtitles into the video container instead of
@@ -361,6 +437,7 @@ impl Downloader {
         command_args.extend(input_presets);
         command_args.extend(input);
         command_args.extend(maps);
+        command_args.extend(attachments);
         command_args.extend(metadata);
         if !preset_custom {
             if let Some(ffmpeg_threads) = self.ffmpeg_threads {
@@ -607,6 +684,33 @@ impl Downloader {
         Ok(path)
     }
 
+    async fn download_font(&self, name: &str) -> Result<Option<(PathBuf, bool)>> {
+        let Some((_, font_file)) = FONTS.iter().find(|(f, _)| f == &name) else {
+            return Ok(None);
+        };
+
+        let cache_dir = cache_dir("fonts")?;
+        let file = cache_dir.join(font_file);
+        if file.exists() {
+            return Ok(Some((file, true)));
+        }
+
+        // the speed limiter does not apply to this
+        let font = self
+            .client
+            .get(format!(
+                "https://static.crunchyroll.com/vilos-v2/web/vilos/assets/libass-fonts/{}",
+                font_file
+            ))
+            .send()
+            .await?
+            .bytes()
+            .await?;
+        fs::write(&file, font.to_vec())?;
+
+        Ok(Some((file, false)))
+    }
+
     async fn download_segments(
         &self,
         writer: &mut impl Write,
@@ -772,7 +876,7 @@ fn estimate_variant_file_size(variant_data: &VariantData, segments: &[VariantSeg
 }
 
 /// Get the length and fps of a video.
-pub fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
+fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
     let video_length = Regex::new(r"Duration:\s(?P<time>\d+:\d+:\d+\.\d+),")?;
     let video_fps = Regex::new(r"(?P<fps>[\d/.]+)\sfps")?;
 
@@ -804,6 +908,113 @@ pub fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
             .unwrap(),
         fps_caps.name("fps").unwrap().as_str().parse().unwrap(),
     ))
+}
+
+// all subtitle fonts (extracted from javascript)
+const FONTS: [(&str, &str); 66] = [
+    ("Adobe Arabic", "AdobeArabic-Bold.woff2"),
+    ("Andale Mono", "andalemo.woff2"),
+    ("Arial", "arial.woff2"),
+    ("Arial Black", "ariblk.woff2"),
+    ("Arial Bold", "arialbd.woff2"),
+    ("Arial Bold Italic", "arialbi.woff2"),
+    ("Arial Italic", "ariali.woff2"),
+    ("Arial Unicode MS", "arialuni.woff2"),
+    ("Comic Sans MS", "comic.woff2"),
+    ("Comic Sans MS Bold", "comicbd.woff2"),
+    ("Courier New", "cour.woff2"),
+    ("Courier New Bold", "courbd.woff2"),
+    ("Courier New Bold Italic", "courbi.woff2"),
+    ("Courier New Italic", "couri.woff2"),
+    ("DejaVu LGC Sans Mono", "DejaVuLGCSansMono.woff2"),
+    ("DejaVu LGC Sans Mono Bold", "DejaVuLGCSansMono-Bold.woff2"),
+    (
+        "DejaVu LGC Sans Mono Bold Oblique",
+        "DejaVuLGCSansMono-BoldOblique.woff2",
+    ),
+    (
+        "DejaVu LGC Sans Mono Oblique",
+        "DejaVuLGCSansMono-Oblique.woff2",
+    ),
+    ("DejaVu Sans", "DejaVuSans.woff2"),
+    ("DejaVu Sans Bold", "DejaVuSans-Bold.woff2"),
+    ("DejaVu Sans Bold Oblique", "DejaVuSans-BoldOblique.woff2"),
+    ("DejaVu Sans Condensed", "DejaVuSansCondensed.woff2"),
+    (
+        "DejaVu Sans Condensed Bold",
+        "DejaVuSansCondensed-Bold.woff2",
+    ),
+    (
+        "DejaVu Sans Condensed Bold Oblique",
+        "DejaVuSansCondensed-BoldOblique.woff2",
+    ),
+    (
+        "DejaVu Sans Condensed Oblique",
+        "DejaVuSansCondensed-Oblique.woff2",
+    ),
+    ("DejaVu Sans ExtraLight", "DejaVuSans-ExtraLight.woff2"),
+    ("DejaVu Sans Mono", "DejaVuSansMono.woff2"),
+    ("DejaVu Sans Mono Bold", "DejaVuSansMono-Bold.woff2"),
+    (
+        "DejaVu Sans Mono Bold Oblique",
+        "DejaVuSansMono-BoldOblique.woff2",
+    ),
+    ("DejaVu Sans Mono Oblique", "DejaVuSansMono-Oblique.woff2"),
+    ("DejaVu Sans Oblique", "DejaVuSans-Oblique.woff2"),
+    ("Gautami", "gautami.woff2"),
+    ("Georgia", "georgia.woff2"),
+    ("Georgia Bold", "georgiab.woff2"),
+    ("Georgia Bold Italic", "georgiaz.woff2"),
+    ("Georgia Italic", "georgiai.woff2"),
+    ("Impact", "impact.woff2"),
+    ("Mangal", "MANGAL.woff2"),
+    ("Meera Inimai", "MeeraInimai-Regular.woff2"),
+    ("Noto Sans Thai", "NotoSansThai.woff2"),
+    ("Rubik", "Rubik-Regular.woff2"),
+    ("Rubik Black", "Rubik-Black.woff2"),
+    ("Rubik Black Italic", "Rubik-BlackItalic.woff2"),
+    ("Rubik Bold", "Rubik-Bold.woff2"),
+    ("Rubik Bold Italic", "Rubik-BoldItalic.woff2"),
+    ("Rubik Italic", "Rubik-Italic.woff2"),
+    ("Rubik Light", "Rubik-Light.woff2"),
+    ("Rubik Light Italic", "Rubik-LightItalic.woff2"),
+    ("Rubik Medium", "Rubik-Medium.woff2"),
+    ("Rubik Medium Italic", "Rubik-MediumItalic.woff2"),
+    ("Tahoma", "tahoma.woff2"),
+    ("Times New Roman", "times.woff2"),
+    ("Times New Roman Bold", "timesbd.woff2"),
+    ("Times New Roman Bold Italic", "timesbi.woff2"),
+    ("Times New Roman Italic", "timesi.woff2"),
+    ("Trebuchet MS", "trebuc.woff2"),
+    ("Trebuchet MS Bold", "trebucbd.woff2"),
+    ("Trebuchet MS Bold Italic", "trebucbi.woff2"),
+    ("Trebuchet MS Italic", "trebucit.woff2"),
+    ("Verdana", "verdana.woff2"),
+    ("Verdana Bold", "verdanab.woff2"),
+    ("Verdana Bold Italic", "verdanaz.woff2"),
+    ("Verdana Italic", "verdanai.woff2"),
+    ("Vrinda", "vrinda.woff2"),
+    ("Vrinda Bold", "vrindab.woff2"),
+    ("Webdings", "webdings.woff2"),
+];
+lazy_static::lazy_static! {
+    static ref FONT_REGEX: Regex = Regex::new(r"(?m)^Style:\s.+?,(?P<font>.+?),").unwrap();
+}
+
+/// Get the fonts used in the subtitle.
+fn get_subtitle_stats(path: &Path) -> Result<Vec<String>> {
+    let mut fonts = vec![];
+
+    for capture in FONT_REGEX.captures_iter(&(fs::read_to_string(path)?)) {
+        if let Some(font) = capture.name("font") {
+            let font_string = font.as_str().to_string();
+            if !fonts.contains(&font_string) {
+                fonts.push(font_string)
+            }
+        }
+    }
+
+    Ok(fonts)
 }
 
 /// Fix the subtitles in multiple ways as Crunchyroll sometimes delivers them malformed.

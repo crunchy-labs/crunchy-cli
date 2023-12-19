@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::{Command, Stdio};
 use std::task::{Context, Poll};
-use std::{env, io};
+use std::{env, fs, io};
 use tempfile::{Builder, NamedTempFile};
 use tokio::io::{AsyncRead, ReadBuf};
 
@@ -44,6 +44,12 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
         tempfile.path().to_string_lossy()
     );
     Ok(tempfile)
+}
+
+pub fn cache_dir<S: AsRef<str>>(name: S) -> io::Result<PathBuf> {
+    let cache_dir = temp_directory().join(format!(".crunchy-cli_{}_cache", name.as_ref()));
+    fs::create_dir_all(&cache_dir)?;
+    Ok(cache_dir)
 }
 
 pub struct TempNamedPipe {

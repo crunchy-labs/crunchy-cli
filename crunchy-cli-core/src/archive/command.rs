@@ -106,6 +106,9 @@ pub struct Archive {
     )]
     #[arg(long)]
     pub(crate) default_subtitle: Option<Locale>,
+    #[arg(help = "Include fonts in the downloaded file")]
+    #[arg(long)]
+    pub(crate) include_fonts: bool,
 
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
@@ -189,8 +192,9 @@ impl Execute for Archive {
 
             single_format_collection.full_visual_output();
 
-            let download_builder = DownloadBuilder::new()
+            let download_builder = DownloadBuilder::new(ctx.crunchy.client())
                 .default_subtitle(self.default_subtitle.clone())
+                .download_fonts(self.include_fonts)
                 .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
                 .ffmpeg_threads(self.ffmpeg_threads)
                 .output_format(Some("matroska".to_string()))

@@ -2,7 +2,7 @@ use crate::utils::filter::real_dedup_vec;
 use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
 use anyhow::Result;
-use chrono::Duration;
+use chrono::{Datelike, Duration};
 use crunchyroll_rs::media::{Resolution, Stream, Subtitle, VariantData};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
 use log::{debug, info};
@@ -16,6 +16,10 @@ pub struct SingleFormat {
 
     pub title: String,
     pub description: String,
+
+    pub release_year: u64,
+    pub release_month: u64,
+    pub release_day: u64,
 
     pub audio: Locale,
     pub subtitles: Vec<Locale>,
@@ -60,6 +64,9 @@ impl SingleFormat {
             },
             title: episode.title.clone(),
             description: episode.description.clone(),
+            release_year: episode.episode_air_date.year() as u64,
+            release_month: episode.episode_air_date.month() as u64,
+            release_day: episode.episode_air_date.day() as u64,
             audio: episode.audio_locale.clone(),
             subtitles,
             series_id: episode.series_id.clone(),
@@ -86,6 +93,9 @@ impl SingleFormat {
             identifier: movie.id.clone(),
             title: movie.title.clone(),
             description: movie.description.clone(),
+            release_year: movie.free_available_date.year() as u64,
+            release_month: movie.free_available_date.month() as u64,
+            release_day: movie.free_available_date.day() as u64,
             audio: Locale::ja_JP,
             subtitles,
             series_id: movie.movie_listing_id.clone(),
@@ -108,6 +118,9 @@ impl SingleFormat {
             identifier: music_video.id.clone(),
             title: music_video.title.clone(),
             description: music_video.description.clone(),
+            release_year: music_video.original_release.year() as u64,
+            release_month: music_video.original_release.month() as u64,
+            release_day: music_video.original_release.day() as u64,
             audio: Locale::ja_JP,
             subtitles: vec![],
             series_id: music_video.id.clone(),
@@ -130,6 +143,9 @@ impl SingleFormat {
             identifier: concert.id.clone(),
             title: concert.title.clone(),
             description: concert.description.clone(),
+            release_year: concert.original_release.year() as u64,
+            release_month: concert.original_release.month() as u64,
+            release_day: concert.original_release.day() as u64,
             audio: Locale::ja_JP,
             subtitles: vec![],
             series_id: concert.id.clone(),
@@ -324,8 +340,15 @@ pub struct Format {
 
     pub locales: Vec<(Locale, Vec<Locale>)>,
 
+    // deprecated
     pub resolution: Resolution,
+    pub width: u64,
+    pub height: u64,
     pub fps: f64,
+
+    pub release_year: u64,
+    pub release_month: u64,
+    pub release_day: u64,
 
     pub series_id: String,
     pub series_name: String,
@@ -364,8 +387,13 @@ impl Format {
             title: first_format.title,
             description: first_format.description,
             locales,
-            resolution: first_stream.resolution,
+            resolution: first_stream.resolution.clone(),
+            width: first_stream.resolution.width,
+            height: first_stream.resolution.height,
             fps: first_stream.fps,
+            release_year: first_format.release_year,
+            release_month: first_format.release_month,
+            release_day: first_format.release_day,
             series_id: first_format.series_id,
             series_name: first_format.series_name,
             season_id: first_format.season_id,
@@ -396,6 +424,14 @@ impl Format {
                 ),
             )
             .replace("{resolution}", &sanitize(self.resolution.to_string(), true))
+            .replace(
+                "{width}",
+                &sanitize(self.resolution.width.to_string(), true),
+            )
+            .replace(
+                "{height}",
+                &sanitize(self.resolution.height.to_string(), true),
+            )
             .replace("{series_id}", &sanitize(&self.series_id, true))
             .replace("{series_name}", &sanitize(&self.series_name, true))
             .replace("{season_id}", &sanitize(&self.season_id, true))
@@ -434,6 +470,18 @@ impl Format {
                         true,
                     )
                 ),
+            )
+            .replace(
+                "{release_year}",
+                &sanitize(self.release_year.to_string(), true),
+            )
+            .replace(
+                "{release_month}",
+                &format!("{:0>2}", sanitize(self.release_month.to_string(), true)),
+            )
+            .replace(
+                "{release_day}",
+                &format!("{:0>2}", sanitize(self.release_day.to_string(), true)),
             );
 
         PathBuf::from(path)

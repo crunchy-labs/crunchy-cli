@@ -15,7 +15,7 @@ use anyhow::Result;
 use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
-use log::debug;
+use log::{debug, warn};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -43,12 +43,16 @@ pub struct Archive {
       {series_name}              → Name of the series\n  \
       {season_name}              → Name of the season\n  \
       {audio}                    → Audio language of the video\n  \
-      {resolution}               → Resolution of the video\n  \
+      {width}                    → Width of the video\n  \
+      {height}                   → Height of the video\n  \
       {season_number}            → Number of the season\n  \
       {episode_number}           → Number of the episode\n  \
       {relative_episode_number}  → Number of the episode relative to its season\n  \
       {sequence_number}          → Like '{episode_number}' but without possible non-number characters\n  \
       {relative_sequence_number} → Like '{relative_episode_number}' but with support for episode 0's and .5's\n  \
+      {release_year}             → Release year of the video\n  \
+      {release_month}            → Release month of the video\n  \
+      {release_day}              → Release day of the video\n  \
       {series_id}                → ID of the series\n  \
       {season_id}                → ID of the season\n  \
       {episode_id}               → ID of the episode")]
@@ -155,6 +159,15 @@ impl Execute for Archive {
             {
                 bail!("File extension for special episodes is not '.mkv'. Currently only matroska / '.mkv' files are supported")
             }
+        }
+
+        if self.output.contains("{resolution}")
+            || self
+                .output_specials
+                .as_ref()
+                .map_or(false, |os| os.contains("{resolution}"))
+        {
+            warn!("The '{{resolution}}' format option is deprecated and will be removed in a future version. Please use '{{width}}' and '{{height}}' instead")
         }
 
         self.audio = all_locale_in_locales(self.audio.clone());

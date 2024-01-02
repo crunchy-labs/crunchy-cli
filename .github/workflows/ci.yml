@@ -32,6 +32,11 @@ jobs:
             target/
           key: ${{ matrix.toolchain }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
       - name: Install cross
         run: cargo install --force cross
 
@@ -75,6 +80,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: x86_64-apple-darwin-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
 
       - name: Build
         run: cargo build --release --target x86_64-apple-darwin

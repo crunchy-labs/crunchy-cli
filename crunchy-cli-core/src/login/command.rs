@@ -18,7 +18,6 @@ pub struct Login {
     pub remove: bool,
 }
 
-#[async_trait::async_trait(?Send)]
 impl Execute for Login {
     async fn execute(self, ctx: Context) -> Result<()> {
         if let Some(login_file_path) = session_file_path() {

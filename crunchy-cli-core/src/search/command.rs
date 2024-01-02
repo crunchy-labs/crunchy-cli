@@ -100,7 +100,6 @@ pub struct Search {
     input: String,
 }
 
-#[async_trait::async_trait(?Send)]
 impl Execute for Search {
     async fn execute(self, ctx: Context) -> Result<()> {
         let input = if crunchyroll_rs::parse::parse_url(&self.input).is_some() {

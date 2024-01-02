@@ -37,7 +37,6 @@ impl DownloadFilter {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for DownloadFilter {
     type T = SingleFormat;
     type Output = SingleFormatCollection;

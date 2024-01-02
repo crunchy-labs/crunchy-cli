@@ -3,9 +3,6 @@ use crunchyroll_rs::{
     Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
 
-// Check when https://github.com/dtolnay/async-trait/issues/224 is resolved and update async-trait
-// to the new fixed version (as this causes some issues)
-#[async_trait::async_trait]
 pub trait Filter {
     type T: Send + Sized;
     type Output: Send + Sized;

@@ -134,7 +134,6 @@ pub struct Archive {
     pub(crate) urls: Vec<String>,
 }
 
-#[async_trait::async_trait(?Send)]
 impl Execute for Archive {
     fn pre_check(&mut self) -> Result<()> {
         if !has_ffmpeg() {

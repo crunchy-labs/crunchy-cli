@@ -24,12 +24,11 @@ pub use download::Download;
 pub use login::Login;
 pub use search::Search;
 
-#[async_trait::async_trait(?Send)]
 trait Execute {
     fn pre_check(&mut self) -> Result<()> {
         Ok(())
     }
-    async fn execute(mut self, ctx: Context) -> Result<()>;
+    async fn execute(self, ctx: Context) -> Result<()>;
 }
 
 #[derive(Debug, Parser)]

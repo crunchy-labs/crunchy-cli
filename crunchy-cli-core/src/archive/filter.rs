@@ -45,7 +45,6 @@ impl ArchiveFilter {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for ArchiveFilter {
     type T = Vec<SingleFormat>;
     type Output = SingleFormatCollection;

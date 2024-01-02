@@ -113,7 +113,6 @@ pub struct Download {
     pub(crate) urls: Vec<String>,
 }
 
-#[async_trait::async_trait(?Send)]
 impl Execute for Download {
     fn pre_check(&mut self) -> Result<()> {
         if !has_ffmpeg() {

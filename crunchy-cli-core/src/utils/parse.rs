@@ -46,10 +46,13 @@ impl UrlFilter {
             let from_season = f.from_season.unwrap_or(u32::MIN);
             let to_season = f.to_season.unwrap_or(u32::MAX);
 
-            episode >= from_episode
-                && episode <= to_episode
-                && season >= from_season
-                && season <= to_season
+            if season < from_season || season > to_season {
+                false
+            } else if season == from_season {
+                episode >= from_episode && episode <= to_episode
+            } else {
+                true
+            }
         })
     }
 }

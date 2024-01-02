@@ -148,24 +148,23 @@ pub fn is_special_file<P: AsRef<Path>>(path: P) -> bool {
 }
 
 lazy_static::lazy_static! {
-    static ref ILLEGAL_RE: Regex = Regex::new(r#"[\?<>:\*\|":]"#).unwrap();
-    static ref CONTROL_RE: Regex = Regex::new(r"[\x00-\x1f\x80-\x9f]").unwrap();
-    static ref RESERVED_RE: Regex = Regex::new(r"^\.+$").unwrap();
+    static ref WINDOWS_NON_PRINTABLE_RE: Regex = Regex::new(r"[\x00-\x1f\x80-\x9f]").unwrap();
+    static ref WINDOWS_ILLEGAL_RE: Regex = Regex::new(r#"[<>:"|?*]"#).unwrap();
     static ref WINDOWS_RESERVED_RE: Regex = RegexBuilder::new(r"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$")
         .case_insensitive(true)
         .build()
         .unwrap();
     static ref WINDOWS_TRAILING_RE: Regex = Regex::new(r"[\. ]+$").unwrap();
+
+    static ref LINUX_NON_PRINTABLE: Regex = Regex::new(r"[\x00]").unwrap();
+
+    static ref RESERVED_RE: Regex = Regex::new(r"^\.+$").unwrap();
 }
 
-/// Sanitizes a filename with the option to include/exclude the path separator from sanitizing. This
-/// is based of the implementation of the
-/// [`sanitize-filename`](https://crates.io/crates/sanitize-filename) crate.
+/// Sanitizes a filename with the option to include/exclude the path separator from sanitizing.
 pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String {
     let path = Cow::from(path.as_ref().trim());
 
-    let path = ILLEGAL_RE.replace_all(&path, "");
-    let path = CONTROL_RE.replace_all(&path, "");
     let path = RESERVED_RE.replace(&path, "");
 
     let collect = |name: String| {
@@ -177,7 +176,9 @@ pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String 
     };
 
     if cfg!(windows) {
-        let path = WINDOWS_RESERVED_RE.replace(&path, "");
+        let path = WINDOWS_NON_PRINTABLE_RE.replace_all(&path, "");
+        let path = WINDOWS_ILLEGAL_RE.replace_all(&path, "");
+        let path = WINDOWS_RESERVED_RE.replace_all(&path, "");
         let path = WINDOWS_TRAILING_RE.replace(&path, "");
         let mut path = path.to_string();
         if include_path_separator {
@@ -185,6 +186,7 @@ pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String 
         }
         collect(path)
     } else {
+        let path = LINUX_NON_PRINTABLE.replace_all(&path, "");
         let mut path = path.to_string();
         if include_path_separator {
             path = path.replace('/', "");

@@ -202,6 +202,14 @@ You can set specific settings which will be
   
   Default is the user agent, defined in the underlying [library](https://github.com/crunchy-labs/crunchyroll-rs).
 
+- Speed limit
+
+  If you want to limit how fast requests/downloads should be, you can use the `--speed-limit` flag. Allowed units are `B` (bytes), `KB` (kilobytes) and `MB` (megabytes).
+
+  ```shell
+  $ crunchy-cli --speed-limit 10MB
+  ```
+
 ### Login
 
 The `login` command can store your session, so you don't have to authenticate every time you execute a command.
@@ -270,7 +278,7 @@ The `download` command lets you download episodes with a specific audio language
   Define an output template which only gets used when the episode is a special (episode number is 0 or has non-zero decimal places) by using the `--output-special` flag.
 
   ```shell
-  $ crunchy-cli download --output-specials -o "Special EP: {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  $ crunchy-cli download --output-specials -o "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
   ```
   
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
@@ -293,6 +301,14 @@ The `download` command lets you download episodes with a specific audio language
 
   ```shell
   $ crunchy-cli downlaod --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+
+- FFmpeg threads
+
+  If you want to manually set how many threads FFmpeg should use, you can use the `--ffmpeg-threads` flag. This does not work with every codec/preset and is skipped entirely when specifying custom ffmpeg output arguments instead of a preset for `--ffmpeg-preset`.
+
+  ```shell
+  $ crunchy-cli download --ffmpeg-threads 4 https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
 
 - Skip existing
@@ -395,7 +411,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
   _crunchy-cli_ exclusively uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of its ability to store multiple audio, video and subtitle tracks at once.
 
   ```shell
-  $ crunchy-cli archive --output-specials -o "Special EP: {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  $ crunchy-cli archive --output-specials -o "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
   ```
 
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
@@ -435,6 +451,14 @@ The `archive` command lets you download episodes with multiple audios and subtit
   $ crunchy-cli archive --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
 
+- FFmpeg threads
+
+  If you want to manually set how many threads FFmpeg should use, you can use the `--ffmpeg-threads` flag. This does not work with every codec/preset and is skipped entirely when specifying custom ffmpeg output arguments instead of a preset for `--ffmpeg-preset`.
+
+  ```shell
+  $ crunchy-cli archive --ffmpeg-threads 4 https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+
 - Default subtitle
 
   `--default-subtitle` Set which subtitle language is to be flagged as **default** and **forced**.
@@ -444,6 +468,14 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
 
   Default is none.
+
+- Include fonts
+
+  You can include the fonts required by subtitles directly into the output file with the `--include-fonts` flag. This will use the embedded font for subtitles instead of the system font when playing the video in a video player which supports it.
+
+  ```shell
+  $ crunchy-cli archive --include-fonts https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
 
 - Skip existing
 
@@ -553,12 +585,16 @@ You can use various template options to change how the filename is processed. Th
 - `{series_name}`              → Name of the series
 - `{season_name}`              → Name of the season
 - `{audio}`                    → Audio language of the video
-- `{resolution}`               → Resolution of the video
+- `{width}`                    → Width of the video
+- `{height}`                   → Height of the video
 - `{season_number}`            → Number of the season
 - `{episode_number}`           → Number of the episode
 - `{relative_episode_number}`  → Number of the episode relative to its season
 - `{sequence_number}`          → Like `{episode_number}` but without possible non-number characters
 - `{relative_sequence_number}` → Like `{relative_episode_number}` but with support for episode 0's and .5's
+- `{release_year}`             → Release year of the video
+- `{release_month}`            → Release month of the video
+- `{release_day} `             → Release day of the video
 - `{series_id}`                → ID of the series
 - `{season_id}`                → ID of the season
 - `{episode_id}`               → ID of the episode

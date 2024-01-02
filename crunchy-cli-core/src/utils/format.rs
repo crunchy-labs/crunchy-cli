@@ -409,8 +409,9 @@ impl Format {
 
     /// Formats the given string if it has specific pattern in it. It also sanitizes the filename.
     pub fn format_path(&self, path: PathBuf) -> PathBuf {
-        let mut path = sanitize(path.to_string_lossy(), false);
-        path = path
+        let path = path
+            .to_string_lossy()
+            .to_string()
             .replace("{title}", &sanitize(&self.title, true))
             .replace(
                 "{audio}",

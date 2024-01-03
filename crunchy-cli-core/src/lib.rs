@@ -315,15 +315,9 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     let root_login_methods_count = cli.login_method.credentials.is_some() as u8
         + cli.login_method.etp_rt.is_some() as u8
         + cli.login_method.anonymous as u8;
-    let mut login_login_methods_count = 0;
-    if let Command::Login(login) = &cli.command {
-        login_login_methods_count += login.login_method.credentials.is_some() as u8
-            + login.login_method.etp_rt.is_some() as u8
-            + login.login_method.anonymous as u8
-    }
 
     let progress_handler = progress!("Logging in");
-    if root_login_methods_count + login_login_methods_count == 0 {
+    if root_login_methods_count == 0 {
         if let Some(login_file_path) = login::session_file_path() {
             if login_file_path.exists() {
                 let session = fs::read_to_string(login_file_path)?;
@@ -340,29 +334,19 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
             }
         }
         bail!("Please use a login method ('--credentials', '--etp-rt' or '--anonymous')")
-    } else if root_login_methods_count + login_login_methods_count > 1 {
+    } else if root_login_methods_count > 1 {
         bail!("Please use only one login method ('--credentials', '--etp-rt' or '--anonymous')")
     }
 
-    let login_method = if login_login_methods_count > 0 {
-        if let Command::Login(login) = &cli.command {
-            login.login_method.clone()
-        } else {
-            unreachable!()
-        }
-    } else {
-        cli.login_method.clone()
-    };
-
-    let crunchy = if let Some(credentials) = &login_method.credentials {
+    let crunchy = if let Some(credentials) = &cli.login_method.credentials {
         if let Some((email, password)) = credentials.split_once(':') {
             builder.login_with_credentials(email, password).await?
         } else {
             bail!("Invalid credentials format. Please provide your credentials as email:password")
         }
-    } else if let Some(etp_rt) = &login_method.etp_rt {
+    } else if let Some(etp_rt) = &cli.login_method.etp_rt {
         builder.login_with_etp_rt(etp_rt).await?
-    } else if login_method.anonymous {
+    } else if cli.login_method.anonymous {
         builder.login_anonymously().await?
     } else {
         bail!("should never happen")

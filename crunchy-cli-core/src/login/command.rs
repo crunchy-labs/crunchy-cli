@@ -11,8 +11,6 @@ use std::path::PathBuf;
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Save your login credentials persistent on disk")]
 pub struct Login {
-    #[clap(flatten)]
-    pub login_method: LoginMethod,
     #[arg(help = "Remove your stored credentials (instead of saving them)")]
     #[arg(long)]
     pub remove: bool,
@@ -56,7 +54,7 @@ pub struct LoginMethod {
     #[arg(global = true, long)]
     pub etp_rt: Option<String>,
     #[arg(help = "Login anonymously / without an account")]
-    #[arg(long, default_value_t = false)]
+    #[arg(global = true, long, default_value_t = false)]
     pub anonymous: bool,
 }
 

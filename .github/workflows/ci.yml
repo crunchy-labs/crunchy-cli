@@ -19,7 +19,7 @@ jobs:
             toolchain: aarch64-unknown-linux-musl
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cargo cache
         uses: actions/cache@v3
@@ -68,7 +68,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cargo cache
         uses: actions/cache@v3
@@ -100,7 +100,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cargo cache
         uses: actions/cache@v3

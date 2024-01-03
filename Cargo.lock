@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "chrono",
  "clap",
@@ -394,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "anyhow",
  "async-speed-limit",

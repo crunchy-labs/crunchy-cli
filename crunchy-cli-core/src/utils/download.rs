@@ -534,7 +534,18 @@ impl Downloader {
         if let Some(output_format) = self.output_format {
             command_args.extend(["-f".to_string(), output_format]);
         }
-        command_args.push(dst.to_str().unwrap().to_string());
+
+        // prepend './' to the path on linux since ffmpeg may interpret the path incorrectly if it's just the filename.
+        // see https://github.com/crunchy-labs/crunchy-cli/issues/303 for example
+        if !cfg!(windows)
+            && dst
+                .parent()
+                .map_or(true, |p| p.to_string_lossy().is_empty())
+        {
+            command_args.push(Path::new("./").join(dst).to_string_lossy().to_string());
+        } else {
+            command_args.push(dst.to_string_lossy().to_string())
+        }
 
         debug!("ffmpeg {}", command_args.join(" "));
 

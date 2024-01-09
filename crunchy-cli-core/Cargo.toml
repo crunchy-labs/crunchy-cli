@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli-core"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.2.1"
+version = "3.2.2"
 edition = "2021"
 license = "MIT"
 
@@ -16,7 +16,7 @@ anyhow = "1.0"
 async-speed-limit = "0.4"
 clap = { version = "4.4", features = ["derive", "string"] }
 chrono = "0.4"
-crunchyroll-rs = { version = "0.8.1", features = ["dash-stream", "experimental-stabilizations", "tower"] }
+crunchyroll-rs = { version = "0.8.2", features = ["dash-stream", "experimental-stabilizations", "tower"] }
 ctrlc = "3.4"
 dialoguer = { version = "0.11", default-features = false }
 dirs = "5.0"

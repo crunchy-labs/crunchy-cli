@@ -432,7 +432,7 @@ impl Downloader {
             "-y".to_string(),
             "-hide_banner".to_string(),
             "-vstats_file".to_string(),
-            fifo.name(),
+            fifo.path().to_string_lossy().to_string(),
         ];
         command_args.extend(input_presets);
         command_args.extend(input);
@@ -584,7 +584,7 @@ impl Downloader {
             bail!("{}", String::from_utf8_lossy(result.stderr.as_slice()))
         }
         ffmpeg_progress_cancel.cancel();
-        Ok(ffmpeg_progress.await??)
+        ffmpeg_progress.await?
     }
 
     async fn check_free_space(

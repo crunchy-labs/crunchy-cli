@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::process::{Command, Stdio};
 use std::task::{Context, Poll};
 use std::{env, fs, io};
-use tempfile::{Builder, NamedTempFile};
+use tempfile::{Builder, NamedTempFile, TempPath};
 use tokio::io::{AsyncRead, ReadBuf};
 
 pub fn has_ffmpeg() -> bool {
@@ -53,17 +53,17 @@ pub fn cache_dir<S: AsRef<str>>(name: S) -> io::Result<PathBuf> {
 }
 
 pub struct TempNamedPipe {
-    name: String,
+    path: TempPath,
 
     #[cfg(not(target_os = "windows"))]
     reader: tokio::net::unix::pipe::Receiver,
     #[cfg(target_os = "windows")]
-    reader: tokio::net::windows::named_pipe::NamedPipeServer,
+    file: tokio::fs::File,
 }
 
 impl TempNamedPipe {
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }
 
@@ -73,40 +73,67 @@ impl AsyncRead for TempNamedPipe {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.reader).poll_read(cx, buf)
+        #[cfg(not(target_os = "windows"))]
+        return Pin::new(&mut self.reader).poll_read(cx, buf);
+        // very very dirty implementation of a 'tail' like behavior
+        #[cfg(target_os = "windows")]
+        {
+            let mut tmp_bytes = vec![0; buf.remaining()];
+            let mut tmp_buf = ReadBuf::new(tmp_bytes.as_mut_slice());
+
+            loop {
+                return match Pin::new(&mut self.file).poll_read(cx, &mut tmp_buf) {
+                    Poll::Ready(r) => {
+                        if r.is_ok() {
+                            if !tmp_buf.filled().is_empty() {
+                                buf.put_slice(tmp_buf.filled())
+                            } else {
+                                // sleep to not loop insanely fast and consume unnecessary system resources
+                                std::thread::sleep(std::time::Duration::from_millis(50));
+                                continue;
+                            }
+                        }
+                        Poll::Ready(r)
+                    }
+                    Poll::Pending => Poll::Pending,
+                };
+            }
+        }
     }
 }
 
 impl Drop for TempNamedPipe {
     fn drop(&mut self) {
         #[cfg(not(target_os = "windows"))]
-        let _ = nix::unistd::unlink(self.name.as_str());
+        let _ = nix::unistd::unlink(self.path.to_string_lossy().to_string().as_str());
     }
 }
 
 pub fn temp_named_pipe() -> io::Result<TempNamedPipe> {
-    let (_, path) = tempfile("")?.keep()?;
-    let _ = fs::remove_file(path.clone());
+    let tmp = tempfile("")?;
 
     #[cfg(not(target_os = "windows"))]
     {
-        let filename = path.to_string_lossy().to_string();
+        let path = tmp.into_temp_path();
+        let _ = fs::remove_file(&path);
 
-        nix::unistd::mkfifo(filename.as_str(), nix::sys::stat::Mode::S_IRWXU)?;
+        nix::unistd::mkfifo(
+            path.to_string_lossy().to_string().as_str(),
+            nix::sys::stat::Mode::S_IRWXU,
+        )?;
 
         Ok(TempNamedPipe {
             reader: tokio::net::unix::pipe::OpenOptions::new().open_receiver(&path)?,
-            name: filename,
+            path,
         })
     }
     #[cfg(target_os = "windows")]
     {
-        let pipe_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let pipe_path = format!(r"\\.\pipe\{}", pipe_name);
+        let (file, path) = tmp.into_parts();
 
         Ok(TempNamedPipe {
-            reader: tokio::net::windows::named_pipe::ServerOptions::new().create(pipe_path)?,
-            name: pipe_name,
+            file: tokio::fs::File::from_std(file),
+            path,
         })
     }
 }

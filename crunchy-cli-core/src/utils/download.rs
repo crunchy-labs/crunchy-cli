@@ -231,6 +231,13 @@ impl Downloader {
                     },
                 })
             }
+
+            let (len, fps) = get_video_stats(&video_path)?;
+            let frames = len.signed_duration_since(NaiveTime::MIN).num_seconds() as f64 * fps;
+            if frames > max_frames {
+                max_frames = frames;
+            }
+
             if !format.subtitles.is_empty() {
                 let progress_spinner = if log::max_level() == LevelFilter::Info {
                     let progress_spinner = ProgressBar::new_spinner()
@@ -252,11 +259,6 @@ impl Downloader {
                     None
                 };
 
-                let (len, fps) = get_video_stats(&video_path)?;
-                let frames = len.signed_duration_since(NaiveTime::MIN).num_seconds() as f64 * fps;
-                if frames > max_frames {
-                    max_frames = frames;
-                }
                 for (subtitle, not_cc) in format.subtitles.iter() {
                     if let Some(pb) = &progress_spinner {
                         let mut progress_message = pb.message();

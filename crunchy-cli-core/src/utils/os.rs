@@ -86,25 +86,27 @@ impl Drop for TempNamedPipe {
 
 pub fn temp_named_pipe() -> io::Result<TempNamedPipe> {
     let (_, path) = tempfile("")?.keep()?;
-    let path = path.to_string_lossy().to_string();
-    let _ = std::fs::remove_file(path.clone());
+    let _ = fs::remove_file(path.clone());
 
     #[cfg(not(target_os = "windows"))]
     {
-        nix::unistd::mkfifo(path.as_str(), nix::sys::stat::Mode::S_IRWXU)?;
+        let filename = path.to_string_lossy().to_string();
+
+        nix::unistd::mkfifo(filename.as_str(), nix::sys::stat::Mode::S_IRWXU)?;
 
         Ok(TempNamedPipe {
             reader: tokio::net::unix::pipe::OpenOptions::new().open_receiver(&path)?,
-            name: path,
+            name: filename,
         })
     }
     #[cfg(target_os = "windows")]
     {
-        let path = format!(r"\\.\pipe\{}", &path);
+        let pipe_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let pipe_path = format!(r"\\.\pipe\{}", pipe_name);
 
         Ok(TempNamedPipe {
-            reader: tokio::net::windows::named_pipe::ServerOptions::new().create(&path)?,
-            name: path,
+            reader: tokio::net::windows::named_pipe::ServerOptions::new().create(pipe_path)?,
+            name: pipe_name,
         })
     }
 }

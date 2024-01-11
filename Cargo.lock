@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli"
-version = "3.2.3"
+version = "3.2.4"
 dependencies = [
  "chrono",
  "clap",
@@ -394,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.2.3"
+version = "3.2.4"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -787,9 +787,9 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "h2"
-version = "0.3.22"
+version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d6250322ef6e60f93f9a2162799302cd6f68f79f6e5d85c8c16f14d1d958178"
+checksum = "b553656127a00601c8ae5590fcfdc118e4083a7924b6cf4ffc1ea4b99dc429d7"
 dependencies = [
  "bytes",
  "fnv",

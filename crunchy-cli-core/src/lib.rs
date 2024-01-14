@@ -36,7 +36,7 @@ trait Execute {
 #[clap(name = "crunchy-cli")]
 pub struct Cli {
     #[clap(flatten)]
-    verbosity: Option<Verbosity>,
+    verbosity: Verbosity,
 
     #[arg(
         help = "Overwrite the language in which results are returned. Default is your system language"
@@ -116,13 +116,13 @@ struct Verbosity {
 pub async fn cli_entrypoint() {
     let mut cli: Cli = Cli::parse();
 
-    if let Some(verbosity) = &cli.verbosity {
-        if verbosity.verbose as u8 + verbosity.quiet as u8 > 1 {
+    if cli.verbosity.verbose || cli.verbosity.quiet {
+        if cli.verbosity.verbose && cli.verbosity.quiet {
             eprintln!("Output cannot be verbose ('-v') and quiet ('-q') at the same time");
             std::process::exit(1)
-        } else if verbosity.verbose {
+        } else if cli.verbosity.verbose {
             CliLogger::init(LevelFilter::Debug).unwrap()
-        } else if verbosity.quiet {
+        } else if cli.verbosity.quiet {
             CliLogger::init(LevelFilter::Error).unwrap()
         }
     } else {
@@ -134,14 +134,14 @@ pub async fn cli_entrypoint() {
     match &mut cli.command {
         Command::Archive(archive) => {
             // prevent interactive select to be shown when output should be quiet
-            if cli.verbosity.is_some() && cli.verbosity.as_ref().unwrap().quiet {
+            if cli.verbosity.quiet {
                 archive.yes = true;
             }
             pre_check_executor(archive).await
         }
         Command::Download(download) => {
             // prevent interactive select to be shown when output should be quiet
-            if cli.verbosity.is_some() && cli.verbosity.as_ref().unwrap().quiet {
+            if cli.verbosity.quiet {
                 download.yes = true;
             }
             pre_check_executor(download).await

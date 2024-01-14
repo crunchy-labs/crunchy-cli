@@ -204,15 +204,16 @@ impl Execute for Archive {
 
             single_format_collection.full_visual_output();
 
-            let download_builder = DownloadBuilder::new(ctx.crunchy.client())
-                .default_subtitle(self.default_subtitle.clone())
-                .download_fonts(self.include_fonts)
-                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
-                .ffmpeg_threads(self.ffmpeg_threads)
-                .output_format(Some("matroska".to_string()))
-                .audio_sort(Some(self.audio.clone()))
-                .subtitle_sort(Some(self.subtitle.clone()))
-                .threads(self.threads);
+            let download_builder =
+                DownloadBuilder::new(ctx.client.clone(), ctx.rate_limiter.clone())
+                    .default_subtitle(self.default_subtitle.clone())
+                    .download_fonts(self.include_fonts)
+                    .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                    .ffmpeg_threads(self.ffmpeg_threads)
+                    .output_format(Some("matroska".to_string()))
+                    .audio_sort(Some(self.audio.clone()))
+                    .subtitle_sort(Some(self.subtitle.clone()))
+                    .threads(self.threads);
 
             for single_formats in single_format_collection.into_iter() {
                 let (download_formats, mut format) = get_format(&self, &single_formats).await?;

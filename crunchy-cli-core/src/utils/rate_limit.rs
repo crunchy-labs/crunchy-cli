@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use tower_service::Service;
 
+#[derive(Clone)]
 pub struct RateLimiterService {
     client: Arc<Client>,
     rate_limiter: Limiter,

@@ -8,7 +8,7 @@ use crunchyroll_rs::crunchyroll::CrunchyrollBuilder;
 use crunchyroll_rs::error::Error;
 use crunchyroll_rs::{Crunchyroll, Locale};
 use log::{debug, error, warn, LevelFilter};
-use reqwest::Proxy;
+use reqwest::{Client, Proxy};
 use std::{env, fs};
 
 mod archive;
@@ -235,11 +235,51 @@ async fn execute_executor(executor: impl Execute, ctx: Context) {
 }
 
 async fn create_ctx(cli: &mut Cli) -> Result<Context> {
-    let crunchy = crunchyroll_session(cli).await?;
-    Ok(Context { crunchy })
+    let client = {
+        let mut builder = CrunchyrollBuilder::predefined_client_builder();
+        if let Some(p) = &cli.proxy {
+            builder = builder.proxy(p.clone())
+        }
+        if let Some(ua) = &cli.user_agent {
+            builder = builder.user_agent(ua)
+        }
+
+        #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
+        let client = {
+            let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
+
+            for certificate in rustls_native_certs::load_native_certs().unwrap() {
+                builder = builder.add_root_certificate(
+                    reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
+                )
+            }
+
+            builder.build().unwrap()
+        };
+        #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
+        let client = builder.build().unwrap();
+
+        client
+    };
+
+    let rate_limiter = cli
+        .speed_limit
+        .map(|l| RateLimiterService::new(l, client.clone()));
+
+    let crunchy = crunchyroll_session(cli, client.clone(), rate_limiter.clone()).await?;
+
+    Ok(Context {
+        crunchy,
+        client,
+        rate_limiter,
+    })
 }
 
-async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
+async fn crunchyroll_session(
+    cli: &mut Cli,
+    client: Client,
+    rate_limiter: Option<RateLimiterService>,
+) -> Result<Crunchyroll> {
     let supported_langs = vec![
         Locale::ar_ME,
         Locale::de_DE,
@@ -273,33 +313,6 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
         lang
     };
 
-    let client = {
-        let mut builder = CrunchyrollBuilder::predefined_client_builder();
-        if let Some(p) = &cli.proxy {
-            builder = builder.proxy(p.clone())
-        }
-        if let Some(ua) = &cli.user_agent {
-            builder = builder.user_agent(ua)
-        }
-
-        #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
-        let client = {
-            let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
-
-            for certificate in rustls_native_certs::load_native_certs().unwrap() {
-                builder = builder.add_root_certificate(
-                    reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
-                )
-            }
-
-            builder.build().unwrap()
-        };
-        #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
-        let client = builder.build().unwrap();
-
-        client
-    };
-
     let mut builder = Crunchyroll::builder()
         .locale(locale)
         .client(client.clone())
@@ -308,8 +321,8 @@ async fn crunchyroll_session(cli: &mut Cli) -> Result<Crunchyroll> {
     if let Command::Download(download) = &cli.command {
         builder = builder.preferred_audio_locale(download.audio.clone())
     }
-    if let Some(speed_limit) = cli.speed_limit {
-        builder = builder.middleware(RateLimiterService::new(speed_limit, client));
+    if let Some(rate_limiter) = rate_limiter {
+        builder = builder.middleware(rate_limiter)
     }
 
     let root_login_methods_count = cli.login_method.credentials.is_some() as u8

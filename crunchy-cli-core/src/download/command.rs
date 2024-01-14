@@ -216,17 +216,18 @@ impl Execute for Download {
 
             single_format_collection.full_visual_output();
 
-            let download_builder = DownloadBuilder::new(ctx.crunchy.client())
-                .default_subtitle(self.subtitle.clone())
-                .force_hardsub(self.force_hardsub)
-                .output_format(if is_special_file(&self.output) || self.output == "-" {
-                    Some("mpegts".to_string())
-                } else {
-                    None
-                })
-                .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
-                .ffmpeg_threads(self.ffmpeg_threads)
-                .threads(self.threads);
+            let download_builder =
+                DownloadBuilder::new(ctx.client.clone(), ctx.rate_limiter.clone())
+                    .default_subtitle(self.subtitle.clone())
+                    .force_hardsub(self.force_hardsub)
+                    .output_format(if is_special_file(&self.output) || self.output == "-" {
+                        Some("mpegts".to_string())
+                    } else {
+                        None
+                    })
+                    .ffmpeg_preset(self.ffmpeg_preset.clone().unwrap_or_default())
+                    .ffmpeg_threads(self.ffmpeg_threads)
+                    .threads(self.threads);
 
             for mut single_formats in single_format_collection.into_iter() {
                 // the vec contains always only one item

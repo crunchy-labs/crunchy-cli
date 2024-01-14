@@ -1,6 +1,7 @@
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::real_dedup_vec;
 use crate::utils::os::{cache_dir, is_special_file, temp_directory, temp_named_pipe, tempfile};
+use crate::utils::rate_limit::RateLimiterService;
 use anyhow::{bail, Result};
 use chrono::NaiveTime;
 use crunchyroll_rs::media::{Subtitle, VariantData, VariantSegment};
@@ -26,6 +27,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
+use tower_service::Service;
 
 #[derive(Clone, Debug)]
 pub enum MergeBehavior {
@@ -48,6 +50,7 @@ impl MergeBehavior {
 #[derive(Clone, derive_setters::Setters)]
 pub struct DownloadBuilder {
     client: Client,
+    rate_limiter: Option<RateLimiterService>,
     ffmpeg_preset: FFmpegPreset,
     default_subtitle: Option<Locale>,
     output_format: Option<String>,
@@ -60,9 +63,10 @@ pub struct DownloadBuilder {
 }
 
 impl DownloadBuilder {
-    pub fn new(client: Client) -> DownloadBuilder {
+    pub fn new(client: Client, rate_limiter: Option<RateLimiterService>) -> DownloadBuilder {
         Self {
             client,
+            rate_limiter,
             ffmpeg_preset: FFmpegPreset::default(),
             default_subtitle: None,
             output_format: None,
@@ -78,6 +82,7 @@ impl DownloadBuilder {
     pub fn build(self) -> Downloader {
         Downloader {
             client: self.client,
+            rate_limiter: self.rate_limiter,
             ffmpeg_preset: self.ffmpeg_preset,
             default_subtitle: self.default_subtitle,
             output_format: self.output_format,
@@ -109,6 +114,7 @@ pub struct DownloadFormat {
 
 pub struct Downloader {
     client: Client,
+    rate_limiter: Option<RateLimiterService>,
 
     ffmpeg_preset: FFmpegPreset,
     default_subtitle: Option<Locale>,
@@ -768,6 +774,8 @@ impl Downloader {
         for num in 0..cpus {
             let thread_sender = sender.clone();
             let thread_segments = segs.remove(0);
+            let thread_client = self.client.clone();
+            let mut thread_rate_limiter = self.rate_limiter.clone();
             let thread_count = count.clone();
             join_set.spawn(async move {
                 let after_download_sender = thread_sender.clone();
@@ -778,20 +786,33 @@ impl Downloader {
                 let download = || async move {
                     for (i, segment) in thread_segments.into_iter().enumerate() {
                         let mut retry_count = 0;
-                        let buf = loop {
-                            let mut buf = vec![];
-                            match segment.write_to(&mut buf).await {
-                                Ok(_) => break buf,
-                                Err(e) => {
-                                    if retry_count == 5 {
-                                        bail!("Max retry count reached ({}), multiple errors occurred while receiving segment {}: {}", retry_count, num + (i * cpus), e)
-                                    }
-                                    debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), e, 5 - retry_count)
+                        let mut buf = loop {
+                            let request = thread_client
+                                .get(&segment.url)
+                                .timeout(Duration::from_secs(60));
+                            let response = if let Some(rate_limiter) = &mut thread_rate_limiter {
+                                rate_limiter.call(request.build()?).await.map_err(anyhow::Error::new)
+                            } else {
+                                request.send().await.map_err(anyhow::Error::new)
+                            };
+
+                            let err = match response {
+                                Ok(r) => match r.bytes().await {
+                                    Ok(b) => break b.to_vec(),
+                                    Err(e) => anyhow::Error::new(e)
                                 }
+                                Err(e) => e,
+                            };
+
+                            if retry_count == 5 {
+                                bail!("Max retry count reached ({}), multiple errors occurred while receiving segment {}: {}", retry_count, num + (i * cpus), err)
                             }
+                            debug!("Failed to download segment {} ({}). Retrying, {} out of 5 retries left", num + (i * cpus), err, 5 - retry_count);
 
                             retry_count += 1;
                         };
+
+                        buf = VariantSegment::decrypt(&mut buf, segment.key)?.to_vec();
 
                         let mut c = thread_count.lock().await;
                         debug!(

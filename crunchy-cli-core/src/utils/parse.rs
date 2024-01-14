@@ -138,7 +138,7 @@ pub async fn parse_url(
     let old_url_regex = Regex::new(r"https?://(www\.)?crunchyroll\.com/.+").unwrap();
     if old_url_regex.is_match(&url) {
         debug!("Detected maybe old url");
-        // replace the 'http' prefix with 'https' as https is not supported by the reqwest client
+        // replace the 'http' prefix with 'https' as http is not supported by the reqwest client
         if url.starts_with("http://") {
             url.replace_range(0..4, "https")
         }

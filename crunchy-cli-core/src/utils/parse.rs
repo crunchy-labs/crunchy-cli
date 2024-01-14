@@ -48,7 +48,7 @@ impl UrlFilter {
 
             if season < from_season || season > to_season {
                 false
-            } else if season == from_season {
+            } else if season == from_season || (f.from_season.is_none() && f.to_season.is_none()) {
                 episode >= from_episode && episode <= to_episode
             } else {
                 true

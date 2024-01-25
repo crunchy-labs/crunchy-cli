@@ -69,6 +69,7 @@ ffmpeg_enum! {
 ffmpeg_enum! {
     enum FFmpegHwAccel {
         Nvidia,
+        Amd,
         Apple
     }
 }
@@ -101,7 +102,11 @@ impl FFmpegPreset {
                 FFmpegHwAccel::all(),
                 FFmpegQuality::all(),
             ),
-            (FFmpegCodec::Av1, vec![], FFmpegQuality::all()),
+            (
+                FFmpegCodec::Av1,
+                vec![FFmpegHwAccel::Amd],
+                FFmpegQuality::all(),
+            ),
         ];
 
         let mut return_values = vec![];
@@ -285,6 +290,10 @@ impl FFmpegPreset {
                                     crf_quality();
                                     output.extend(["-c:v", "h264_nvenc", "-c:a", "copy"])
                                 }
+                                FFmpegHwAccel::Amd => {
+                                    crf_quality();
+                                    output.extend(["-c:v", "h264_amf", "-c:a", "copy"])
+                                }
                                 FFmpegHwAccel::Apple => {
                                     // Apple's Video Toolbox encoders ignore `-crf`, use `-q:v`
                                     // instead. It's on a scale of 1-100, 100 being lossless. Just
@@ -332,8 +341,12 @@ impl FFmpegPreset {
                                         "hvc1",
                                     ])
                                 }
+                                FFmpegHwAccel::Amd => {
+                                    crf_quality();
+                                    output.extend(["-c:v", "hevc_amf", "-c:a", "copy"])
+                                }
                                 FFmpegHwAccel::Apple => {
-                                    // See the comment that starts on line 287.
+                                    // See the comment for apple h264 hwaccel
                                     match quality {
                                         FFmpegQuality::Lossless => output.extend(["-q:v", "61"]),
                                         FFmpegQuality::Normal => (),
@@ -356,12 +369,17 @@ impl FFmpegPreset {
                         }
                     }
                     FFmpegCodec::Av1 => {
-                        output.extend(["-c:v", "libsvtav1", "-c:a", "copy"]);
-
-                        match quality {
+                        let mut crf_quality = || match quality {
                             FFmpegQuality::Lossless => output.extend(["-crf", "22"]),
                             FFmpegQuality::Normal => (),
                             FFmpegQuality::Low => output.extend(["-crf", "35"]),
+                        };
+
+                        crf_quality();
+                        if let Some(FFmpegHwAccel::Amd) = hwaccel_opt {
+                            output.extend(["-c:v", "av1_amf", "-c:a", "copy"]);
+                        } else {
+                            output.extend(["-c:v", "libsvtav1", "-c:a", "copy"]);
                         }
                     }
                 }

@@ -44,9 +44,12 @@ pub struct Cli {
     #[arg(global = true, long)]
     lang: Option<Locale>,
 
-    #[arg(help = "Enable experimental fixes which may resolve some unexpected errors")]
+    #[arg(
+        help = "Enable experimental fixes which may resolve some unexpected errors. Generally not recommended as this flag may crash the program completely"
+    )]
     #[arg(
         long_help = "Enable experimental fixes which may resolve some unexpected errors. \
+            It is not recommended to use this this flag regularly, it might cause unexpected errors which may crash the program completely. \
             If everything works as intended this option isn't needed, but sometimes Crunchyroll mislabels \
             the audio of a series/season or episode or returns a wrong season number. This is when using this option might help to solve the issue"
     )]

@@ -60,9 +60,10 @@ pub struct Download {
     #[arg(long)]
     pub(crate) output_specials: Option<String>,
 
-    #[arg(help = "Sanitize file names for all operating systems")]
+    #[arg(help = "Sanitize the output file for use with all operating systems. \
+    This option only affects template options and not static characters.")]
     #[arg(long, default_value_t = false)]
-    pub(crate) universal_filenames: bool,
+    pub(crate) universal_output: bool,
 
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution. \
@@ -258,10 +259,10 @@ impl Execute for Download {
                         self.output_specials
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
-                            self.universal_filenames,
+                            self.universal_output,
                     )
                 } else {
-                    format.format_path((&self.output).into(), self.universal_filenames)
+                    format.format_path((&self.output).into(), self.universal_output)
                 };
                 let (path, changed) = free_file(formatted_path.clone());
 

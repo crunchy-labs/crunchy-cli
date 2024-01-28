@@ -104,6 +104,12 @@ pub struct Download {
     #[arg(long, default_value_t = false)]
     pub(crate) force_hardsub: bool,
 
+    #[arg(
+        help = "If a subtitle byte size is less than this amount, it is not included in the downloaded file."
+    )]
+    #[arg(long, default_value_t = 0)]
+    pub(crate) meaningful_subtitle_size: u64,
+
     #[arg(help = "The number of threads used to download")]
     #[arg(short, long, default_value_t = num_cpus::get())]
     pub(crate) threads: usize,
@@ -220,6 +226,7 @@ impl Execute for Download {
                 DownloadBuilder::new(ctx.client.clone(), ctx.rate_limiter.clone())
                     .default_subtitle(self.subtitle.clone())
                     .force_hardsub(self.force_hardsub)
+                    .meaningful_subtitle_min_size(self.meaningful_subtitle_size)
                     .output_format(if is_special_file(&self.output) || self.output == "-" {
                         Some("mpegts".to_string())
                     } else {

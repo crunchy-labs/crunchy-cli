@@ -14,6 +14,7 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::io::Write;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -56,6 +57,7 @@ pub struct DownloadBuilder {
     output_format: Option<String>,
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
+    meaningful_subtitle_min_size: u64,
     force_hardsub: bool,
     download_fonts: bool,
     threads: usize,
@@ -72,6 +74,7 @@ impl DownloadBuilder {
             output_format: None,
             audio_sort: None,
             subtitle_sort: None,
+            meaningful_subtitle_min_size: 0,
             force_hardsub: false,
             download_fonts: false,
             threads: num_cpus::get(),
@@ -88,6 +91,7 @@ impl DownloadBuilder {
             output_format: self.output_format,
             audio_sort: self.audio_sort,
             subtitle_sort: self.subtitle_sort,
+            meaningful_subtitle_min_size: self.meaningful_subtitle_min_size,
 
             force_hardsub: self.force_hardsub,
             download_fonts: self.download_fonts,
@@ -121,6 +125,7 @@ pub struct Downloader {
     output_format: Option<String>,
     audio_sort: Option<Vec<Locale>>,
     subtitle_sort: Option<Vec<Locale>>,
+    meaningful_subtitle_min_size: u64,
 
     force_hardsub: bool,
     download_fonts: bool,
@@ -298,11 +303,16 @@ impl Downloader {
                             .then_some(format!(" for video {}", i))
                             .unwrap_or_default()
                     );
-                    subtitles.push(FFmpegMeta {
-                        path: subtitle_path,
-                        language: subtitle.locale.clone(),
-                        title: subtitle_title,
-                    })
+
+                    let subtitle_size = subtitle_path.metadata()?.size();
+                    if subtitle_size > self.meaningful_subtitle_min_size {
+                        // Only add subtitles with meaningful information
+                        subtitles.push(FFmpegMeta {
+                            path: subtitle_path,
+                            language: subtitle.locale.clone(),
+                            title: subtitle_title,
+                        });
+                    }
                 }
             }
             videos.push(FFmpegMeta {

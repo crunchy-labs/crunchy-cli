@@ -114,6 +114,12 @@ pub struct Archive {
     #[arg(long)]
     pub(crate) include_fonts: bool,
 
+    #[arg(
+        help = "If a subtitle byte size is less than this amount, it is not included in the downloaded file."
+    )]
+    #[arg(long, default_value_t = 0)]
+    pub(crate) meaningful_subtitle_size: u64,
+
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
@@ -213,6 +219,7 @@ impl Execute for Archive {
                     .output_format(Some("matroska".to_string()))
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
+                    .meaningful_subtitle_min_size(self.meaningful_subtitle_size)
                     .threads(self.threads);
 
             for single_formats in single_format_collection.into_iter() {

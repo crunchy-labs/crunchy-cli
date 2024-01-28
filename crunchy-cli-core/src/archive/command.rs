@@ -114,6 +114,10 @@ pub struct Archive {
     #[arg(long)]
     pub(crate) include_fonts: bool,
 
+    #[arg(help = "Omit closed caption subtitles in the downloaded file")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) no_closed_caption: bool,
+
     #[arg(
         help = "If a subtitle byte size is less than this amount, it is not included in the downloaded file."
     )]
@@ -220,6 +224,7 @@ impl Execute for Archive {
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
                     .meaningful_subtitle_min_size(self.meaningful_subtitle_size)
+                    .no_closed_caption(self.no_closed_caption)
                     .threads(self.threads);
 
             for single_formats in single_format_collection.into_iter() {

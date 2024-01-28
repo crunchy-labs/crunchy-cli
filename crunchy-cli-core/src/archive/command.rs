@@ -16,7 +16,7 @@ use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
 use log::{debug, warn};
-use std::collections::HashMap;
+use std::ops::Sub;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, clap::Parser)]
@@ -85,6 +85,12 @@ pub struct Archive {
     #[arg(short, long, default_value = "auto")]
     #[arg(value_parser = MergeBehavior::parse)]
     pub(crate) merge: MergeBehavior,
+
+    #[arg(
+        help = "If in auto merge mode. Milliseconds if which audio track lengths are within each other, the audio merge method is used"
+    )]
+    #[arg(long, default_value_t = 1000)]
+    pub(crate) audio_error: i64,
 
     #[arg(help = format!("Presets for converting the video to a specific coding format. \
     Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
@@ -356,26 +362,46 @@ async fn get_format(
                 .collect(),
         }),
         MergeBehavior::Auto => {
-            let mut d_formats: HashMap<Duration, DownloadFormat> = HashMap::new();
-
+            let mut d_formats: Vec<(Duration, DownloadFormat)> = Vec::with_capacity(4);
+        
             for (single_format, video, audio, subtitles) in format_pairs {
-                if let Some(d_format) = d_formats.get_mut(&single_format.duration) {
-                    d_format.audios.push((audio, single_format.audio.clone()));
-                    d_format.subtitles.extend(subtitles)
-                } else {
-                    d_formats.insert(
-                        single_format.duration,
-                        DownloadFormat {
-                            video: (video, single_format.audio.clone()),
-                            audios: vec![(audio, single_format.audio.clone())],
-                            subtitles,
-                        },
-                    );
-                }
+                let closest_format = d_formats.iter_mut().min_by(|(x, _), (y, _)| {
+                    x.sub(single_format.duration)
+                        .abs()
+                        .cmp(&y.sub(single_format.duration).abs())
+                });
+
+                match closest_format {
+                    Some(closest_format)
+                        if closest_format
+                            .0
+                            .sub(single_format.duration)
+                            .abs()
+                            .num_milliseconds()
+                            < archive.audio_error =>
+                    {
+                        // If less than `audio_error` apart, use same audio.
+                        closest_format
+                            .1
+                            .audios
+                            .push((audio, single_format.audio.clone()));
+                        closest_format.1.subtitles.extend(subtitles);
+                    }
+                    _ => {
+                        d_formats.push((
+                            single_format.duration,
+                            DownloadFormat {
+                                video: (video, single_format.audio.clone()),
+                                audios: vec![(audio, single_format.audio.clone())],
+                                subtitles,
+                            },
+                        ));
+                    }
+                };
             }
 
-            for d_format in d_formats.into_values() {
-                download_formats.push(d_format)
+            for (_, d_format) in d_formats.into_iter() {
+                download_formats.push(d_format);
             }
         }
     }

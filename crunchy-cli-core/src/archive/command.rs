@@ -301,8 +301,8 @@ async fn get_format(
         let subtitles: Vec<(Subtitle, bool)> = archive
             .subtitle
             .iter()
-            .filter_map(|s| {
-                stream
+            .flat_map(|s| {
+                let subtitles = stream
                     .subtitles
                     .get(s)
                     .cloned()
@@ -313,7 +313,13 @@ async fn get_format(
                             l,
                             single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
                         )
-                    })
+                    });
+                let cc = stream.closed_captions.get(s).cloned().map(|l| (l, false));
+
+                subtitles
+                    .into_iter()
+                    .chain(cc.into_iter())
+                    .collect::<Vec<(Subtitle, bool)>>()
             })
             .collect();
 

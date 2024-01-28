@@ -317,7 +317,12 @@ async fn get_format(
     let subtitle = if contains_hardsub {
         None
     } else if let Some(subtitle_locale) = &download.subtitle {
-        stream.subtitles.get(subtitle_locale).cloned()
+        stream
+            .subtitles
+            .get(subtitle_locale)
+            .cloned()
+            // use closed captions as fallback if no actual subtitles are found
+            .or_else(|| stream.closed_captions.get(subtitle_locale).cloned())
     } else {
         None
     };

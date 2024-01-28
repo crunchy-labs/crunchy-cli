@@ -64,6 +64,10 @@ pub struct Archive {
     #[arg(long)]
     pub(crate) output_specials: Option<String>,
 
+    #[arg(help = "Sanitize file names for all operating systems")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) universal_filenames: bool,
+
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution. \
     Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or 'common-use' words (e.g. best). \
@@ -228,9 +232,10 @@ impl Execute for Archive {
                         self.output_specials
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
+                            self.universal_filenames,
                     )
                 } else {
-                    format.format_path((&self.output).into())
+                    format.format_path((&self.output).into(), self.universal_filenames)
                 };
                 let (path, changed) = free_file(formatted_path.clone());
 

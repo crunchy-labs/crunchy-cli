@@ -517,6 +517,10 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
 ### Search
 
+The `search` command is a powerful tool to query the Crunchyroll library.
+It behaves like the regular search on the website but is able to further process the results and return everything it can find, from the series title down to the raw stream url.
+_Using this command with the `--anonymous` flag or a non-premium account may return incomplete results._
+
 **Supported urls/input**
 
 - Single episode (with [episode filtering](#episode-filtering))

@@ -7,6 +7,7 @@ use anyhow::{bail, Result};
 use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::search::QueryResults;
 use crunchyroll_rs::{Episode, Locale, MediaCollection, MovieListing, MusicVideo, Series};
+use log::warn;
 
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Search in videos")]
@@ -102,6 +103,10 @@ pub struct Search {
 
 impl Execute for Search {
     async fn execute(self, ctx: Context) -> Result<()> {
+        if !ctx.crunchy.premium() {
+            warn!("Using `search` anonymously or with a non-premium account may return incomplete results")
+        }
+
         let input = if crunchyroll_rs::parse::parse_url(&self.input).is_some() {
             match parse_url(&ctx.crunchy, self.input.clone(), true).await {
                 Ok(ok) => vec![ok],

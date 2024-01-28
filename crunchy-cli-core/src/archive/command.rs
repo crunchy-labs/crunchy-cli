@@ -87,10 +87,10 @@ pub struct Archive {
     pub(crate) merge: MergeBehavior,
 
     #[arg(
-        help = "If in auto merge mode. Milliseconds if which audio track lengths are within each other, the audio merge method is used"
+        help = "If the merge behavior is 'auto', only download multiple video tracks if their length difference is higher than the given milliseconds"
     )]
-    #[arg(long, default_value_t = 1000)]
-    pub(crate) audio_error: i64,
+    #[arg(long, default_value_t = 200)]
+    pub(crate) merge_auto_tolerance: u32,
 
     #[arg(help = format!("Presets for converting the video to a specific coding format. \
     Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
@@ -362,7 +362,7 @@ async fn get_format(
                 .collect(),
         }),
         MergeBehavior::Auto => {
-            let mut d_formats: Vec<(Duration, DownloadFormat)> = Vec::with_capacity(4);
+            let mut d_formats: Vec<(Duration, DownloadFormat)> = vec![];
         
             for (single_format, video, audio, subtitles) in format_pairs {
                 let closest_format = d_formats.iter_mut().min_by(|(x, _), (y, _)| {
@@ -378,7 +378,7 @@ async fn get_format(
                             .sub(single_format.duration)
                             .abs()
                             .num_milliseconds()
-                            < archive.audio_error =>
+                            < archive.merge_auto_tolerance.into() =>
                     {
                         // If less than `audio_error` apart, use same audio.
                         closest_format

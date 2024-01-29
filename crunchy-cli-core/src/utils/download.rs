@@ -58,6 +58,7 @@ pub struct DownloadBuilder {
     subtitle_sort: Option<Vec<Locale>>,
     force_hardsub: bool,
     download_fonts: bool,
+    no_closed_caption: bool,
     threads: usize,
     ffmpeg_threads: Option<usize>,
 }
@@ -74,6 +75,7 @@ impl DownloadBuilder {
             subtitle_sort: None,
             force_hardsub: false,
             download_fonts: false,
+            no_closed_caption: false,
             threads: num_cpus::get(),
             ffmpeg_threads: None,
         }
@@ -91,6 +93,7 @@ impl DownloadBuilder {
 
             force_hardsub: self.force_hardsub,
             download_fonts: self.download_fonts,
+            no_closed_caption: self.no_closed_caption,
 
             download_threads: self.threads,
             ffmpeg_threads: self.ffmpeg_threads,
@@ -124,6 +127,7 @@ pub struct Downloader {
 
     force_hardsub: bool,
     download_fonts: bool,
+    no_closed_caption: bool,
 
     download_threads: usize,
     ffmpeg_threads: Option<usize>,
@@ -266,6 +270,10 @@ impl Downloader {
                 };
 
                 for (subtitle, not_cc) in format.subtitles.iter() {
+                    if !not_cc && self.no_closed_caption {
+                        continue;
+                    }
+
                     if let Some(pb) = &progress_spinner {
                         let mut progress_message = pb.message();
                         if !progress_message.is_empty() {

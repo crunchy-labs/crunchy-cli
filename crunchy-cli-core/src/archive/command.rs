@@ -125,6 +125,10 @@ pub struct Archive {
     #[arg(long)]
     pub(crate) include_fonts: bool,
 
+    #[arg(help = "Omit closed caption subtitles in the downloaded file")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) no_closed_caption: bool,
+
     #[arg(help = "Skip files which are already existing")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
@@ -224,6 +228,7 @@ impl Execute for Archive {
                     .output_format(Some("matroska".to_string()))
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
+                    .no_closed_caption(self.no_closed_caption)
                     .threads(self.threads);
 
             for single_formats in single_format_collection.into_iter() {

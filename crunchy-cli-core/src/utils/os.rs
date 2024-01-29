@@ -191,7 +191,7 @@ lazy_static::lazy_static! {
 }
 
 /// Sanitizes a filename with the option to include/exclude the path separator from sanitizing.
-pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String {
+pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool, universal: bool) -> String {
     let path = Cow::from(path.as_ref().trim());
 
     let path = RESERVED_RE.replace(&path, "");
@@ -204,7 +204,7 @@ pub fn sanitize<S: AsRef<str>>(path: S, include_path_separator: bool) -> String 
         }
     };
 
-    if cfg!(windows) {
+    if universal || cfg!(windows) {
         let path = WINDOWS_NON_PRINTABLE_RE.replace_all(&path, "");
         let path = WINDOWS_ILLEGAL_RE.replace_all(&path, "");
         let path = WINDOWS_RESERVED_RE.replace_all(&path, "");

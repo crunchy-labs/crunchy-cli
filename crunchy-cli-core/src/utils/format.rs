@@ -8,6 +8,7 @@ use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVide
 use log::{debug, info};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
@@ -420,11 +421,18 @@ impl Format {
                         .iter()
                         .map(|(a, _)| a.to_string())
                         .collect::<Vec<String>>()
-                        .join("|"),
-                    true, universal,
+                        .join(
+                            &env::var("CRUNCHY_CLI_FORMAT_DELIMITER")
+                                .map_or("_".to_string(), |e| e),
+                        ),
+                    true,
+                    universal,
                 ),
             )
-            .replace("{resolution}", &sanitize(self.resolution.to_string(), true, universal))
+            .replace(
+                "{resolution}",
+                &sanitize(self.resolution.to_string(), true, universal),
+            )
             .replace(
                 "{width}",
                 &sanitize(self.resolution.width.to_string(), true, universal),
@@ -434,12 +442,21 @@ impl Format {
                 &sanitize(self.resolution.height.to_string(), true, universal),
             )
             .replace("{series_id}", &sanitize(&self.series_id, true, universal))
-            .replace("{series_name}", &sanitize(&self.series_name, true, universal))
+            .replace(
+                "{series_name}",
+                &sanitize(&self.series_name, true, universal),
+            )
             .replace("{season_id}", &sanitize(&self.season_id, true, universal))
-            .replace("{season_name}", &sanitize(&self.season_title, true, universal))
+            .replace(
+                "{season_name}",
+                &sanitize(&self.season_title, true, universal),
+            )
             .replace(
                 "{season_number}",
-                &format!("{:0>2}", sanitize(self.season_number.to_string(), true, universal)),
+                &format!(
+                    "{:0>2}",
+                    sanitize(self.season_number.to_string(), true, universal)
+                ),
             )
             .replace("{episode_id}", &sanitize(&self.episode_id, true, universal))
             .replace(
@@ -452,13 +469,17 @@ impl Format {
                     "{:0>2}",
                     sanitize(
                         self.relative_episode_number.unwrap_or_default().to_string(),
-                        true, universal,
+                        true,
+                        universal,
                     )
                 ),
             )
             .replace(
                 "{sequence_number}",
-                &format!("{:0>2}", sanitize(self.sequence_number.to_string(), true, universal)),
+                &format!(
+                    "{:0>2}",
+                    sanitize(self.sequence_number.to_string(), true, universal)
+                ),
             )
             .replace(
                 "{relative_sequence_number}",
@@ -468,7 +489,8 @@ impl Format {
                         self.relative_sequence_number
                             .unwrap_or_default()
                             .to_string(),
-                        true, universal,
+                        true,
+                        universal,
                     )
                 ),
             )
@@ -478,11 +500,17 @@ impl Format {
             )
             .replace(
                 "{release_month}",
-                &format!("{:0>2}", sanitize(self.release_month.to_string(), true, universal)),
+                &format!(
+                    "{:0>2}",
+                    sanitize(self.release_month.to_string(), true, universal)
+                ),
             )
             .replace(
                 "{release_day}",
-                &format!("{:0>2}", sanitize(self.release_day.to_string(), true, universal)),
+                &format!(
+                    "{:0>2}",
+                    sanitize(self.release_day.to_string(), true, universal)
+                ),
             );
 
         PathBuf::from(path)

@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -42,21 +42,21 @@ jobs:
         run: cross build --release --no-default-features --features openssl-tls-static --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: crunchy-cli-linux-${{ matrix.arch }}
           path: ./target/${{ matrix.toolchain }}/release/crunchy-cli
           if-no-files-found: error
 
       - name: Upload manpages artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: manpages
           path: ./target/${{ matrix.toolchain }}/release/manpages
           if-no-files-found: error
 
       - name: Upload completions artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: completions
           path: ./target/${{ matrix.toolchain }}/release/completions
@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -99,7 +99,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: crunchy-cli-darwin-${{ matrix.arch }}
           path: ./target/${{ matrix.toolchain }}/release/crunchy-cli
@@ -112,7 +112,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -133,7 +133,7 @@ jobs:
         run: cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: crunchy-cli-windows-x86_64
           path: ./target/x86_64-pc-windows-gnu/release/crunchy-cli.exe

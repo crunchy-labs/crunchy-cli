@@ -63,7 +63,18 @@ jobs:
           if-no-files-found: error
 
   build-mac:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # macos-13 uses x86_64, macos-14 aarch64
+        # see https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
+        include:
+          - os: macos-13
+            arch: x86_64
+            toolchain: x86_64-apple-darwin
+          - os: macos-14
+            arch: aarch64
+            toolchain: aarch64-apple-darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,13 +96,13 @@ jobs:
           toolchain: stable
 
       - name: Build
-        run: cargo build --release --target x86_64-apple-darwin
+        run: cargo build --release --target ${{ matrix.toolchain }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: crunchy-cli-darwin-x86_64
-          path: ./target/x86_64-apple-darwin/release/crunchy-cli
+          name: crunchy-cli-darwin-${{ matrix.arch }}
+          path: ./target/${{ matrix.toolchain }}/release/crunchy-cli
           if-no-files-found: error
 
   build-windows:

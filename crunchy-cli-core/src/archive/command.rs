@@ -16,8 +16,11 @@ use chrono::Duration;
 use crunchyroll_rs::media::{Resolution, Subtitle};
 use crunchyroll_rs::Locale;
 use log::{debug, warn};
+use regex::Regex;
+use std::fmt::{Display, Formatter};
 use std::ops::Sub;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 #[derive(Clone, Debug, clap::Parser)]
 #[clap(about = "Archive a video")]
@@ -68,7 +71,7 @@ pub struct Archive {
     This option only affects template options and not static characters.")]
     #[arg(long, default_value_t = false)]
     pub(crate) universal_output: bool,
-    
+
     #[arg(help = "Video resolution")]
     #[arg(long_help = "The video resolution. \
     Can either be specified via the pixels (e.g. 1920x1080), the abbreviation for pixels (e.g. 1080p) or 'common-use' words (e.g. best). \
@@ -129,9 +132,19 @@ pub struct Archive {
     #[arg(long, default_value_t = false)]
     pub(crate) no_closed_caption: bool,
 
-    #[arg(help = "Skip files which are already existing")]
+    #[arg(help = "Skip files which are already existing by their name")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
+    #[arg(
+        help = "Only works in combination with `--skip-existing`. Sets the method how already existing files should be skipped. Valid methods are 'audio' and 'subtitle'"
+    )]
+    #[arg(long_help = "Only works in combination with `--skip-existing`. \
+    By default, already existing files are determined by their name and the download of the corresponding episode is skipped. \
+    With this flag you can modify this behavior. \
+    Valid options are 'audio' and 'subtitle' (if the file already exists but the audio/subtitle differs from what should be downloaded, the episode gets downloaded and the file overwritten)")]
+    #[arg(long, default_values_t = SkipExistingMethod::default())]
+    #[arg(value_parser = SkipExistingMethod::parse)]
+    pub(crate) skip_existing_method: Vec<SkipExistingMethod>,
     #[arg(help = "Skip special episodes")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_specials: bool,
@@ -244,19 +257,55 @@ impl Execute for Archive {
                         self.output_specials
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
-                            self.universal_output,
+                        self.universal_output,
                     )
                 } else {
                     format.format_path((&self.output).into(), self.universal_output)
                 };
-                let (path, changed) = free_file(formatted_path.clone());
+                let (mut path, changed) = free_file(formatted_path.clone());
 
                 if changed && self.skip_existing {
-                    debug!(
-                        "Skipping already existing file '{}'",
-                        formatted_path.to_string_lossy()
-                    );
-                    continue;
+                    let mut skip = true;
+
+                    if !self.skip_existing_method.is_empty() {
+                        if let Some((mut audio_locales, mut subtitle_locales)) =
+                            get_video_streams(&formatted_path)?
+                        {
+                            let method_audio = self
+                                .skip_existing_method
+                                .contains(&SkipExistingMethod::Audio);
+                            let method_subtitle = self
+                                .skip_existing_method
+                                .contains(&SkipExistingMethod::Subtitle);
+
+                            if method_audio {
+                                audio_locales
+                                    .retain(|a| !format.locales.iter().any(|(l, _)| a == l));
+                            }
+                            if self
+                                .skip_existing_method
+                                .contains(&SkipExistingMethod::Subtitle)
+                            {
+                                subtitle_locales
+                                    .retain(|s| !format.locales.iter().any(|(_, l)| l.contains(s)))
+                            }
+
+                            if (method_audio && !audio_locales.is_empty())
+                                || (method_subtitle && !subtitle_locales.is_empty())
+                            {
+                                skip = false;
+                                path = formatted_path.clone()
+                            }
+                        }
+                    }
+
+                    if skip {
+                        debug!(
+                            "Skipping already existing file '{}'",
+                            formatted_path.to_string_lossy()
+                        );
+                        continue;
+                    }
                 }
 
                 format.locales.sort_by(|(a, _), (b, _)| {
@@ -281,6 +330,36 @@ impl Execute for Archive {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum SkipExistingMethod {
+    Audio,
+    Subtitle,
+}
+
+impl Display for SkipExistingMethod {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            SkipExistingMethod::Audio => "audio",
+            SkipExistingMethod::Subtitle => "subtitle",
+        };
+        write!(f, "{}", value)
+    }
+}
+
+impl SkipExistingMethod {
+    fn parse(s: &str) -> Result<Self, String> {
+        match s.to_lowercase().as_str() {
+            "audio" => Ok(Self::Audio),
+            "subtitle" => Ok(Self::Subtitle),
+            _ => Err(format!("invalid skip existing method '{}'", s)),
+        }
+    }
+
+    fn default<'a>() -> &'a [Self] {
+        &[]
     }
 }
 
@@ -374,7 +453,7 @@ async fn get_format(
         }),
         MergeBehavior::Auto => {
             let mut d_formats: Vec<(Duration, DownloadFormat)> = vec![];
-        
+
             for (single_format, video, audio, subtitles) in format_pairs {
                 let closest_format = d_formats.iter_mut().min_by(|(x, _), (y, _)| {
                     x.sub(single_format.duration)
@@ -421,4 +500,37 @@ async fn get_format(
         download_formats,
         Format::from_single_formats(single_format_to_format_pairs),
     ))
+}
+
+fn get_video_streams(path: &Path) -> Result<Option<(Vec<Locale>, Vec<Locale>)>> {
+    let video_streams =
+        Regex::new(r"(?m)Stream\s#\d+:\d+\((?P<language>.+)\):\s(?P<type>(Audio|Subtitle))")
+            .unwrap();
+
+    let ffmpeg = Command::new("ffmpeg")
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .arg("-hide_banner")
+        .args(["-i", &path.to_string_lossy().to_string()])
+        .output()?;
+    let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
+
+    let mut audio = vec![];
+    let mut subtitle = vec![];
+    for cap in video_streams.captures_iter(&ffmpeg_output) {
+        let locale = cap.name("language").unwrap().as_str();
+        let type_ = cap.name("type").unwrap().as_str();
+
+        match type_ {
+            "Audio" => audio.push(Locale::from(locale.to_string())),
+            "Subtitle" => subtitle.push(Locale::from(locale.to_string())),
+            _ => unreachable!(),
+        }
+    }
+
+    if audio.is_empty() && subtitle.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some((audio, subtitle)))
+    }
 }

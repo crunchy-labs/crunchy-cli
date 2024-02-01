@@ -94,7 +94,7 @@ pub struct Download {
     #[arg(long)]
     pub(crate) ffmpeg_threads: Option<usize>,
 
-    #[arg(help = "Skip files which are already existing")]
+    #[arg(help = "Skip files which are already existing by their name")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_existing: bool,
     #[arg(help = "Skip special episodes")]
@@ -259,7 +259,7 @@ impl Execute for Download {
                         self.output_specials
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
-                            self.universal_output,
+                        self.universal_output,
                     )
                 } else {
                     format.format_path((&self.output).into(), self.universal_output)

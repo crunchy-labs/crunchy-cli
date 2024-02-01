@@ -49,6 +49,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload manpages artifact
+        if: ${{ matrix.arch == 'x86_64' }} # only upload the manpages once
         uses: actions/upload-artifact@v4
         with:
           name: manpages
@@ -56,6 +57,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload completions artifact
+        if: ${{ matrix.arch == 'x86_64' }} # only upload the completions once
         uses: actions/upload-artifact@v4
         with:
           name: completions

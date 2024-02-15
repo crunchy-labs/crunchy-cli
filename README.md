@@ -278,7 +278,7 @@ The `download` command lets you download episodes with a specific audio language
   Define an output template which only gets used when the episode is a special (episode number is 0 or has non-zero decimal places) by using the `--output-special` flag.
 
   ```shell
-  $ crunchy-cli download --output-specials -o "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  $ crunchy-cli download --output-specials "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
   ```
   
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
@@ -411,7 +411,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
   _crunchy-cli_ exclusively uses the [`.mkv`](https://en.wikipedia.org/wiki/Matroska) container format, because of its ability to store multiple audio, video and subtitle tracks at once.
 
   ```shell
-  $ crunchy-cli archive --output-specials -o "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
+  $ crunchy-cli archive --output-specials "Special EP - {title}" https://www.crunchyroll.com/watch/GY8D975JY/veldoras-journal
   ```
 
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.

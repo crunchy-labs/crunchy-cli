@@ -1202,13 +1202,16 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
                 let Some(line) = line? else {
                     break
                 };
-                let frame: u64 = current_frame
-                    .captures(line.as_str())
-                    .unwrap()
-                    .name("frame")
-                    .unwrap()
-                    .as_str()
-                    .parse()?;
+
+                // we're manually unpack the regex here as `.unwrap()` may fail in some cases, e.g.
+                // https://github.com/crunchy-labs/crunchy-cli/issues/337
+                let Some(frame_cap) = current_frame.captures(line.as_str()) else {
+                    break
+                };
+                let Some(frame_str) = frame_cap.name("frame") else {
+                    break
+                };
+                let frame: u64 = frame_str.as_str().parse()?;
 
                 if let Some(p) = &progress {
                     p.set_position(frame)

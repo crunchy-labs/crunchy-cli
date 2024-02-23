@@ -141,7 +141,7 @@ pub struct Archive {
     #[arg(long_help = "Only works in combination with `--skip-existing`. \
     By default, already existing files are determined by their name and the download of the corresponding episode is skipped. \
     With this flag you can modify this behavior. \
-    Valid options are 'audio' and 'subtitle' (if the file already exists but the audio/subtitle differs from what should be downloaded, the episode gets downloaded and the file overwritten)")]
+    Valid options are 'audio' and 'subtitle' (if the file already exists but the audio/subtitle are less from what should be downloaded, the episode gets downloaded and the file overwritten).")]
     #[arg(long, default_values_t = SkipExistingMethod::default())]
     #[arg(value_parser = SkipExistingMethod::parse)]
     pub(crate) skip_existing_method: Vec<SkipExistingMethod>,
@@ -278,20 +278,34 @@ impl Execute for Archive {
                                 .skip_existing_method
                                 .contains(&SkipExistingMethod::Subtitle);
 
-                            if method_audio {
-                                audio_locales
-                                    .retain(|a| !format.locales.iter().any(|(l, _)| a == l));
-                            }
-                            if self
-                                .skip_existing_method
-                                .contains(&SkipExistingMethod::Subtitle)
-                            {
-                                subtitle_locales
-                                    .retain(|s| !format.locales.iter().any(|(_, l)| l.contains(s)))
-                            }
+                            let audio_differ = if method_audio {
+                                format
+                                    .locales
+                                    .iter()
+                                    .any(|(a, _)| !audio_locales.contains(a))
+                            } else {
+                                false
+                            };
+                            let subtitle_differ = if method_subtitle {
+                                format
+                                    .locales
+                                    .clone()
+                                    .into_iter()
+                                    .flat_map(|(a, mut s)| {
+                                        // remove the closed caption if the flag is given to omit
+                                        // closed captions
+                                        if self.no_closed_caption && a != Locale::ja_JP {
+                                            s.retain(|l| l != &a)
+                                        }
+                                        s
+                                    })
+                                    .any(|l| !subtitle_locales.contains(&l))
+                            } else {
+                                false
+                            };
 
-                            if (method_audio && !audio_locales.is_empty())
-                                || (method_subtitle && !subtitle_locales.is_empty())
+                            if (method_audio && audio_differ)
+                                || (method_subtitle && subtitle_differ)
                             {
                                 skip = false;
                                 path = formatted_path.clone()

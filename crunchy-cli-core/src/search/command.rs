@@ -103,7 +103,7 @@ pub struct Search {
 
 impl Execute for Search {
     async fn execute(self, ctx: Context) -> Result<()> {
-        if !ctx.crunchy.premium() {
+        if !ctx.crunchy.premium().await {
             warn!("Using `search` anonymously or with a non-premium account may return incomplete results")
         }
 

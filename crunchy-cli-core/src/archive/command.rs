@@ -268,7 +268,7 @@ impl Execute for Archive {
                     let mut skip = true;
 
                     if !self.skip_existing_method.is_empty() {
-                        if let Some((mut audio_locales, mut subtitle_locales)) =
+                        if let Some((audio_locales, subtitle_locales)) =
                             get_video_streams(&formatted_path)?
                         {
                             let method_audio = self

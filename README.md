@@ -300,7 +300,7 @@ The `download` command lets you download episodes with a specific audio language
   If you need more specific ffmpeg customizations you could either convert the output file manually or use ffmpeg output arguments as value for this flag.
 
   ```shell
-  $ crunchy-cli downlaod --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  $ crunchy-cli download --ffmpeg-preset av1-lossless https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
   ```
 
 - FFmpeg threads

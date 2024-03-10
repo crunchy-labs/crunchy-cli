@@ -1,4 +1,5 @@
 use crate::utils::filter::real_dedup_vec;
+use crate::utils::locale::LanguageTagging;
 use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
 use anyhow::Result;
@@ -417,7 +418,12 @@ impl Format {
     }
 
     /// Formats the given string if it has specific pattern in it. It also sanitizes the filename.
-    pub fn format_path(&self, path: PathBuf, universal: bool) -> PathBuf {
+    pub fn format_path(
+        &self,
+        path: PathBuf,
+        universal: bool,
+        language_tagging: Option<&LanguageTagging>,
+    ) -> PathBuf {
         let path = path
             .to_string_lossy()
             .to_string()
@@ -427,7 +433,7 @@ impl Format {
                 &sanitize(
                     self.locales
                         .iter()
-                        .map(|(a, _)| a.to_string())
+                        .map(|(a, _)| language_tagging.map_or(a.to_string(), |t| t.for_locale(a)))
                         .collect::<Vec<String>>()
                         .join(
                             &env::var("CRUNCHY_CLI_FORMAT_DELIMITER")

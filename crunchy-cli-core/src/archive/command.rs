@@ -6,7 +6,7 @@ use crate::utils::download::{
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat};
-use crate::utils::locale::all_locale_in_locales;
+use crate::utils::locale::{all_locale_in_locales, resolve_locales, LanguageTagging};
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::parse_url;
@@ -20,6 +20,7 @@ use crunchyroll_rs::Locale;
 use log::{debug, warn};
 use regex::Regex;
 use std::fmt::{Display, Formatter};
+use std::iter::zip;
 use std::ops::Sub;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -31,15 +32,19 @@ pub struct Archive {
     #[arg(help = format!("Audio languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Audio languages. Can be used multiple times. \
-    Available languages are:\n  {}", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
+    Available languages are:\n  {}\nIETF tagged language codes for the shown available locales can be used too", Locale::all().into_iter().map(|l| format!("{:<6} → {}", l.to_string(), l.to_human_readable())).collect::<Vec<String>>().join("\n  ")))]
     #[arg(short, long, default_values_t = vec![Locale::ja_JP, crate::utils::locale::system_locale()])]
     pub(crate) audio: Vec<Locale>,
+    #[arg(skip)]
+    output_audio_locales: Vec<String>,
     #[arg(help = format!("Subtitle languages. Can be used multiple times. \
     Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(long_help = format!("Subtitle languages. Can be used multiple times. \
-    Available languages are: {}", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
+    Available languages are: {}\nIETF tagged language codes for the shown available locales can be used too", Locale::all().into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ")))]
     #[arg(short, long, default_values_t = Locale::all())]
     pub(crate) subtitle: Vec<Locale>,
+    #[arg(skip)]
+    output_subtitle_locales: Vec<String>,
 
     #[arg(help = "Name of the output file")]
     #[arg(long_help = "Name of the output file. \
@@ -95,12 +100,22 @@ pub struct Archive {
     #[arg(short, long, default_value = "auto")]
     #[arg(value_parser = MergeBehavior::parse)]
     pub(crate) merge: MergeBehavior,
-
     #[arg(
         help = "If the merge behavior is 'auto', only download multiple video tracks if their length difference is higher than the given milliseconds"
     )]
     #[arg(long, default_value_t = 200)]
     pub(crate) merge_auto_tolerance: u32,
+    #[arg(
+        long,
+        help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
+        Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard)"
+    )]
+    #[arg(
+        long_help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
+        Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard; you might run in issues as there are multiple locales which resolve to the same IETF language code, e.g. 'es-LA' and 'es-ES' are both resolving to 'es')"
+    )]
+    #[arg(value_parser = LanguageTagging::parse)]
+    pub(crate) language_tagging: Option<LanguageTagging>,
 
     #[arg(help = format!("Presets for converting the video to a specific coding format. \
     Available presets: \n  {}", FFmpegPreset::available_matches_human_readable().join("\n  ")))]
@@ -217,6 +232,26 @@ impl Execute for Archive {
         self.audio = all_locale_in_locales(self.audio.clone());
         self.subtitle = all_locale_in_locales(self.subtitle.clone());
 
+        if let Some(language_tagging) = &self.language_tagging {
+            self.audio = resolve_locales(&self.audio);
+            self.subtitle = resolve_locales(&self.subtitle);
+            self.output_audio_locales = language_tagging.convert_locales(&self.audio);
+            self.output_subtitle_locales = language_tagging.convert_locales(&self.subtitle);
+        } else {
+            self.output_audio_locales = self
+                .audio
+                .clone()
+                .into_iter()
+                .map(|l| l.to_string())
+                .collect();
+            self.output_subtitle_locales = self
+                .subtitle
+                .clone()
+                .into_iter()
+                .map(|l| l.to_string())
+                .collect();
+        }
+
         Ok(())
     }
 
@@ -259,7 +294,13 @@ impl Execute for Archive {
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
                     .no_closed_caption(self.no_closed_caption)
-                    .threads(self.threads);
+                    .threads(self.threads)
+                    .audio_locale_output_map(
+                        zip(self.audio.clone(), self.output_audio_locales.clone()).collect(),
+                    )
+                    .subtitle_locale_output_map(
+                        zip(self.subtitle.clone(), self.output_subtitle_locales.clone()).collect(),
+                    );
 
             for single_formats in single_format_collection.into_iter() {
                 let (download_formats, mut format) = get_format(&self, &single_formats).await?;
@@ -275,9 +316,14 @@ impl Execute for Archive {
                             .as_ref()
                             .map_or((&self.output).into(), |so| so.into()),
                         self.universal_output,
+                        self.language_tagging.as_ref(),
                     )
                 } else {
-                    format.format_path((&self.output).into(), self.universal_output)
+                    format.format_path(
+                        (&self.output).into(),
+                        self.universal_output,
+                        self.language_tagging.as_ref(),
+                    )
                 };
                 let (mut path, changed) = free_file(formatted_path.clone());
 

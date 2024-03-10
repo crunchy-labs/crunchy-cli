@@ -12,7 +12,7 @@ use regex::Regex;
 use reqwest::Client;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -61,6 +61,8 @@ pub struct DownloadBuilder {
     no_closed_caption: bool,
     threads: usize,
     ffmpeg_threads: Option<usize>,
+    audio_locale_output_map: HashMap<Locale, String>,
+    subtitle_locale_output_map: HashMap<Locale, String>,
 }
 
 impl DownloadBuilder {
@@ -78,6 +80,8 @@ impl DownloadBuilder {
             no_closed_caption: false,
             threads: num_cpus::get(),
             ffmpeg_threads: None,
+            audio_locale_output_map: HashMap::new(),
+            subtitle_locale_output_map: HashMap::new(),
         }
     }
 
@@ -99,6 +103,9 @@ impl DownloadBuilder {
             ffmpeg_threads: self.ffmpeg_threads,
 
             formats: vec![],
+
+            audio_locale_output_map: self.audio_locale_output_map,
+            subtitle_locale_output_map: self.subtitle_locale_output_map,
         }
     }
 }
@@ -138,6 +145,9 @@ pub struct Downloader {
     ffmpeg_threads: Option<usize>,
 
     formats: Vec<DownloadFormat>,
+
+    audio_locale_output_map: HashMap<Locale, String>,
+    subtitle_locale_output_map: HashMap<Locale, String>,
 }
 
 impl Downloader {
@@ -426,7 +436,12 @@ impl Downloader {
             maps.extend(["-map".to_string(), (i + videos.len()).to_string()]);
             metadata.extend([
                 format!("-metadata:s:a:{}", i),
-                format!("language={}", meta.language),
+                format!(
+                    "language={}",
+                    self.audio_locale_output_map
+                        .get(&meta.language)
+                        .unwrap_or(&meta.language.to_string())
+                ),
             ]);
             metadata.extend([
                 format!("-metadata:s:a:{}", i),
@@ -457,7 +472,12 @@ impl Downloader {
                 ]);
                 metadata.extend([
                     format!("-metadata:s:s:{}", i),
-                    format!("language={}", meta.language),
+                    format!(
+                        "language={}",
+                        self.subtitle_locale_output_map
+                            .get(&meta.language)
+                            .unwrap_or(&meta.language.to_string())
+                    ),
                 ]);
                 metadata.extend([
                     format!("-metadata:s:s:{}", i),

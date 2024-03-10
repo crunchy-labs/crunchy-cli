@@ -61,9 +61,10 @@ pub struct Cli {
 
     #[arg(help = "Use a proxy to route all traffic through")]
     #[arg(long_help = "Use a proxy to route all traffic through. \
-            Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself")]
-    #[arg(global = true, long, value_parser = crate::utils::clap::clap_parse_proxy)]
-    proxy: Option<Proxy>,
+            Make sure that the proxy can either forward TLS requests, which is needed to bypass the (cloudflare) bot protection, or that it is configured so that the proxy can bypass the protection itself. \
+            Besides specifying a simple url, you also can partially control where a proxy should be used: '<url>:' only proxies api requests, ':<url>' only proxies download traffic, '<url>:<url>' proxies api requests through the first url and download traffic through the second url")]
+    #[arg(global = true, long, value_parser = crate::utils::clap::clap_parse_proxies)]
+    proxy: Option<(Option<Proxy>, Option<Proxy>)>,
 
     #[arg(help = "Use custom user agent")]
     #[arg(global = true, long)]
@@ -238,43 +239,29 @@ async fn execute_executor(executor: impl Execute, ctx: Context) {
 }
 
 async fn create_ctx(cli: &mut Cli) -> Result<Context> {
-    let client = {
-        let mut builder = CrunchyrollBuilder::predefined_client_builder();
-        if let Some(p) = &cli.proxy {
-            builder = builder.proxy(p.clone())
-        }
-        if let Some(ua) = &cli.user_agent {
-            builder = builder.user_agent(ua)
-        }
+    let crunchy_client = reqwest_client(
+        cli.proxy.as_ref().and_then(|p| p.0.clone()),
+        cli.user_agent.clone(),
+    );
+    let internal_client = reqwest_client(
+        cli.proxy.as_ref().and_then(|p| p.1.clone()),
+        cli.user_agent.clone(),
+    );
 
-        #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
-        let client = {
-            let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
-
-            for certificate in rustls_native_certs::load_native_certs().unwrap() {
-                builder = builder.add_root_certificate(
-                    reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
-                )
-            }
-
-            builder.build().unwrap()
-        };
-        #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
-        let client = builder.build().unwrap();
-
-        client
-    };
-
-    let rate_limiter = cli
-        .speed_limit
-        .map(|l| RateLimiterService::new(l, client.clone()));
-
-    let crunchy = crunchyroll_session(cli, client.clone(), rate_limiter.clone()).await?;
+    let crunchy = crunchyroll_session(
+        cli,
+        crunchy_client.clone(),
+        cli.speed_limit
+            .map(|l| RateLimiterService::new(l, crunchy_client)),
+    )
+    .await?;
 
     Ok(Context {
         crunchy,
-        client,
-        rate_limiter,
+        client: internal_client.clone(),
+        rate_limiter: cli
+            .speed_limit
+            .map(|l| RateLimiterService::new(l, internal_client)),
     })
 }
 
@@ -371,4 +358,31 @@ async fn crunchyroll_session(
     progress_handler.stop("Logged in");
 
     Ok(crunchy)
+}
+
+fn reqwest_client(proxy: Option<Proxy>, user_agent: Option<String>) -> Client {
+    let mut builder = CrunchyrollBuilder::predefined_client_builder();
+    if let Some(p) = proxy {
+        builder = builder.proxy(p)
+    }
+    if let Some(ua) = user_agent {
+        builder = builder.user_agent(ua)
+    }
+
+    #[cfg(any(feature = "openssl-tls", feature = "openssl-tls-static"))]
+    let client = {
+        let mut builder = builder.use_native_tls().tls_built_in_root_certs(false);
+
+        for certificate in rustls_native_certs::load_native_certs().unwrap() {
+            builder = builder.add_root_certificate(
+                reqwest::Certificate::from_der(certificate.0.as_slice()).unwrap(),
+            )
+        }
+
+        builder.build().unwrap()
+    };
+    #[cfg(not(any(feature = "openssl-tls", feature = "openssl-tls-static")))]
+    let client = builder.build().unwrap();
+
+    client
 }

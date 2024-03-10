@@ -13,10 +13,6 @@ native-tls = ["crunchy-cli-core/native-tls"]
 openssl-tls = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls"]
 openssl-tls-static = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls-static"]
 
-# deprecated
-openssl = ["openssl-tls"]
-openssl-static = ["openssl-tls-static"]
-
 [dependencies]
 tokio = { version = "1.35", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 

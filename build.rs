@@ -19,13 +19,6 @@ fn main() -> std::io::Result<()> {
         println!("cargo:warning=Multiple tls backends are activated (through the '*-tls' features). Consider to activate only one as it is not possible to change the backend during runtime. The active backend for this build will be '{}'.", active_tls_backend)
     }
 
-    if cfg!(feature = "openssl") {
-        println!("cargo:warning=The 'openssl' feature is deprecated and will be removed in a future version. Use the 'openssl-tls' feature instead.")
-    }
-    if cfg!(feature = "openssl-static") {
-        println!("cargo:warning=The 'openssl-static' feature is deprecated and will be removed in a future version. Use the 'openssl-tls-static' feature instead.")
-    }
-
     // note that we're using an anti-pattern here / violate the rust conventions. build script are
     // not supposed to write outside of 'OUT_DIR'. to have the generated files in the build "root"
     // (the same directory where the output binary lives) is much simpler than in 'OUT_DIR' since

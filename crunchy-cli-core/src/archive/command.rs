@@ -529,7 +529,11 @@ async fn get_format(
                 .flat_map(|(_, _, _, subtitles)| subtitles.clone())
                 .collect(),
             metadata: DownloadFormatMetadata {
-                skip_events: format_pairs.first().unwrap().0.skip_events().await?,
+                skip_events: if archive.include_chapters {
+                    format_pairs.first().unwrap().0.skip_events().await?
+                } else {
+                    None
+                },
             },
         }),
         MergeBehavior::Auto => {

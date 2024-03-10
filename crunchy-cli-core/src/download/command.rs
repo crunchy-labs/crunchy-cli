@@ -1,6 +1,6 @@
 use crate::download::filter::DownloadFilter;
 use crate::utils::context::Context;
-use crate::utils::download::{DownloadBuilder, DownloadFormat};
+use crate::utils::download::{DownloadBuilder, DownloadFormat, DownloadFormatMetadata};
 use crate::utils::ffmpeg::{FFmpegPreset, SOFTSUB_CONTAINERS};
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat};
@@ -100,6 +100,14 @@ pub struct Download {
     #[arg(help = "Skip special episodes")]
     #[arg(long, default_value_t = false)]
     pub(crate) skip_specials: bool,
+
+    #[arg(help = "Includes chapters (e.g. intro, credits, ...)")]
+    #[arg(long_help = "Includes chapters (e.g. intro, credits, ...). \
+    Because chapters are essentially only special timeframes in episodes like the intro, most of the video timeline isn't covered by a chapter.
+    These \"gaps\" are filled with an 'Episode' chapter because many video players are ignore those gaps and just assume that a chapter ends when the next chapter start is reached, even if a specific end-time is set.
+    Also chapters aren't always available, so in this case, just a big 'Episode' chapter from start to end will be created")]
+    #[arg(long, default_value_t = false)]
+    pub(crate) include_chapters: bool,
 
     #[arg(help = "Skip any interactive input")]
     #[arg(short, long, default_value_t = false)]
@@ -342,6 +350,13 @@ async fn get_format(
                 single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
             )]
         }),
+        metadata: DownloadFormatMetadata {
+            skip_events: if download.include_chapters {
+                single_format.skip_events().await?
+            } else {
+                None
+            },
+        },
     };
     let mut format = Format::from_single_formats(vec![(
         single_format.clone(),

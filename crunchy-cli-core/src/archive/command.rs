@@ -1,6 +1,8 @@
 use crate::archive::filter::ArchiveFilter;
 use crate::utils::context::Context;
-use crate::utils::download::{DownloadBuilder, DownloadFormat, MergeBehavior};
+use crate::utils::download::{
+    DownloadBuilder, DownloadFormat, DownloadFormatMetadata, MergeBehavior,
+};
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::Filter;
 use crate::utils::format::{Format, SingleFormat};
@@ -127,6 +129,17 @@ pub struct Archive {
     #[arg(help = "Include fonts in the downloaded file")]
     #[arg(long)]
     pub(crate) include_fonts: bool,
+    #[arg(
+        help = "Includes chapters (e.g. intro, credits, ...). Only works if `--merge` is set to 'audio'"
+    )]
+    #[arg(
+        long_help = "Includes chapters (e.g. intro, credits, ...). . Only works if `--merge` is set to 'audio'. \
+    Because chapters are essentially only special timeframes in episodes like the intro, most of the video timeline isn't covered by a chapter.
+    These \"gaps\" are filled with an 'Episode' chapter because many video players are ignore those gaps and just assume that a chapter ends when the next chapter start is reached, even if a specific end-time is set.
+    Also chapters aren't always available, so in this case, just a big 'Episode' chapter from start to end will be created"
+    )]
+    #[arg(long, default_value_t = false)]
+    pub(crate) include_chapters: bool,
 
     #[arg(help = "Omit closed caption subtitles in the downloaded file")]
     #[arg(long, default_value_t = false)]
@@ -186,6 +199,10 @@ impl Execute for Archive {
             {
                 bail!("File extension for special episodes is not '.mkv'. Currently only matroska / '.mkv' files are supported")
             }
+        }
+
+        if self.include_chapters && !matches!(self.merge, MergeBehavior::Audio) {
+            bail!("`--include-chapters` can only be used if `--merge` is set to 'audio'")
         }
 
         if self.output.contains("{resolution}")
@@ -446,6 +463,7 @@ async fn get_format(
                     video: (video, single_format.audio.clone()),
                     audios: vec![(audio, single_format.audio.clone())],
                     subtitles,
+                    metadata: DownloadFormatMetadata { skip_events: None },
                 })
             }
         }
@@ -464,6 +482,9 @@ async fn get_format(
                 .iter()
                 .flat_map(|(_, _, _, subtitles)| subtitles.clone())
                 .collect(),
+            metadata: DownloadFormatMetadata {
+                skip_events: format_pairs.first().unwrap().0.skip_events().await?,
+            },
         }),
         MergeBehavior::Auto => {
             let mut d_formats: Vec<(Duration, DownloadFormat)> = vec![];
@@ -498,6 +519,7 @@ async fn get_format(
                                 video: (video, single_format.audio.clone()),
                                 audios: vec![(audio, single_format.audio.clone())],
                                 subtitles,
+                                metadata: DownloadFormatMetadata { skip_events: None },
                             },
                         ));
                     }

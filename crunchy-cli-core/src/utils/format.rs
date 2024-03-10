@@ -3,7 +3,7 @@ use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
 use anyhow::Result;
 use chrono::{Datelike, Duration};
-use crunchyroll_rs::media::{Resolution, Stream, Subtitle, VariantData};
+use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, Subtitle, VariantData};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
 use log::{debug, info};
 use std::cmp::Ordering;
@@ -173,6 +173,14 @@ impl SingleFormat {
             _ => unreachable!(),
         };
         Ok(stream)
+    }
+
+    pub async fn skip_events(&self) -> Result<Option<SkipEvents>> {
+        match &self.source {
+            MediaCollection::Episode(e) => Ok(Some(e.skip_events().await?)),
+            MediaCollection::Movie(m) => Ok(Some(m.skip_events().await?)),
+            _ => Ok(None),
+        }
     }
 
     pub fn source_type(&self) -> String {

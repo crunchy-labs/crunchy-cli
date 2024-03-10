@@ -8,5 +8,5 @@ compile_error!("At least one tls feature must be activated");
 
 #[tokio::main]
 async fn main() {
-    crunchy_cli_core::cli_entrypoint().await
+    crunchy_cli_core::main(&std::env::args().collect::<Vec<String>>()).await
 }

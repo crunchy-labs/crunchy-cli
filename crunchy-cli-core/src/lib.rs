@@ -117,8 +117,8 @@ struct Verbosity {
     quiet: bool,
 }
 
-pub async fn cli_entrypoint() {
-    let mut cli: Cli = Cli::parse();
+pub async fn main(args: &[String]) {
+    let mut cli: Cli = Cli::parse_from(args);
 
     if cli.verbosity.verbose || cli.verbosity.quiet {
         if cli.verbosity.verbose && cli.verbosity.quiet {

@@ -184,6 +184,8 @@ You can set specific settings which will be
 
   The `--proxy` flag supports https and socks5 proxies to route all your traffic through.
   This may be helpful to bypass the geo-restrictions Crunchyroll has on certain series.
+  You are also able to set in which part of the cli a proxy should be used.
+  Instead of a normal url you can also use: `<url>:` (only proxies api requests), `:<url>` (only proxies download traffic), `<url>:<url>` (proxies api requests through the first url and download traffic through the second url).
 
   ```shell
   $ crunchy-cli --proxy socks5://127.0.0.1:8080 <command>
@@ -283,6 +285,14 @@ The `download` command lets you download episodes with a specific audio language
   
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
 
+- Universal output
+
+  The output template options can be forced to get sanitized via the `--universal-output` flag to be valid across all supported operating systems (Windows has a lot of characters which aren't allowed in filenames...).
+
+  ```shell
+  $ crunchy-cli download --universal-output -o https://www.crunchyroll.com/watch/G7PU4XD48/tales-veldoras-journal-2
+  ```
+
 - Resolution
 
   The resolution for videos can be set via the `-r` / `--resolution` flag.
@@ -292,6 +302,15 @@ The `download` command lets you download episodes with a specific audio language
   ```
 
   Default is `best`.
+
+- Language tagging
+
+  You can force the usage of a specific language tagging in the output file with the `--language-tagging` flag.
+  This might be useful as some video players doesn't recognize the language tagging Crunchyroll uses internally.
+
+  ```shell
+  $ crunchy-cli download --language-tagging ietf https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
 
 - FFmpeg Preset
 
@@ -325,6 +344,15 @@ The `download` command lets you download episodes with a specific audio language
 
   ```shell
   $ crunchy-cli download --skip-specials https://www.crunchyroll.com/series/GYZJ43JMR/that-time-i-got-reincarnated-as-a-slime[S2]
+  ```
+
+- Include chapters
+
+  Crunchyroll sometimes provide information about skippable events like the intro or credits.
+  These information can be stored as chapters in the resulting video file via the `--include-chapters` flag.
+
+  ```shell
+  $ crunchy-cli download --include-chapters https://www.crunchyroll.com/watch/G0DUND0K2/the-journeys-end
   ```
 
 - Yes
@@ -416,6 +444,14 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
   Default is the template, set by the `-o` / `--output` flag. See the [Template Options section](#output-template-options) below for more options.
 
+- Universal output
+
+  The output template options can be forced to get sanitized via the `--universal-output` flag to be valid across all supported operating systems (Windows has a lot of characters which aren't allowed in filenames...).
+
+  ```shell
+  $ crunchy-cli archive --universal-output -o https://www.crunchyroll.com/watch/G7PU4XD48/tales-veldoras-journal-2
+  ```
+
 - Resolution
 
   The resolution for videos can be set via the `-r` / `--resolution` flag.
@@ -440,6 +476,26 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
 
   Default is `auto`.
+
+- Merge auto tolerance
+
+  Sometimes two video tracks are downloaded with `--merge` set to `auto` even if they only differ some milliseconds in length which shouldn't be noticeable to the viewer.
+  To prevent this, you can specify a range in milliseconds with the `--merge-auto-tolerance` flag that only downloads one video if the length difference is in the given range.
+
+  ```shell
+  $ crunchy-cli archive -m auto --merge-auto-tolerance 100 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+  
+  Default are `200` milliseconds.
+
+- Language tagging
+
+  You can force the usage of a specific language tagging in the output file with the `--language-tagging` flag.
+  This might be useful as some video players doesn't recognize the language tagging Crunchyroll uses internally.
+
+  ```shell
+  $ crunchy-cli archive --language-tagging ietf https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
 
 - FFmpeg Preset
 
@@ -477,12 +533,32 @@ The `archive` command lets you download episodes with multiple audios and subtit
   $ crunchy-cli archive --include-fonts https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
+- Include chapters
+
+  Crunchyroll sometimes provide information about skippable events like the intro or credits.
+  These information can be stored as chapters in the resulting video file via the `--include-chapters` flag.
+  This flag only works if `--merge` is set to `audio` because chapters cannot be mapped to a specific video steam.
+
+  ```shell
+  $ crunchy-cli archive --include-chapters https://www.crunchyroll.com/watch/G0DUND0K2/the-journeys-end
+  ```
+
 - Skip existing
 
   If you re-download a series but want to skip episodes you've already downloaded, the `--skip-existing` flag skips the already existing/downloaded files.
 
   ```shell
   $ crunchy-cli archive --skip-existing https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  ```
+
+- Skip existing method
+
+  By default, already existing files are determined by their name and the download of the corresponding episode is skipped.
+  But sometimes Crunchyroll adds dubs or subs to an already existing episode and these changes aren't recognized and `--skip-existing` just skips it.
+  This behavior can be changed by the `--skip-existing-method` flag. Valid options are `audio` and `subtitle` (if the file already exists but the audio/subtitle are less from what should be downloaded, the episode gets downloaded and the file overwritten).
+
+  ```shell
+  $ crunchy-cli archive --skip-existing-method audio --skip-existing-method video https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
 
 - Skip specials

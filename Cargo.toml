@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.2.5"
+version = "3.3.0"
 edition = "2021"
 license = "MIT"
 
@@ -14,7 +14,7 @@ openssl-tls = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-
 openssl-tls-static = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls-static"]
 
 [dependencies]
-tokio = { version = "1.35", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.36", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
 native-tls-crate = { package = "native-tls", version = "0.2.11", optional = true }
 
@@ -22,8 +22,8 @@ crunchy-cli-core = { path = "./crunchy-cli-core" }
 
 [build-dependencies]
 chrono = "0.4"
-clap = { version = "4.4", features = ["string"] }
-clap_complete = "4.4"
+clap = { version = "4.5", features = ["string"] }
+clap_complete = "4.5"
 clap_mangen = "0.2"
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }

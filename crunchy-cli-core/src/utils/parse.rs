@@ -147,7 +147,7 @@ pub async fn parse_url(
         url = crunchy.client().get(&url).send().await?.url().to_string()
     }
 
-    let parsed_url = crunchyroll_rs::parse_url(url).map_or(Err(anyhow!("Invalid url")), Ok)?;
+    let parsed_url = crunchyroll_rs::parse_url(url).ok_or(anyhow!("Invalid url"))?;
     debug!("Url type: {:?}", parsed_url);
     let media_collection = match parsed_url {
         UrlType::Series(id)

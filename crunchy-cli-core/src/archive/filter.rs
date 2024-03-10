@@ -180,7 +180,7 @@ impl Filter for ArchiveFilter {
                 Some(
                     season
                         .audio_locales
-                        .get(0)
+                        .first()
                         .cloned()
                         .unwrap_or(Locale::ja_JP),
                 )

@@ -593,7 +593,7 @@ fn get_video_streams(path: &Path) -> Result<Option<(Vec<Locale>, Vec<Locale>)>> 
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .arg("-hide_banner")
-        .args(["-i", &path.to_string_lossy().to_string()])
+        .args(["-i", &path.to_string_lossy()])
         .output()?;
     let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
 

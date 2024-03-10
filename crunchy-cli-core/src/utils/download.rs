@@ -793,7 +793,7 @@ impl Downloader {
             .await?
             .bytes()
             .await?;
-        fs::write(&file, font.to_vec())?;
+        fs::write(&file, font)?;
 
         Ok(Some((file, false)))
     }
@@ -990,20 +990,18 @@ fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
         .args(["-i", path.to_str().unwrap()])
         .output()?;
     let ffmpeg_output = String::from_utf8(ffmpeg.stderr)?;
-    let length_caps = video_length.captures(ffmpeg_output.as_str()).map_or(
-        Err(anyhow::anyhow!(
+    let length_caps = video_length
+        .captures(ffmpeg_output.as_str())
+        .ok_or(anyhow::anyhow!(
             "failed to get video length: {}",
             ffmpeg_output
-        )),
-        Ok,
-    )?;
-    let fps_caps = video_fps.captures(ffmpeg_output.as_str()).map_or(
-        Err(anyhow::anyhow!(
+        ))?;
+    let fps_caps = video_fps
+        .captures(ffmpeg_output.as_str())
+        .ok_or(anyhow::anyhow!(
             "failed to get video fps: {}",
             ffmpeg_output
-        )),
-        Ok,
-    )?;
+        ))?;
 
     Ok((
         NaiveTime::parse_from_str(length_caps.name("time").unwrap().as_str(), "%H:%M:%S%.f")

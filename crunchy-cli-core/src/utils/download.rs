@@ -606,6 +606,10 @@ impl Downloader {
             command_args.extend([format!("-disposition:s:s:{}", i), "forced".to_string()])
         }
 
+        // manually specifying the color model for the output file. this must be done manually
+        // because some Crunchyroll episodes are encoded in a way that ffmpeg cannot re-encode
+        command_args.extend(["-pix_fmt".to_string(), "yuv420p".to_string()]);
+
         command_args.extend(output_presets);
         if let Some(output_format) = self.output_format {
             command_args.extend(["-f".to_string(), output_format]);

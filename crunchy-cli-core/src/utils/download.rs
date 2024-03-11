@@ -1225,41 +1225,44 @@ fn write_ffmpeg_chapters(
 ) -> Result<()> {
     let video_len = video_len
         .signed_duration_since(NaiveTime::MIN)
-        .num_seconds() as u32;
-    events.sort_by(|(_, event_a), (_, event_b)| event_a.start.cmp(&event_b.start));
+        .num_milliseconds() as f32 / 1000.0;
+    events.sort_by(|(_, event_a), (_, event_b)| event_a.start.total_cmp(&event_b.start));
 
     writeln!(file, ";FFMETADATA1")?;
 
-    let mut last_end_time = 0;
+    let mut last_end_time = 0.0;
     for (name, event) in events {
-        // include an extra 'Episode' chapter if the start of the current chapter is more than 10
-        // seconds later than the end of the last chapter.
-        // this is done before writing the actual chapter of this loop to keep the chapter
-        // chronologically in order
-        if event.start as i32 - last_end_time as i32 > 10 {
+        /*
+            - Convert from seconds to milliseconds for the correct timescale
+            - Include an extra 'Episode' chapter if the start of the current chapter is more than 10
+              seconds later than the end of the last chapter.
+              This is done before writing the actual chapter of this loop to keep the chapter
+              chronologically in order
+        */
+        if event.start - last_end_time > 10.0 {
             writeln!(file, "[CHAPTER]")?;
-            writeln!(file, "TIMEBASE=1/1")?;
-            writeln!(file, "START={}", last_end_time)?;
-            writeln!(file, "END={}", event.start)?;
+            writeln!(file, "TIMEBASE=1/1000")?;
+            writeln!(file, "START={}", last_end_time * 1000u32)?;
+            writeln!(file, "END={}", event.start * 1000u32)?;
             writeln!(file, "title=Episode")?;
         }
 
         writeln!(file, "[CHAPTER]")?;
-        writeln!(file, "TIMEBASE=1/1")?;
-        writeln!(file, "START={}", event.start)?;
-        writeln!(file, "END={}", event.end)?;
+        writeln!(file, "TIMEBASE=1/1000")?;
+        writeln!(file, "START={}", event.start * 1000u32)?;
+        writeln!(file, "END={}", event.end * 1000u32)?;
         writeln!(file, "title={}", name)?;
 
         last_end_time = event.end;
     }
 
-    // only add a traling chapter if the gab between the end of the last chapter and the total video
+    // only add a trailing chapter if the gap between the end of the last chapter and the total video
     // length is greater than 10 seconds
-    if video_len as i32 - last_end_time as i32 > 10 {
+    if video_len - last_end_time > 10.0 {
         writeln!(file, "[CHAPTER]")?;
-        writeln!(file, "TIMEBASE=1/1")?;
-        writeln!(file, "START={}", last_end_time)?;
-        writeln!(file, "END={}", video_len)?;
+        writeln!(file, "TIMEBASE=1/1000")?;
+        writeln!(file, "START={}", last_end_time * 1000u32)?;
+        writeln!(file, "END={}", video_len * 1000u32)?;
         writeln!(file, "title=Episode")?;
     }
 

@@ -1242,15 +1242,15 @@ fn write_ffmpeg_chapters(
         if event.start - last_end_time > 10.0 {
             writeln!(file, "[CHAPTER]")?;
             writeln!(file, "TIMEBASE=1/1000")?;
-            writeln!(file, "START={}", last_end_time * 1000u32)?;
-            writeln!(file, "END={}", event.start * 1000u32)?;
+            writeln!(file, "START={}", (last_end_time * 1000.0) as u32)?;
+            writeln!(file, "END={}", (event.start * 1000.0) as u32)?;
             writeln!(file, "title=Episode")?;
         }
 
         writeln!(file, "[CHAPTER]")?;
         writeln!(file, "TIMEBASE=1/1000")?;
-        writeln!(file, "START={}", event.start * 1000u32)?;
-        writeln!(file, "END={}", event.end * 1000u32)?;
+        writeln!(file, "START={}", (event.start * 1000.0) as u32)?;
+        writeln!(file, "END={}", (event.end * 1000.0) as u32)?;
         writeln!(file, "title={}", name)?;
 
         last_end_time = event.end;
@@ -1261,8 +1261,8 @@ fn write_ffmpeg_chapters(
     if video_len - last_end_time > 10.0 {
         writeln!(file, "[CHAPTER]")?;
         writeln!(file, "TIMEBASE=1/1000")?;
-        writeln!(file, "START={}", last_end_time * 1000u32)?;
-        writeln!(file, "END={}", video_len * 1000u32)?;
+        writeln!(file, "START={}", (last_end_time * 1000.0) as u32)?;
+        writeln!(file, "END={}", (video_len * 1000.0) as u32)?;
         writeln!(file, "title=Episode")?;
     }
 

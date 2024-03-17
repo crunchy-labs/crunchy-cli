@@ -1015,7 +1015,7 @@ fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
 }
 
 // all subtitle fonts (extracted from javascript)
-const FONTS: [(&str, &str); 66] = [
+const FONTS: [(&str, &str); 68] = [
     ("Adobe Arabic", "AdobeArabic-Bold.woff2"),
     ("Andale Mono", "andalemo.woff2"),
     ("Arial", "arial.woff2"),

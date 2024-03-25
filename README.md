@@ -1,3 +1,5 @@
+# This project has been sunset as Crunchyroll moved to a DRM-only system. See [#362](https://github.com/crunchy-labs/crunchy-cli/issues/362).
+
 # crunchy-cli
 
 👇 A Command-line downloader for [Crunchyroll](https://www.crunchyroll.com).

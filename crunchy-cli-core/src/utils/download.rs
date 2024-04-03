@@ -1015,7 +1015,7 @@ fn get_video_stats(path: &Path) -> Result<(NaiveTime, f64)> {
 }
 
 // all subtitle fonts (extracted from javascript)
-const FONTS: [(&str, &str); 66] = [
+const FONTS: [(&str, &str); 68] = [
     ("Adobe Arabic", "AdobeArabic-Bold.woff2"),
     ("Andale Mono", "andalemo.woff2"),
     ("Arial", "arial.woff2"),
@@ -1073,6 +1073,8 @@ const FONTS: [(&str, &str); 66] = [
     ("Impact", "impact.woff2"),
     ("Mangal", "MANGAL.woff2"),
     ("Meera Inimai", "MeeraInimai-Regular.woff2"),
+    ("Noto Sans Tamil", "NotoSansTamil.woff2"),
+    ("Noto Sans Telugu", "NotoSansTelegu.woff2"),
     ("Noto Sans Thai", "NotoSansThai.woff2"),
     ("Rubik", "Rubik-Regular.woff2"),
     ("Rubik Black", "Rubik-Black.woff2"),

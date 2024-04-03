@@ -1,4 +1,6 @@
-# This project has been sunset as Crunchyroll moved to a DRM-only system. See [#362](https://github.com/crunchy-labs/crunchy-cli/issues/362).
+> ~~This project has been sunset as Crunchyroll moved to a DRM-only system. See [#362](https://github.com/crunchy-labs/crunchy-cli/issues/362).~~
+>
+> Well there is one endpoint which still has DRM-free streams, I guess I still have a bit time until (finally) everything is DRM-only.
 
 # crunchy-cli
 

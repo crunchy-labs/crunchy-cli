@@ -88,9 +88,7 @@ pub struct Search {
     ///
     ///     stream.locale             → Stream locale/language
     ///     stream.dash_url           → Stream url in DASH format
-    ///     stream.drm_dash_url       → Stream url in DRM protected DASH format
-    ///     stream.hls_url            → Stream url in HLS format
-    ///     stream.drm_hls_url        → Stream url in DRM protected HLS format
+    ///     stream.is_drm             → If `stream.is_drm` is DRM encrypted
     ///
     ///     subtitle.locale           → Subtitle locale/language
     ///     subtitle.url              → Url to the subtitle

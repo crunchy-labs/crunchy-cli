@@ -487,7 +487,7 @@ async fn get_format(
                             single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
                         )
                     });
-                let cc = stream.closed_captions.get(s).cloned().map(|l| (l, false));
+                let cc = stream.captions.get(s).cloned().map(|l| (l, false));
 
                 subtitles
                     .into_iter()

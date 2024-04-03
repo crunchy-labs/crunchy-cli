@@ -16,20 +16,20 @@ anyhow = "1.0"
 async-speed-limit = "0.4"
 clap = { version = "4.5", features = ["derive", "string"] }
 chrono = "0.4"
-crunchyroll-rs = { version = "0.8.6", features = ["dash-stream", "experimental-stabilizations", "tower"] }
+crunchyroll-rs = { version = "0.10.0", features = ["experimental-stabilizations", "tower"] }
 ctrlc = "3.4"
 dialoguer = { version = "0.11", default-features = false }
 dirs = "5.0"
 derive_setters = "0.1"
 futures-util = { version = "0.3", features = ["io"] }
 fs2 = "0.4"
-http = "0.2"
+http = "1.1"
 indicatif = "0.17"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.16"
 regex = "1.10"
-reqwest = { version = "0.11", default-features = false, features = ["socks", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["socks", "stream"] }
 serde = "1.0"
 serde_json = "1.0"
 serde_plain = "1.0"

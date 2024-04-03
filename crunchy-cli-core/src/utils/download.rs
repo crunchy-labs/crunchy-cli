@@ -4,7 +4,7 @@ use crate::utils::os::{cache_dir, is_special_file, temp_directory, temp_named_pi
 use crate::utils::rate_limit::RateLimiterService;
 use anyhow::{bail, Result};
 use chrono::NaiveTime;
-use crunchyroll_rs::media::{SkipEvents, SkipEventsEvent, Subtitle, VariantData, VariantSegment};
+use crunchyroll_rs::media::{SkipEvents, SkipEventsEvent, StreamData, StreamSegment, Subtitle};
 use crunchyroll_rs::Locale;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressFinish, ProgressStyle};
 use log::{debug, warn, LevelFilter};
@@ -117,8 +117,8 @@ struct FFmpegMeta {
 }
 
 pub struct DownloadFormat {
-    pub video: (VariantData, Locale),
-    pub audios: Vec<(VariantData, Locale)>,
+    pub video: (StreamData, Locale),
+    pub audios: Vec<(StreamData, Locale)>,
     pub subtitles: Vec<(Subtitle, bool)>,
     pub metadata: DownloadFormatMetadata,
 }
@@ -671,20 +671,17 @@ impl Downloader {
         &self,
         dst: &Path,
     ) -> Result<(Option<(PathBuf, u64)>, Option<(PathBuf, u64)>)> {
-        let mut all_variant_data = vec![];
+        let mut all_stream_data = vec![];
         for format in &self.formats {
-            all_variant_data.push(&format.video.0);
-            all_variant_data.extend(format.audios.iter().map(|(a, _)| a))
+            all_stream_data.push(&format.video.0);
+            all_stream_data.extend(format.audios.iter().map(|(a, _)| a))
         }
         let mut estimated_required_space: u64 = 0;
-        for variant_data in all_variant_data {
-            // nearly no overhead should be generated with this call(s) as we're using dash as
-            // stream provider and generating the dash segments does not need any fetching of
-            // additional (http) resources as hls segments would
-            let segments = variant_data.segments().await?;
+        for stream_data in all_stream_data {
+            let segments = stream_data.segments();
 
             // sum the length of all streams up
-            estimated_required_space += estimate_variant_file_size(variant_data, &segments);
+            estimated_required_space += estimate_variant_file_size(stream_data, &segments);
         }
 
         let tmp_stat = fs2::statvfs(temp_directory()).unwrap();
@@ -730,29 +727,21 @@ impl Downloader {
         Ok((tmp_required, dst_required))
     }
 
-    async fn download_video(
-        &self,
-        variant_data: &VariantData,
-        message: String,
-    ) -> Result<TempPath> {
+    async fn download_video(&self, stream_data: &StreamData, message: String) -> Result<TempPath> {
         let tempfile = tempfile(".mp4")?;
         let (mut file, path) = tempfile.into_parts();
 
-        self.download_segments(&mut file, message, variant_data)
+        self.download_segments(&mut file, message, stream_data)
             .await?;
 
         Ok(path)
     }
 
-    async fn download_audio(
-        &self,
-        variant_data: &VariantData,
-        message: String,
-    ) -> Result<TempPath> {
+    async fn download_audio(&self, stream_data: &StreamData, message: String) -> Result<TempPath> {
         let tempfile = tempfile(".m4a")?;
         let (mut file, path) = tempfile.into_parts();
 
-        self.download_segments(&mut file, message, variant_data)
+        self.download_segments(&mut file, message, stream_data)
             .await?;
 
         Ok(path)
@@ -806,15 +795,15 @@ impl Downloader {
         &self,
         writer: &mut impl Write,
         message: String,
-        variant_data: &VariantData,
+        stream_data: &StreamData,
     ) -> Result<()> {
-        let segments = variant_data.segments().await?;
+        let segments = stream_data.segments();
         let total_segments = segments.len();
 
         let count = Arc::new(Mutex::new(0));
 
         let progress = if log::max_level() == LevelFilter::Info {
-            let estimated_file_size = estimate_variant_file_size(variant_data, &segments);
+            let estimated_file_size = estimate_variant_file_size(stream_data, &segments);
 
             let progress = ProgressBar::new(estimated_file_size)
                 .with_style(
@@ -832,7 +821,7 @@ impl Downloader {
         };
 
         let cpus = self.download_threads;
-        let mut segs: Vec<Vec<VariantSegment>> = Vec::with_capacity(cpus);
+        let mut segs: Vec<Vec<StreamSegment>> = Vec::with_capacity(cpus);
         for _ in 0..cpus {
             segs.push(vec![])
         }
@@ -858,7 +847,7 @@ impl Downloader {
                 let download = || async move {
                     for (i, segment) in thread_segments.into_iter().enumerate() {
                         let mut retry_count = 0;
-                        let mut buf = loop {
+                        let buf = loop {
                             let request = thread_client
                                 .get(&segment.url)
                                 .timeout(Duration::from_secs(60));
@@ -884,11 +873,9 @@ impl Downloader {
                             retry_count += 1;
                         };
 
-                        buf = VariantSegment::decrypt(&mut buf, segment.key)?.to_vec();
-
                         let mut c = thread_count.lock().await;
                         debug!(
-                            "Downloaded and decrypted segment [{}/{} {:.2}%] {}",
+                            "Downloaded segment [{}/{} {:.2}%] {}",
                             num + (i * cpus) + 1,
                             total_segments,
                             ((*c + 1) as f64 / total_segments as f64) * 100f64,
@@ -928,7 +915,7 @@ impl Downloader {
 
             if let Some(p) = &progress {
                 let progress_len = p.length().unwrap();
-                let estimated_segment_len = (variant_data.bandwidth / 8)
+                let estimated_segment_len = (stream_data.bandwidth / 8)
                     * segments.get(pos as usize).unwrap().length.as_secs();
                 let bytes_len = bytes.len() as u64;
 
@@ -977,8 +964,8 @@ impl Downloader {
     }
 }
 
-fn estimate_variant_file_size(variant_data: &VariantData, segments: &[VariantSegment]) -> u64 {
-    (variant_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>()
+fn estimate_variant_file_size(stream_data: &StreamData, segments: &[StreamSegment]) -> u64 {
+    (stream_data.bandwidth / 8) * segments.iter().map(|s| s.length.as_secs()).sum::<u64>()
 }
 
 /// Get the length and fps of a video.

@@ -163,37 +163,15 @@ impl From<&Concert> for FormatConcert {
 struct FormatStream {
     pub locale: Locale,
     pub dash_url: String,
-    pub drm_dash_url: String,
-    pub hls_url: String,
-    pub drm_hls_url: String,
+    pub is_drm: bool,
 }
 
 impl From<&Stream> for FormatStream {
     fn from(value: &Stream) -> Self {
-        let (dash_url, drm_dash_url, hls_url, drm_hls_url) =
-            value.variants.get(&Locale::Custom("".to_string())).map_or(
-                (
-                    "".to_string(),
-                    "".to_string(),
-                    "".to_string(),
-                    "".to_string(),
-                ),
-                |v| {
-                    (
-                        v.adaptive_dash.clone().unwrap_or_default().url,
-                        v.drm_adaptive_dash.clone().unwrap_or_default().url,
-                        v.adaptive_hls.clone().unwrap_or_default().url,
-                        v.drm_adaptive_hls.clone().unwrap_or_default().url,
-                    )
-                },
-            );
-
         Self {
             locale: value.audio_locale.clone(),
-            dash_url,
-            drm_dash_url,
-            hls_url,
-            drm_hls_url,
+            dash_url: value.url.clone(),
+            is_drm: value.session.uses_stream_limits,
         }
     }
 }
@@ -441,7 +419,7 @@ impl Format {
         if !stream_empty {
             for (_, episodes) in tree.iter_mut() {
                 for (episode, streams) in episodes {
-                    streams.push(episode.stream().await?)
+                    streams.push(episode.stream_maybe_without_drm().await?)
                 }
             }
         } else {
@@ -510,7 +488,7 @@ impl Format {
         }
         if !stream_empty {
             for (movie, streams) in tree.iter_mut() {
-                streams.push(movie.stream().await?)
+                streams.push(movie.stream_maybe_without_drm().await?)
             }
         } else {
             for (_, streams) in tree.iter_mut() {
@@ -548,7 +526,7 @@ impl Format {
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
         let music_video = must_match_if_true!(!music_video_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.clone()).unwrap_or_default();
-        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.stream().await?).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::MusicVideo(music_video) => music_video.stream_maybe_without_drm().await?).unwrap_or_default();
 
         let music_video_map = self.serializable_to_json_map(FormatMusicVideo::from(&music_video));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));
@@ -570,7 +548,7 @@ impl Format {
         let stream_empty = self.check_pattern_count_empty(Scope::Stream);
 
         let concert = must_match_if_true!(!concert_empty => media_collection|MediaCollection::Concert(concert) => concert.clone()).unwrap_or_default();
-        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::Concert(concert) => concert.stream().await?).unwrap_or_default();
+        let stream = must_match_if_true!(!stream_empty => media_collection|MediaCollection::Concert(concert) => concert.stream_maybe_without_drm().await?).unwrap_or_default();
 
         let concert_map = self.serializable_to_json_map(FormatConcert::from(&concert));
         let stream_map = self.serializable_to_json_map(FormatStream::from(&stream));

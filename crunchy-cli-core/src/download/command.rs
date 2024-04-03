@@ -389,7 +389,7 @@ async fn get_format(
             .get(subtitle_locale)
             .cloned()
             // use closed captions as fallback if no actual subtitles are found
-            .or_else(|| stream.closed_captions.get(subtitle_locale).cloned())
+            .or_else(|| stream.captions.get(subtitle_locale).cloned())
     } else {
         None
     };

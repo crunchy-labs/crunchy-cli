@@ -2,9 +2,9 @@ use crate::utils::filter::real_dedup_vec;
 use crate::utils::locale::LanguageTagging;
 use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::{Datelike, Duration};
-use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, Subtitle, VariantData};
+use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, StreamData, Subtitle};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
 use log::{debug, info};
 use std::cmp::Ordering;
@@ -167,12 +167,17 @@ impl SingleFormat {
 
     pub async fn stream(&self) -> Result<Stream> {
         let stream = match &self.source {
-            MediaCollection::Episode(e) => e.stream().await?,
-            MediaCollection::Movie(m) => m.stream().await?,
-            MediaCollection::MusicVideo(mv) => mv.stream().await?,
-            MediaCollection::Concert(c) => c.stream().await?,
+            MediaCollection::Episode(e) => e.stream_maybe_without_drm().await?,
+            MediaCollection::Movie(m) => m.stream_maybe_without_drm().await?,
+            MediaCollection::MusicVideo(mv) => mv.stream_maybe_without_drm().await?,
+            MediaCollection::Concert(c) => c.stream_maybe_without_drm().await?,
             _ => unreachable!(),
         };
+
+        if stream.session.uses_stream_limits {
+            bail!("Found a stream which probably uses DRM. DRM downloads aren't supported")
+        }
+
         Ok(stream)
     }
 
@@ -331,9 +336,7 @@ impl Iterator for SingleFormatCollectionIterator {
     type Item = Vec<SingleFormat>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((_, episodes)) = self.0 .0.iter_mut().next() else {
-            return None;
-        };
+        let (_, episodes) = self.0 .0.iter_mut().next()?;
 
         let value = episodes.pop_first().unwrap().1;
         if episodes.is_empty() {
@@ -377,7 +380,7 @@ pub struct Format {
 impl Format {
     #[allow(clippy::type_complexity)]
     pub fn from_single_formats(
-        mut single_formats: Vec<(SingleFormat, VariantData, Vec<(Subtitle, bool)>)>,
+        mut single_formats: Vec<(SingleFormat, StreamData, Vec<(Subtitle, bool)>)>,
     ) -> Self {
         let locales: Vec<(Locale, Vec<Locale>)> = single_formats
             .iter()
@@ -397,10 +400,10 @@ impl Format {
             title: first_format.title,
             description: first_format.description,
             locales,
-            resolution: first_stream.resolution.clone(),
-            width: first_stream.resolution.width,
-            height: first_stream.resolution.height,
-            fps: first_stream.fps,
+            resolution: first_stream.resolution().unwrap(),
+            width: first_stream.resolution().unwrap().width,
+            height: first_stream.resolution().unwrap().height,
+            fps: first_stream.fps().unwrap(),
             release_year: first_format.release_year,
             release_month: first_format.release_month,
             release_day: first_format.release_day,

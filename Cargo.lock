@@ -342,7 +342,7 @@ checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
 name = "crunchy-cli"
-version = "3.3.3"
+version = "3.3.4"
 dependencies = [
  "chrono",
  "clap",
@@ -355,7 +355,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.3.3"
+version = "3.3.4"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -390,9 +390,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9dba87354272cbe34eea8c27cab75b5104d7334aa6374db4807bd145f77a5ac"
+checksum = "0010e5dded0388e3a1e69105c2e65637d092eff049ba10f132f216c8e26a2473"
 dependencies = [
  "async-trait",
  "chrono",
@@ -415,9 +415,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f7727afdfa43dcc8981a83c299a2e416262053402dc0586b15bfe0488f05e23"
+checksum = "7e5226275711b3d1dc6afdc5e2241a45bb5d4dc1a813902265d628ccfe1ab67d"
 dependencies = [
  "darling",
  "quote",
@@ -727,9 +727,9 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "h2"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51ee2dd2e4f378392eeff5d51618cd9a63166a2513846bbc55f21cfacd9199d4"
+checksum = "816ec7294445779408f36fe57bc5b7fc1cf59664059096c65f905c1c61f58069"
 dependencies = [
  "bytes",
  "fnv",

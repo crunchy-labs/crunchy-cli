@@ -2,13 +2,15 @@ use crate::search::filter::FilterOptions;
 use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Stream, Subtitle};
 use crunchyroll_rs::{
-    Concert, Episode, Locale, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
+    Concert, Crunchyroll, Episode, Locale, MediaCollection, Movie, MovieListing, MusicVideo,
+    Season, Series,
 };
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 #[derive(Default, Serialize)]
 struct FormatSeries {
@@ -191,6 +193,27 @@ impl From<&Subtitle> for FormatSubtitle {
     }
 }
 
+#[derive(Default, Serialize)]
+struct FormatAccount {
+    pub token: String,
+    pub id: String,
+    pub profile_name: String,
+    pub email: String,
+}
+
+impl FormatAccount {
+    pub async fn async_from(value: &Crunchyroll) -> Result<Self> {
+        let account = value.account().await?;
+
+        Ok(Self {
+            token: value.access_token().await,
+            id: account.account_id,
+            profile_name: account.profile_name,
+            email: account.email,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 enum Scope {
     Series,
@@ -202,6 +225,7 @@ enum Scope {
     Concert,
     Stream,
     Subtitle,
+    Account,
 }
 
 macro_rules! must_match_if_true {
@@ -230,10 +254,15 @@ pub struct Format {
     pattern_count: HashMap<Scope, u32>,
     input: String,
     filter_options: FilterOptions,
+    crunchyroll: Arc<Crunchyroll>,
 }
 
 impl Format {
-    pub fn new(input: String, filter_options: FilterOptions) -> Result<Self> {
+    pub fn new(
+        input: String,
+        filter_options: FilterOptions,
+        crunchyroll: Arc<Crunchyroll>,
+    ) -> Result<Self> {
         let scope_regex = Regex::new(r"(?m)\{\{\s*(?P<scope>\w+)\.(?P<field>\w+)\s*}}").unwrap();
         let mut pattern = vec![];
         let mut pattern_count = HashMap::new();
@@ -260,6 +289,7 @@ impl Format {
             Scope::Concert => FormatConcert
             Scope::Stream => FormatStream
             Scope::Subtitle => FormatSubtitle
+            Scope::Account => FormatAccount
         );
 
         for capture in scope_regex.captures_iter(&input) {
@@ -277,6 +307,7 @@ impl Format {
                 "concert" => Scope::Concert,
                 "stream" => Scope::Stream,
                 "subtitle" => Scope::Subtitle,
+                "account" => Scope::Account,
                 _ => bail!("'{}.{}' is not a valid keyword", scope, field),
             };
 
@@ -302,6 +333,7 @@ impl Format {
             pattern_count,
             input,
             filter_options,
+            crunchyroll,
         })
     }
 
@@ -316,6 +348,7 @@ impl Format {
                     Scope::Episode,
                     Scope::Stream,
                     Scope::Subtitle,
+                    Scope::Account,
                 ])?;
 
                 self.parse_series(media_collection).await
@@ -326,17 +359,28 @@ impl Format {
                     Scope::Movie,
                     Scope::Stream,
                     Scope::Subtitle,
+                    Scope::Account,
                 ])?;
 
                 self.parse_movie_listing(media_collection).await
             }
             MediaCollection::MusicVideo(_) => {
-                self.check_scopes(vec![Scope::MusicVideo, Scope::Stream, Scope::Subtitle])?;
+                self.check_scopes(vec![
+                    Scope::MusicVideo,
+                    Scope::Stream,
+                    Scope::Subtitle,
+                    Scope::Account,
+                ])?;
 
                 self.parse_music_video(media_collection).await
             }
             MediaCollection::Concert(_) => {
-                self.check_scopes(vec![Scope::Concert, Scope::Stream, Scope::Subtitle])?;
+                self.check_scopes(vec![
+                    Scope::Concert,
+                    Scope::Stream,
+                    Scope::Subtitle,
+                    Scope::Account,
+                ])?;
 
                 self.parse_concert(media_collection).await
             }
@@ -349,6 +393,7 @@ impl Format {
         let episode_empty = self.check_pattern_count_empty(Scope::Episode);
         let stream_empty = self.check_pattern_count_empty(Scope::Stream)
             && self.check_pattern_count_empty(Scope::Subtitle);
+        let account_empty = self.check_pattern_count_empty(Scope::Account);
 
         #[allow(clippy::type_complexity)]
         let mut tree: Vec<(Season, Vec<(Episode, Vec<Stream>)>)> = vec![];
@@ -431,6 +476,11 @@ impl Format {
         }
 
         let mut output = vec![];
+        let account_map = if !account_empty {
+            self.serializable_to_json_map(FormatAccount::async_from(&self.crunchyroll).await?)
+        } else {
+            Map::default()
+        };
         let series_map = self.serializable_to_json_map(FormatSeries::from(&series));
         for (season, episodes) in tree {
             let season_map = self.serializable_to_json_map(FormatSeason::from(&season));
@@ -442,6 +492,7 @@ impl Format {
                     output.push(
                         self.replace_all(
                             HashMap::from([
+                                (Scope::Account, &account_map),
                                 (Scope::Series, &series_map),
                                 (Scope::Season, &season_map),
                                 (Scope::Episode, &episode_map),

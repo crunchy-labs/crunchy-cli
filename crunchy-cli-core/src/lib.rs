@@ -225,8 +225,6 @@ async fn execute_executor(executor: impl Execute, ctx: Context) {
         if let Some(crunchy_error) = err.downcast_mut::<Error>() {
             if let Error::Block { message, .. } = crunchy_error {
                 *message = "Triggered Cloudflare bot protection. Try again later or use a VPN or proxy to spoof your location".to_string()
-            } else if let Error::Request { message, .. } = crunchy_error {
-                *message = "You've probably hit a rate limit. Try again later, generally after 10-20 minutes the rate limit is over and you can continue to use the cli".to_string()
             }
 
             error!("An error occurred: {}", crunchy_error)

@@ -8,6 +8,7 @@ use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::search::QueryResults;
 use crunchyroll_rs::{Episode, Locale, MediaCollection, MovieListing, MusicVideo, Series};
 use log::warn;
+use std::sync::Arc;
 
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Search in videos")]
@@ -87,11 +88,16 @@ pub struct Search {
     ///     concert.premium_only      → If the concert is only available with Crunchyroll premium
     ///
     ///     stream.locale             → Stream locale/language
-    ///     stream.dash_url           → Stream url in DASH format
-    ///     stream.is_drm             → If `stream.is_drm` is DRM encrypted
+    ///     stream.dash_url           → Stream url in DASH format. You need to set the `Authorization` header to `Bearer <account.token>` when requesting this url
+    ///     stream.is_drm             → If `stream.dash_url` is DRM encrypted
     ///
     ///     subtitle.locale           → Subtitle locale/language
     ///     subtitle.url              → Url to the subtitle
+    ///
+    ///     account.token             → Access token to make request to restricted endpoints. This token is only valid for a max. of 5 minutes
+    ///     account.id                → Internal ID of the user account
+    ///     account.profile_name      → Profile name of the account
+    ///     account.email             → Email address of the account
     #[arg(short, long, verbatim_doc_comment)]
     #[arg(default_value = "S{{season.number}}E{{episode.number}} - {{episode.title}}")]
     output: String,
@@ -143,13 +149,14 @@ impl Execute for Search {
             output
         };
 
+        let crunchy_arc = Arc::new(ctx.crunchy);
         for (media_collection, url_filter) in input {
             let filter_options = FilterOptions {
                 audio: self.audio.clone(),
                 url_filter,
             };
 
-            let format = Format::new(self.output.clone(), filter_options)?;
+            let format = Format::new(self.output.clone(), filter_options, crunchy_arc.clone())?;
             println!("{}", format.parse(media_collection).await?);
         }
 

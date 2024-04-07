@@ -1285,21 +1285,11 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
 
     let reader = BufReader::new(stats);
     let mut lines = reader.lines();
+    let mut frame = 0;
     loop {
         select! {
-            // when gracefully canceling this future, set the progress to 100% (finished). sometimes
-            // ffmpeg is too fast or already finished when the reading process of 'stats' starts
-            // which causes the progress to be stuck at 0%
             _ = cancellation_token.cancelled() => {
-                if let Some(p) = &progress {
-                    p.set_position(total_frames)
-                }
-                debug!(
-                    "Processed frame [{}/{} 100%]",
-                    total_frames,
-                    total_frames
-                );
-                return Ok(())
+                break
             }
             line = lines.next_line() => {
                 let Some(line) = line? else {
@@ -1314,7 +1304,7 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
                 let Some(frame_str) = frame_cap.name("frame") else {
                     break
                 };
-                let frame: u64 = frame_str.as_str().parse()?;
+                frame = frame_str.as_str().parse()?;
 
                 if let Some(p) = &progress {
                     p.set_position(frame)
@@ -1328,6 +1318,16 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
                 )
             }
         }
+    }
+
+    // when this future is gracefully cancelled or if ffmpeg is too fast or already finished when
+    // reading process of 'stats' starts (which causes the progress to be stuck at 0%), the progress
+    // is manually set to 100% here
+    if frame < total_frames {
+        if let Some(p) = &progress {
+            p.set_position(frame)
+        }
+        debug!("Processed frame [{}/{} 100%]", total_frames, total_frames);
     }
 
     Ok(())

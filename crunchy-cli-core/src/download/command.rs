@@ -187,15 +187,6 @@ impl Execute for Download {
             }
         }
 
-        if self.output.contains("{resolution}")
-            || self
-                .output_specials
-                .as_ref()
-                .map_or(false, |os| os.contains("{resolution}"))
-        {
-            warn!("The '{{resolution}}' format option is deprecated and will be removed in a future version. Please use '{{width}}' and '{{height}}' instead")
-        }
-
         if let Some(language_tagging) = &self.language_tagging {
             self.audio = resolve_locales(&[self.audio.clone()]).remove(0);
             self.subtitle = self

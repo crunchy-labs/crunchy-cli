@@ -242,15 +242,6 @@ impl Execute for Archive {
             warn!("Using `--sync-start` without `--ffmpeg-preset` might produce worse sync results than with `--ffmpeg-preset` set")
         }
 
-        if self.output.contains("{resolution}")
-            || self
-                .output_specials
-                .as_ref()
-                .map_or(false, |os| os.contains("{resolution}"))
-        {
-            warn!("The '{{resolution}}' format option is deprecated and will be removed in a future version. Please use '{{width}}' and '{{height}}' instead")
-        }
-
         self.audio = all_locale_in_locales(self.audio.clone());
         self.subtitle = all_locale_in_locales(self.subtitle.clone());
 

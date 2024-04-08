@@ -447,10 +447,6 @@ impl Format {
                 ),
             )
             .replace(
-                "{resolution}",
-                &sanitize(self.resolution.to_string(), true, universal),
-            )
-            .replace(
                 "{width}",
                 &sanitize(self.resolution.width.to_string(), true, universal),
             )

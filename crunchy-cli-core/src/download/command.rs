@@ -8,7 +8,7 @@ use crate::utils::locale::{resolve_locales, LanguageTagging};
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::parse_url;
-use crate::utils::video::variant_data_from_stream;
+use crate::utils::video::stream_data_from_stream;
 use crate::Execute;
 use anyhow::bail;
 use anyhow::Result;
@@ -351,7 +351,7 @@ async fn get_format(
     try_peer_hardsubs: bool,
 ) -> Result<(DownloadFormat, Format)> {
     let stream = single_format.stream().await?;
-    let Some((video, audio, contains_hardsub)) = variant_data_from_stream(
+    let Some((video, audio, contains_hardsub)) = stream_data_from_stream(
         &stream,
         &download.resolution,
         if try_peer_hardsubs {

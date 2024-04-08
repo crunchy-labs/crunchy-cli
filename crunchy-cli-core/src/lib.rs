@@ -184,16 +184,29 @@ pub async fn main(args: &[String]) {
                     .unwrap_or_default()
                     .starts_with(".crunchy-cli_")
                 {
-                    let result = fs::remove_file(file.path());
-                    debug!(
-                        "Ctrl-c removed temporary file {} {}",
-                        file.path().to_string_lossy(),
-                        if result.is_ok() {
-                            "successfully"
-                        } else {
-                            "not successfully"
-                        }
-                    )
+                    if file.file_type().map_or(true, |ft| ft.is_file()) {
+                        let result = fs::remove_file(file.path());
+                        debug!(
+                            "Ctrl-c removed temporary file {} {}",
+                            file.path().to_string_lossy(),
+                            if result.is_ok() {
+                                "successfully"
+                            } else {
+                                "not successfully"
+                            }
+                        )
+                    } else {
+                        let result = fs::remove_dir_all(file.path());
+                        debug!(
+                            "Ctrl-c removed temporary directory {} {}",
+                            file.path().to_string_lossy(),
+                            if result.is_ok() {
+                                "successfully"
+                            } else {
+                                "not successfully"
+                            }
+                        )
+                    }
                 }
             }
         }

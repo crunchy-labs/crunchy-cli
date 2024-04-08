@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use crunchyroll_rs::media::{Resolution, Stream, StreamData};
 use crunchyroll_rs::Locale;
 
-pub async fn variant_data_from_stream(
+pub async fn stream_data_from_stream(
     stream: &Stream,
     resolution: &Resolution,
     subtitle: Option<Locale>,

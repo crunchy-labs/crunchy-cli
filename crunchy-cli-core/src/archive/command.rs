@@ -10,7 +10,7 @@ use crate::utils::locale::{all_locale_in_locales, resolve_locales, LanguageTaggi
 use crate::utils::log::progress;
 use crate::utils::os::{free_file, has_ffmpeg, is_special_file};
 use crate::utils::parse::parse_url;
-use crate::utils::video::variant_data_from_stream;
+use crate::utils::video::stream_data_from_stream;
 use crate::Execute;
 use anyhow::bail;
 use anyhow::Result;
@@ -89,6 +89,17 @@ pub struct Archive {
     #[arg(value_parser = crate::utils::clap::clap_parse_resolution)]
     pub(crate) resolution: Resolution,
 
+    #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
+    #[arg(
+        long_help = "Tries to sync the timing of all downloaded audios to match one video. \
+    This is done by downloading the first few segments/frames of all video tracks that differ in length and comparing them frame by frame. \
+    The value of this flag determines how accurate the syncing is, generally speaking everything over 15 begins to be more inaccurate and everything below 6 is too accurate (and won't succeed). \
+    If you want to provide a custom value to this flag, you have to set it with an equals (e.g. `--sync-start=10` instead of `--sync-start 10`). \
+    When the syncing fails, the command is continued as if `--sync-start` wasn't provided for this episode
+    "
+    )]
+    #[arg(long, require_equals = true, num_args = 0..=1, default_missing_value = "7.5")]
+    pub(crate) sync_start: Option<f64>,
     #[arg(
         help = "Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio' and 'video'"
     )]
@@ -216,8 +227,19 @@ impl Execute for Archive {
             }
         }
 
-        if self.include_chapters && !matches!(self.merge, MergeBehavior::Audio) {
-            bail!("`--include-chapters` can only be used if `--merge` is set to 'audio'")
+        if self.include_chapters
+            && !matches!(self.merge, MergeBehavior::Audio)
+            && self.sync_start.is_none()
+        {
+            bail!("`--include-chapters` can only be used if `--merge` is set to 'audio' or `--sync-start` is set")
+        }
+
+        if !matches!(self.merge, MergeBehavior::Auto) && self.sync_start.is_some() {
+            bail!("`--sync-start` can only be used if `--merge` is set to `auto`")
+        }
+
+        if self.sync_start.is_some() && self.ffmpeg_preset.is_none() {
+            warn!("Using `--sync-start` without `--ffmpeg-preset` might produce worse sync results than with `--ffmpeg-preset` set")
         }
 
         if self.output.contains("{resolution}")
@@ -294,6 +316,7 @@ impl Execute for Archive {
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
                     .no_closed_caption(self.no_closed_caption)
+                    .sync_start_value(self.sync_start)
                     .threads(self.threads)
                     .audio_locale_output_map(
                         zip(self.audio.clone(), self.output_audio_locales.clone()).collect(),
@@ -450,7 +473,7 @@ async fn get_format(
     for single_format in single_formats {
         let stream = single_format.stream().await?;
         let Some((video, audio, _)) =
-            variant_data_from_stream(&stream, &archive.resolution, None).await?
+            stream_data_from_stream(&stream, &archive.resolution, None).await?
         else {
             if single_format.is_episode() {
                 bail!(
@@ -569,7 +592,9 @@ async fn get_format(
                                 video: (video, single_format.audio.clone()),
                                 audios: vec![(audio, single_format.audio.clone())],
                                 subtitles,
-                                metadata: DownloadFormatMetadata { skip_events: None },
+                                metadata: DownloadFormatMetadata {
+                                    skip_events: single_format.skip_events().await?,
+                                },
                             },
                         ));
                     }

@@ -24,6 +24,8 @@ derive_setters = "0.1"
 futures-util = { version = "0.3", features = ["io"] }
 fs2 = "0.4"
 http = "1.1"
+image = { version = "0.25", features = ["jpeg"], default-features = false }
+image_hasher = "2.0"
 indicatif = "0.17"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }

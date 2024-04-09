@@ -392,7 +392,13 @@ impl Downloader {
                         (*o as f64 / self.formats[0].video.0.fps().unwrap() * 1000.0) as i64,
                     )
                 })
-            } else if !offset_pre_checked {
+            } else {
+                for format in &mut self.formats {
+                    format.metadata.skip_events = None
+                }
+            }
+
+            if !offset_pre_checked {
                 warn!("Couldn't find reliable sync positions")
             }
         }

@@ -126,6 +126,7 @@ pub struct Archive {
         long_help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
         Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard; you might run in issues as there are multiple locales which resolve to the same IETF language code, e.g. 'es-LA' and 'es-ES' are both resolving to 'es')"
     )]
+    #[arg(long)]
     #[arg(value_parser = LanguageTagging::parse)]
     pub(crate) language_tagging: Option<LanguageTagging>,
 

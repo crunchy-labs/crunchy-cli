@@ -1516,7 +1516,7 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
     // is manually set to 100% here
     if frame < total_frames {
         if let Some(p) = &progress {
-            p.set_position(frame)
+            p.set_position(total_frames)
         }
         debug!("Processed frame [{}/{} 100%]", total_frames, total_frames);
     }

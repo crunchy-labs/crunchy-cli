@@ -1527,13 +1527,13 @@ struct SyncVideo {
 
 fn sync_videos(mut sync_videos: Vec<SyncVideo>, value: f64) -> Result<Option<HashMap<usize, u64>>> {
     let mut result = HashMap::new();
-    let hasher = HasherConfig::new().to_hasher();
-    let start_frame = 50;
+    let hasher = HasherConfig::new().preproc_dct().to_hasher();
+    let start_frame = 300;
 
     sync_videos.sort_by_key(|sv| sv.length);
 
     let sync_base = sync_videos.remove(0);
-    let sync_hashes = extract_frame_hashes(&sync_base.path, start_frame, 100, &hasher)?;
+    let sync_hashes = extract_frame_hashes(&sync_base.path, start_frame, 50, &hasher)?;
 
     for sync_video in sync_videos {
         let mut highest_frame_match = f64::INFINITY;
@@ -1558,22 +1558,20 @@ fn sync_videos(mut sync_videos: Vec<SyncVideo>, value: f64) -> Result<Option<Has
                 &hasher,
             )?);
 
-            let check_frame_windows_result = check_frame_windows(&sync_hashes, &hashes);
-            if let Some(offset) = check_frame_windows_result
-                .iter()
-                .enumerate()
-                .find_map(|(i, cfw)| (*cfw <= value).then_some(i))
-            {
-                result.insert(sync_video.idx, frame + offset as u64 - start_frame);
+            let mut check_frame_windows_result: Vec<(usize, f64)> =
+                check_frame_windows(&sync_hashes, &hashes)
+                    .into_iter()
+                    .enumerate()
+                    .collect();
+            check_frame_windows_result.sort_by(|(_, a), (_, b)| a.partial_cmp(&b).unwrap());
+            if check_frame_windows_result[0].1 <= value {
+                result.insert(
+                    sync_video.idx,
+                    frame + check_frame_windows_result[0].0 as u64 - start_frame,
+                );
                 break;
-            } else {
-                let curr_highest_frame_match = *check_frame_windows_result
-                    .iter()
-                    .min_by(|a, b| a.total_cmp(b))
-                    .unwrap();
-                if curr_highest_frame_match < highest_frame_match {
-                    highest_frame_match = curr_highest_frame_match
-                }
+            } else if check_frame_windows_result[0].1 < highest_frame_match {
+                highest_frame_match = check_frame_windows_result[0].1
             }
 
             frame = (frame + 300 - sync_hashes.len() as u64).min(sync_video.available_frames)
@@ -1610,7 +1608,7 @@ fn extract_frame_hashes(
         .args([
             "-vf",
             format!(
-                r#"select=between(n\,{}\,{}),setpts=PTS-STARTPTS"#,
+                r#"select=between(n\,{}\,{}),setpts=PTS-STARTPTS,scale=-1:240"#,
                 start_frame,
                 start_frame + frame_count
             )

@@ -585,7 +585,11 @@ async fn get_format(
                                 audios: vec![(audio, single_format.audio.clone())],
                                 subtitles,
                                 metadata: DownloadFormatMetadata {
-                                    skip_events: single_format.skip_events().await?,
+                                    skip_events: if archive.include_chapters {
+                                        single_format.skip_events().await?
+                                    } else {
+                                        None
+                                    },
                                 },
                             },
                         ));

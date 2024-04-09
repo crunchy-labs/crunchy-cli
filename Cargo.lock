@@ -175,9 +175,9 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "bumpalo"
-version = "3.15.4"
+version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ff69b9dd49fd426c69a0db9fc04dd934cdb6645ff000864d98f7e2af8830eaa"
+checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
 name = "bytemuck"
@@ -199,9 +199,9 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
 name = "cc"
-version = "1.0.91"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd97381a8cc6493395a5afc4c691c1084b3768db713b73aa215217aa245d153"
+checksum = "2678b2e3449475e95b0aa6f9b506a28e61b3dc8996592b983695e8ebb58a8b41"
 
 [[package]]
 name = "cfg-if"
@@ -254,9 +254,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.1"
+version = "4.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "885e4d7d5af40bfb99ae6f9433e292feac98d452dcb3ec3d25dfe7552b77da8c"
+checksum = "dd79504325bf38b10165b02e89b4347300f855f273c4cb30c4a3209e6583275e"
 dependencies = [
  "clap",
 ]
@@ -354,7 +354,7 @@ checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
 name = "crunchy-cli"
-version = "3.4.0"
+version = "3.4.1"
 dependencies = [
  "chrono",
  "clap",
@@ -367,7 +367,7 @@ dependencies = [
 
 [[package]]
 name = "crunchy-cli-core"
-version = "3.4.0"
+version = "3.4.1"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -404,9 +404,9 @@ dependencies = [
 
 [[package]]
 name = "crunchyroll-rs"
-version = "0.10.4"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ec02ad9896fe71bfc53c48e8b8949aa81ab7f3cb9ff31fd197565d6cd7922ea"
+checksum = "e8aa954631407844404a4b1fd2d957b101b8b8653f2884a726b4240175355234"
 dependencies = [
  "async-trait",
  "chrono",
@@ -424,14 +424,15 @@ dependencies = [
  "smart-default",
  "tokio",
  "tower-service",
+ "uuid",
  "webpki-roots",
 ]
 
 [[package]]
 name = "crunchyroll-rs-internal"
-version = "0.10.4"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24d7cdd1fa6a6303a56f45041060641d6b4446e8065a91f1bcb8aa4a8f1f483c"
+checksum = "fc0b9e242c063f13048a53031b49a370c864db3fc6e12d573a8b297bd268b1c4"
 dependencies = [
  "darling",
  "quote",
@@ -2169,6 +2170,15 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
+name = "uuid"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a183cf7feeba97b4dd1c0d46788634f6221d87fa961b305bed08c851829efcc0"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "vcpkg"

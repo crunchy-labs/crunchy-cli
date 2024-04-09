@@ -89,17 +89,6 @@ pub struct Archive {
     #[arg(value_parser = crate::utils::clap::clap_parse_resolution)]
     pub(crate) resolution: Resolution,
 
-    #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
-    #[arg(
-        long_help = "Tries to sync the timing of all downloaded audios to match one video. \
-    This is done by downloading the first few segments/frames of all video tracks that differ in length and comparing them frame by frame. \
-    The value of this flag determines how accurate the syncing is, generally speaking everything over 15 begins to be more inaccurate and everything below 6 is too accurate (and won't succeed). \
-    If you want to provide a custom value to this flag, you have to set it with an equals (e.g. `--sync-start=10` instead of `--sync-start 10`). \
-    When the syncing fails, the command is continued as if `--sync-start` wasn't provided for this episode
-    "
-    )]
-    #[arg(long, require_equals = true, num_args = 0..=1, default_missing_value = "7.5")]
-    pub(crate) sync_start: Option<f64>,
     #[arg(
         help = "Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio' and 'video'"
     )]
@@ -121,6 +110,18 @@ pub struct Archive {
         help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
         Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard)"
     )]
+    #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
+    #[arg(
+        long_help = "Tries to sync the timing of all downloaded audios to match one video. \
+    This is done by downloading the first few segments/frames of all video tracks that differ in length and comparing them frame by frame. \
+    The value of this flag determines how accurate the syncing is, generally speaking everything over 15 begins to be more inaccurate and everything below 6 is too accurate (and won't succeed). \
+    If you want to provide a custom value to this flag, you have to set it with an equals (e.g. `--sync-start=10` instead of `--sync-start 10`). \
+    When the syncing fails, the command is continued as if `--sync-start` wasn't provided for this episode
+    "
+    )]
+    #[arg(long, require_equals = true, num_args = 0..=1, default_missing_value = "7.5")]
+    pub(crate) sync_start: Option<f64>,
+
     #[arg(
         long_help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
         Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard; you might run in issues as there are multiple locales which resolve to the same IETF language code, e.g. 'es-LA' and 'es-ES' are both resolving to 'es')"

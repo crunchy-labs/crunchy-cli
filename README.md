@@ -468,7 +468,7 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
 - Merge behavior
 
-  Due to censorship, some episodes have multiple lengths for different languages.
+  Due to censorship or additional intros, some episodes have multiple lengths for different languages.
   In the best case, when multiple audio & subtitle tracks are used, there is only one *video* track and all other languages can be stored as audio-only.
   But, as said, this is not always the case.
   With the `-m` / `--merge` flag you can define the behaviour when an episodes' video tracks differ in length.
@@ -491,6 +491,16 @@ The `archive` command lets you download episodes with multiple audios and subtit
   ```
   
   Default are `200` milliseconds.
+
+- Sync start
+
+  If you want that all videos of the same episode should start at the same time and `--merge` doesn't fit your needs (e.g. one video has an intro, all other doesn't), you might consider using the `--sync-start`.
+  It tries to sync the timing of all downloaded audios to match one video.
+  This is done by downloading the first few segments/frames of all video tracks that differ in length and comparing them frame by frame.
+  The flag takes an optional value determines how accurate the syncing is, generally speaking everything over 15 begins to be more inaccurate and everything below 6 is too accurate (and won't succeed).
+  When the syncing fails, the command is continued as if `--sync-start` wasn't provided for this episode.
+
+  Default is `7.5`.
 
 - Language tagging
 

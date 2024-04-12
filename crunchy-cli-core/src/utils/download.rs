@@ -1309,8 +1309,8 @@ fn get_subtitle_stats(path: &Path) -> Result<Vec<String>> {
                 fonts.push(font_string)
             }
         }
-        if let Some(overrideFont) = capture.name("overrideFont") {
-            let font_string = overrideFont.as_str().to_string();
+        if let Some(override_font) = capture.name("overrideFont") {
+            let font_string = override_font.as_str().to_string();
             if !fonts.contains(&font_string) {
                 fonts.push(font_string)
             }

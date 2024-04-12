@@ -1303,7 +1303,7 @@ fn get_subtitle_stats(path: &Path) -> Result<Vec<String>> {
     let mut fonts = vec![];
 
     for capture in FONT_REGEX.captures_iter(&(fs::read_to_string(path)?)) {
-        if let Some(font) = (capture.name("font") || capture.name("overrideFont")) {
+        if let Some(font) = capture.name("font") || let Some(font) = capture.name("overrideFont") {
             let font_string = font.as_str().to_string();
             if !fonts.contains(&font_string) {
                 fonts.push(font_string)

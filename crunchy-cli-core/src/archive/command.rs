@@ -286,10 +286,15 @@ impl Execute for Archive {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection =
-                ArchiveFilter::new(url_filter, self.clone(), !self.yes, self.skip_specials)
-                    .visit(media_collection)
-                    .await?;
+            let single_format_collection = ArchiveFilter::new(
+                url_filter,
+                self.clone(),
+                !self.yes,
+                self.skip_specials,
+                ctx.crunchy.premium().await,
+            )
+            .visit(media_collection)
+            .await?;
 
             if single_format_collection.is_empty() {
                 progress_handler.stop(format!("Skipping url {} (no matching videos found)", i + 1));

@@ -7,6 +7,7 @@ use anyhow::Result;
 use crunchyroll_rs::{Concert, Episode, Locale, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{info, warn};
 use std::collections::{BTreeMap, HashMap};
+use std::ops::Not;
 
 enum Visited {
     Series,
@@ -21,6 +22,7 @@ pub(crate) struct ArchiveFilter {
     skip_special: bool,
     season_episodes: HashMap<String, Vec<Episode>>,
     season_subtitles_missing: Vec<u32>,
+    seasons_with_premium: Option<Vec<u32>>,
     season_sorting: Vec<String>,
     visited: Visited,
 }
@@ -31,6 +33,7 @@ impl ArchiveFilter {
         archive: Archive,
         interactive_input: bool,
         skip_special: bool,
+        is_premium: bool,
     ) -> Self {
         Self {
             url_filter,
@@ -39,6 +42,7 @@ impl ArchiveFilter {
             skip_special,
             season_episodes: HashMap::new(),
             season_subtitles_missing: vec![],
+            seasons_with_premium: is_premium.not().then_some(vec![]),
             season_sorting: vec![],
             visited: Visited::None,
         }
@@ -308,6 +312,29 @@ impl Filter for ArchiveFilter {
             }
         } else {
             episodes.push((episode.clone(), episode.subtitle_locales.clone()))
+        }
+
+        if self.seasons_with_premium.is_some() {
+            let episode_len_before = episodes.len();
+            episodes.retain(|(e, _)| !e.is_premium_only);
+            if episode_len_before < episodes.len()
+                && !self
+                    .seasons_with_premium
+                    .as_ref()
+                    .unwrap()
+                    .contains(&episode.season_number)
+            {
+                warn!(
+                    "Skipping premium episodes in season {}",
+                    episode.season_number
+                );
+                self.seasons_with_premium
+                    .as_mut()
+                    .unwrap()
+                    .push(episode.season_number)
+            }
+
+            return Ok(None);
         }
 
         let mut relative_episode_number = None;

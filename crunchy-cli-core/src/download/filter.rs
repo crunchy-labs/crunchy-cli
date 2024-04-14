@@ -7,6 +7,7 @@ use anyhow::{bail, Result};
 use crunchyroll_rs::{Concert, Episode, Movie, MovieListing, MusicVideo, Season, Series};
 use log::{error, info, warn};
 use std::collections::HashMap;
+use std::ops::Not;
 
 pub(crate) struct DownloadFilter {
     url_filter: UrlFilter,
@@ -15,6 +16,7 @@ pub(crate) struct DownloadFilter {
     skip_special: bool,
     season_episodes: HashMap<u32, Vec<Episode>>,
     season_subtitles_missing: Vec<u32>,
+    seasons_with_premium: Option<Vec<u32>>,
     season_visited: bool,
 }
 
@@ -24,6 +26,7 @@ impl DownloadFilter {
         download: Download,
         interactive_input: bool,
         skip_special: bool,
+        is_premium: bool,
     ) -> Self {
         Self {
             url_filter,
@@ -32,6 +35,7 @@ impl DownloadFilter {
             skip_special,
             season_episodes: HashMap::new(),
             season_subtitles_missing: vec![],
+            seasons_with_premium: is_premium.not().then_some(vec![]),
             season_visited: false,
         }
     }
@@ -199,6 +203,26 @@ impl Filter for DownloadFilter {
                 }
                 return Ok(None);
             }
+        }
+
+        if self.seasons_with_premium.is_some() && episode.is_premium_only {
+            if !self
+                .seasons_with_premium
+                .as_ref()
+                .unwrap()
+                .contains(&episode.season_number)
+            {
+                warn!(
+                    "Skipping premium episodes in season {}",
+                    episode.season_number
+                );
+                self.seasons_with_premium
+                    .as_mut()
+                    .unwrap()
+                    .push(episode.season_number)
+            }
+
+            return Ok(None);
         }
 
         let mut relative_episode_number = None;

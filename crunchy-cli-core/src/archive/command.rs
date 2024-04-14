@@ -271,6 +271,10 @@ impl Execute for Archive {
     }
 
     async fn execute(self, ctx: Context) -> Result<()> {
+        if !ctx.crunchy.premium().await {
+            warn!("You may not be able to download all requested videos when logging in anonymously or using a non-premium account")
+        }
+
         let mut parsed_urls = vec![];
 
         for (i, url) in self.urls.clone().into_iter().enumerate() {

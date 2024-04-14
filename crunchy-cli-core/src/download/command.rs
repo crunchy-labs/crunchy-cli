@@ -212,6 +212,10 @@ impl Execute for Download {
     }
 
     async fn execute(self, ctx: Context) -> Result<()> {
+        if !ctx.crunchy.premium().await {
+            warn!("You may not be able to download all requested videos when logging in anonymously or using a non-premium account")
+        }
+
         let mut parsed_urls = vec![];
 
         let output_supports_softsubs = SOFTSUB_CONTAINERS.contains(

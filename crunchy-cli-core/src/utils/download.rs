@@ -1295,7 +1295,7 @@ const FONTS: [(&str, &str); 68] = [
     ("Webdings", "webdings.woff2"),
 ];
 lazy_static::lazy_static! {
-    static ref FONT_REGEX: Regex = Regex::new(r"(?m)^Style:\s.+?,(?P<font>.+?),").unwrap();
+    static ref FONT_REGEX: Regex = Regex::new(r"(?m)^(?:Style:\s.+?,(?P<font>.+?),|(?:Dialogue:\s(?:.+?,)+,\{(?:\\.*)?\\fn(?P<overrideFont>[\w\s]+)(?:\\.*)?)\})").unwrap();
 }
 
 /// Get the fonts used in the subtitle.
@@ -1305,6 +1305,12 @@ fn get_subtitle_stats(path: &Path) -> Result<Vec<String>> {
     for capture in FONT_REGEX.captures_iter(&(fs::read_to_string(path)?)) {
         if let Some(font) = capture.name("font") {
             let font_string = font.as_str().to_string();
+            if !fonts.contains(&font_string) {
+                fonts.push(font_string)
+            }
+        }
+        if let Some(override_font) = capture.name("overrideFont") {
+            let font_string = override_font.as_str().to_string();
             if !fonts.contains(&font_string) {
                 fonts.push(font_string)
             }

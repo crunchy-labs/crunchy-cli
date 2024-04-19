@@ -337,9 +337,19 @@ async fn crunchyroll_session(
                 if let Some((token_type, token)) = session.split_once(':') {
                     match token_type {
                         "refresh_token" => {
-                            return Ok(builder.login_with_refresh_token(token).await?)
+                            return match builder.login_with_refresh_token(token).await {
+                                Ok(crunchy) => Ok(crunchy),
+                                Err(e) => {
+                                    if let Error::Request { message, .. } = &e {
+                                        if message.starts_with("invalid_grant") {
+                                            bail!("The stored login is expired, please login again")
+                                        }
+                                    }
+                                    Err(e.into())
+                                }
+                            }
                         }
-                        "etp_rt" => bail!("The stored login method (etp-rt) isn't supported anymore. Please use your credentials to login"),
+                        "etp_rt" => bail!("The stored login method (etp-rt) isn't supported anymore. Please login again using your credentials"),
                         _ => (),
                     }
                 }

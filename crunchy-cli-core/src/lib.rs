@@ -326,9 +326,8 @@ async fn crunchyroll_session(
         builder = builder.middleware(rate_limiter)
     }
 
-    let root_login_methods_count = cli.login_method.credentials.is_some() as u8
-        + cli.login_method.etp_rt.is_some() as u8
-        + cli.login_method.anonymous as u8;
+    let root_login_methods_count =
+        cli.login_method.credentials.is_some() as u8 + cli.login_method.anonymous as u8;
 
     let progress_handler = progress!("Logging in");
     if root_login_methods_count == 0 {
@@ -340,16 +339,16 @@ async fn crunchyroll_session(
                         "refresh_token" => {
                             return Ok(builder.login_with_refresh_token(token).await?)
                         }
-                        "etp_rt" => return Ok(builder.login_with_etp_rt(token).await?),
+                        "etp_rt" => bail!("The stored login method (etp-rt) isn't supported anymore. Please use your credentials to login"),
                         _ => (),
                     }
                 }
                 bail!("Could not read stored session ('{}')", session)
             }
         }
-        bail!("Please use a login method ('--credentials', '--etp-rt' or '--anonymous')")
+        bail!("Please use a login method ('--credentials' or '--anonymous')")
     } else if root_login_methods_count > 1 {
-        bail!("Please use only one login method ('--credentials', '--etp-rt' or '--anonymous')")
+        bail!("Please use only one login method ('--credentials' or '--anonymous')")
     }
 
     let crunchy = if let Some(credentials) = &cli.login_method.credentials {
@@ -358,8 +357,6 @@ async fn crunchyroll_session(
         } else {
             bail!("Invalid credentials format. Please provide your credentials as email:password")
         }
-    } else if let Some(etp_rt) = &cli.login_method.etp_rt {
-        builder.login_with_etp_rt(etp_rt).await?
     } else if cli.login_method.anonymous {
         builder.login_anonymously().await?
     } else {

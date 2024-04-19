@@ -25,9 +25,7 @@ impl Execute for Login {
                 SessionToken::RefreshToken(refresh_token) => {
                     fs::write(login_file_path, format!("refresh_token:{}", refresh_token))?
                 }
-                SessionToken::EtpRt(etp_rt) => {
-                    fs::write(login_file_path, format!("etp_rt:{}", etp_rt))?
-                }
+                SessionToken::EtpRt(_) => bail!("Login with etp_rt isn't supported anymore. Please use your credentials to login"),
                 SessionToken::Anonymous => bail!("Anonymous login cannot be saved"),
             }
 
@@ -47,12 +45,6 @@ pub struct LoginMethod {
     )]
     #[arg(global = true, long)]
     pub credentials: Option<String>,
-    #[arg(help = "Login with the etp-rt cookie")]
-    #[arg(
-        long_help = "Login with the etp-rt cookie. This can be obtained when you login on crunchyroll.com and extract it from there"
-    )]
-    #[arg(global = true, long)]
-    pub etp_rt: Option<String>,
     #[arg(help = "Login anonymously / without an account")]
     #[arg(global = true, long, default_value_t = false)]
     pub anonymous: bool,

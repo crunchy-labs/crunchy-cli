@@ -122,16 +122,6 @@ You can authenticate with your credentials (email:password) or by using a refres
   $ crunchy-cli --credentials "email:password" <command>
   ```
 
-- <span id="global-etp-rt">Refresh Token</span>
-
-  To obtain a refresh token, you have to log in at [crunchyroll.com](https://www.crunchyroll.com/) and extract the `etp_rt` cookie.
-  The easiest way to get it is via a browser extension which lets you export your cookies, like [Cookie-Editor](https://cookie-editor.cgagnier.ca/) ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) / [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)).
-  When installed, look for the `etp_rt` entry and extract its value.
-
-  ```shell
-  $ crunchy-cli --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d" <command>
-  ```
-
 - <span id="global-anonymous">Stay Anonymous</span>
 
   Login without an account (you won't be able to access premium content):
@@ -226,11 +216,9 @@ The `login` command can store your session, so you don't have to authenticate ev
 # save the refresh token which gets generated when login with credentials.
 # your email and password won't be stored at any time on disk
 $ crunchy-cli login --credentials "email:password"
-# save etp-rt cookie
-$ crunchy-cli login --etp-rt "4ebf1690-53a4-491a-a2ac-488309120f5d"
 ```
 
-With the session stored, you do not need to pass `--credentials` / `--etp-rt` / `--anonymous` anymore when you want to execute a command.
+With the session stored, you do not need to pass `--credentials` / `--anonymous` anymore when you want to execute a command.
 
 ### Download
 

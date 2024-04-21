@@ -12,6 +12,8 @@ depends=('ffmpeg' 'openssl')
 makedepends=('cargo')
 source=("${pkgname}-${pkgver}.tar.gz::https://github.com/crunchy-labs/crunchy-cli/archive/refs/tags/v${pkgver}.tar.gz")
 sha256sums=('$CI_SHA_SUM')
+# lto causes linking errors when executed by this buildscript. besides, lto is already done by cargo itself (which doesn't cause linking errors)
+options=(!lto)
 
 build() {
   cd "$srcdir/${pkgname}-$pkgver"

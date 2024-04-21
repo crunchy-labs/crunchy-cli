@@ -105,11 +105,6 @@ pub struct Archive {
     )]
     #[arg(long, default_value_t = 200)]
     pub(crate) merge_auto_tolerance: u32,
-    #[arg(
-        long,
-        help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
-        Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard)"
-    )]
     #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
     #[arg(
         long_help = "Tries to sync the timing of all downloaded audios to match one video. \
@@ -122,6 +117,10 @@ pub struct Archive {
     #[arg(long, require_equals = true, num_args = 0..=1, default_missing_value = "7.5")]
     pub(crate) sync_start: Option<f64>,
 
+    #[arg(
+        help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
+        Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard)"
+    )]
     #[arg(
         long_help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
         Valid options are: 'default' (how Crunchyroll uses it internally), 'ietf' (according to the IETF standard; you might run in issues as there are multiple locales which resolve to the same IETF language code, e.g. 'es-LA' and 'es-ES' are both resolving to 'es')"

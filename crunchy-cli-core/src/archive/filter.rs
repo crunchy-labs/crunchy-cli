@@ -314,7 +314,7 @@ impl Filter for ArchiveFilter {
             episodes.push((episode.clone(), episode.subtitle_locales.clone()))
         }
 
-        if self.seasons_with_premium.is_some() {
+        if self.seasons_with_premium.is_some() && episode.is_premium_only {
             let episode_len_before = episodes.len();
             episodes.retain(|(e, _)| !e.is_premium_only);
             if episode_len_before < episodes.len()

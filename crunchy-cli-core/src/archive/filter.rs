@@ -333,8 +333,10 @@ impl Filter for ArchiveFilter {
                     .unwrap()
                     .push(episode.season_number)
             }
-
-            return Ok(None);
+            
+            if episodes.is_empty() {
+                return Ok(None);
+            }
         }
 
         let mut relative_episode_number = None;

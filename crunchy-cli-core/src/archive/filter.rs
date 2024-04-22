@@ -314,7 +314,7 @@ impl Filter for ArchiveFilter {
             episodes.push((episode.clone(), episode.subtitle_locales.clone()))
         }
 
-        if self.seasons_with_premium.is_some() && episode.is_premium_only {
+        if self.seasons_with_premium.is_some() {
             let episode_len_before = episodes.len();
             episodes.retain(|(e, _)| !e.is_premium_only);
             if episode_len_before < episodes.len()
@@ -333,8 +333,10 @@ impl Filter for ArchiveFilter {
                     .unwrap()
                     .push(episode.season_number)
             }
-
-            return Ok(None);
+            
+            if episodes.is_empty() {
+                return Ok(None);
+            }
         }
 
         let mut relative_episode_number = None;

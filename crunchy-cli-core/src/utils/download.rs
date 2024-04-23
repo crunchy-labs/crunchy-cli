@@ -128,6 +128,7 @@ struct FFmpegAudioMeta {
     path: TempPath,
     locale: Locale,
     start_time: Option<TimeDelta>,
+    video_idx: usize,
 }
 
 struct FFmpegSubtitleMeta {
@@ -135,6 +136,7 @@ struct FFmpegSubtitleMeta {
     locale: Locale,
     cc: bool,
     start_time: Option<TimeDelta>,
+    video_idx: usize,
 }
 
 pub struct DownloadFormat {
@@ -433,7 +435,7 @@ impl Downloader {
         }
 
         // downloads all audios
-        for format in &self.formats {
+        for (i, format) in self.formats.iter().enumerate() {
             for (j, (stream_data, locale)) in format.audios.iter().enumerate() {
                 let path = self
                     .download_audio(
@@ -445,6 +447,7 @@ impl Downloader {
                     path,
                     locale: locale.clone(),
                     start_time: audio_offsets.get(&j).cloned(),
+                    video_idx: i,
                 })
             }
         }
@@ -507,6 +510,7 @@ impl Downloader {
                     locale: subtitle.locale.clone(),
                     cc: !not_cc,
                     start_time: subtitle_offsets.get(&j).cloned(),
+                    video_idx: i,
                 })
             }
         }
@@ -632,7 +636,11 @@ impl Downloader {
                     if videos.len() == 1 {
                         meta.locale.to_human_readable()
                     } else {
-                        format!("{} [Video: #{}]", meta.locale.to_human_readable(), i + 1,)
+                        format!(
+                            "{} [Video: #{}]",
+                            meta.locale.to_human_readable(),
+                            meta.video_idx + 1
+                        )
                     }
                 ),
             ]);
@@ -679,7 +687,7 @@ impl Downloader {
                             title += " (CC)"
                         }
                         if videos.len() > 1 {
-                            title += &format!(" [Video: #{}]", i + 1)
+                            title += &format!(" [Video: #{}]", meta.video_idx + 1)
                         }
                         title
                     }),

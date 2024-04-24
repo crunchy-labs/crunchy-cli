@@ -960,8 +960,7 @@ impl Downloader {
         let tempfile = tempfile(".ass")?;
         let (mut file, path) = tempfile.into_parts();
 
-        let mut buf = vec![];
-        subtitle.write_to(&mut buf).await?;
+        let mut buf = subtitle.data().await?;
         fix_subtitles(&mut buf, max_length);
 
         file.write_all(buf.as_slice())?;

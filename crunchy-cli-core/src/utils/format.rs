@@ -526,7 +526,33 @@ impl Format {
                 ),
             );
 
-        PathBuf::from(path)
+        let mut path = PathBuf::from(path);
+
+        // make sure that every path section has a maximum of 255 characters
+        if path.file_name().unwrap_or_default().to_string_lossy().len() > 255 {
+            let name = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let ext = path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            if ext != name {
+                path.set_file_name(format!("{}.{}", &name[..(255 - ext.len() - 1)], ext))
+            }
+        }
+        path.into_iter()
+            .map(|s| {
+                if s.len() > 255 {
+                    s.to_string_lossy()[..255].to_string()
+                } else {
+                    s.to_string_lossy().to_string()
+                }
+            })
+            .collect()
     }
 
     pub fn visual_output(&self, dst: &Path) {

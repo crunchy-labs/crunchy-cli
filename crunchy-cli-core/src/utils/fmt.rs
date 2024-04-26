@@ -1,7 +1,7 @@
 use chrono::TimeDelta;
 
 pub fn format_time_delta(time_delta: &TimeDelta) -> String {
-    let negative: bool = time_delta.abs() > *time_delta;
+    let negative = *time_delta < TimeDelta::zero();
     let time_delta = time_delta.abs();
     let hours = time_delta.num_hours();
     let minutes = time_delta.num_minutes() - time_delta.num_hours() * 60;

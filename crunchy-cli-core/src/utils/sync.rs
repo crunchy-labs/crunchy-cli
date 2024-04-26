@@ -216,9 +216,9 @@ fn generate_chromaprint(
 ) -> Result<Vec<u32>> {
     let mut ss_argument: &TimeDelta = &start.checked_sub(offset).unwrap();
     let mut offset_argument = &TimeDelta::zero();
-    if offset.abs() > *offset {
+    if *offset < TimeDelta::zero() {
         ss_argument = start;
-        offset_argument = &offset;
+        offset_argument = offset;
     };
 
     let mut command = Command::new("ffmpeg");

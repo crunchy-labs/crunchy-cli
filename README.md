@@ -471,13 +471,13 @@ The `archive` command lets you download episodes with multiple audios and subtit
 
   Default is `auto`.
 
-- <span id="archive-merge-auto-tolerance">Merge auto tolerance</span>
+- <span id="archive-merge-time-tolerance">Merge time tolerance</span>
 
   Sometimes two video tracks are downloaded with `--merge` set to `auto` even if they only differ some milliseconds in length which shouldn't be noticeable to the viewer.
-  To prevent this, you can specify a range in milliseconds with the `--merge-auto-tolerance` flag that only downloads one video if the length difference is in the given range.
+  To prevent this, you can specify a range in milliseconds with the `--merge-time-tolerance` flag that only downloads one video if the length difference is in the given range.
 
   ```shell
-  $ crunchy-cli archive -m auto --merge-auto-tolerance 100 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
+  $ crunchy-cli archive -m auto --merge-time-tolerance 100 https://www.crunchyroll.com/series/GY8VEQ95Y/darling-in-the-franxx
   ```
   
   Default are `200` milliseconds.

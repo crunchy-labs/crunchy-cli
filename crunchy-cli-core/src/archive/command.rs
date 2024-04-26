@@ -104,7 +104,7 @@ pub struct Archive {
         help = "If the merge behavior is 'auto', only download multiple video tracks if their length difference is higher than the given milliseconds"
     )]
     #[arg(long, default_value_t = 200)]
-    pub(crate) merge_auto_tolerance: u32,
+    pub(crate) merge_time_tolerance: u32,
     #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
     #[arg(
         long_help = "Tries to sync the timing of all downloaded audios to match one video. \
@@ -577,7 +577,7 @@ async fn get_format(
                             .sub(single_format.duration)
                             .abs()
                             .num_milliseconds()
-                            < archive.merge_auto_tolerance.into() =>
+                            < archive.merge_time_tolerance.into() =>
                     {
                         // If less than `audio_error` apart, use same audio.
                         closest_format

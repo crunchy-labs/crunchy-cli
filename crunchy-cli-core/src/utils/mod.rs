@@ -3,6 +3,7 @@ pub mod context;
 pub mod download;
 pub mod ffmpeg;
 pub mod filter;
+pub mod fmt;
 pub mod format;
 pub mod interactive_select;
 pub mod locale;

@@ -1,5 +1,6 @@
 use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::real_dedup_vec;
+use crate::utils::fmt::format_time_delta;
 use crate::utils::log::progress;
 use crate::utils::os::{
     cache_dir, is_special_file, temp_directory, temp_named_pipe, tempdir, tempfile,
@@ -595,7 +596,7 @@ impl Downloader {
 
         for (i, meta) in videos.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(start_time)])
+                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), i.to_string()]);
@@ -616,7 +617,7 @@ impl Downloader {
         }
         for (i, meta) in audios.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(start_time)])
+                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), (i + videos.len()).to_string()]);
@@ -663,7 +664,7 @@ impl Downloader {
         if container_supports_softsubs {
             for (i, meta) in subtitles.iter().enumerate() {
                 if let Some(start_time) = meta.start_time {
-                    input.extend(["-ss".to_string(), format_time_delta(start_time)])
+                    input.extend(["-ss".to_string(), format_time_delta(&start_time)])
                 }
                 input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
                 maps.extend([
@@ -1390,8 +1391,8 @@ fn fix_subtitles(raw: &mut Vec<u8>, max_length: TimeDelta) {
                         format!(
                             "Dialogue: {},{},{},",
                             layer,
-                            format_time_delta(start),
-                            format_time_delta(end)
+                            format_time_delta(&start),
+                            format_time_delta(&end)
                         ),
                     )
                     .to_string()
@@ -1663,18 +1664,6 @@ fn check_frame_windows(base_hashes: &[ImageHash], check_hashes: &[ImageHash]) ->
         results.push(sum as f64 / check_window.len() as f64);
     }
     results
-}
-
-fn format_time_delta(time_delta: TimeDelta) -> String {
-    let hours = time_delta.num_hours();
-    let minutes = time_delta.num_minutes() - time_delta.num_hours() * 60;
-    let seconds = time_delta.num_seconds() - time_delta.num_minutes() * 60;
-    let milliseconds = time_delta.num_milliseconds() - time_delta.num_seconds() * 1000;
-
-    format!(
-        "{}:{:0>2}:{:0>2}.{:0>3}",
-        hours, minutes, seconds, milliseconds
-    )
 }
 
 fn len_from_segments(segments: &[StreamSegment]) -> TimeDelta {

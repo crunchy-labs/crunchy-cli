@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::process::{Command, Stdio};
 use std::task::{Context, Poll};
 use std::{env, fs, io};
-use tempfile::{Builder, NamedTempFile, TempDir, TempPath};
+use tempfile::{Builder, NamedTempFile, TempPath};
 use tokio::io::{AsyncRead, ReadBuf};
 
 pub fn has_ffmpeg() -> bool {
@@ -44,22 +44,6 @@ pub fn tempfile<S: AsRef<str>>(suffix: S) -> io::Result<NamedTempFile> {
         tempfile.path().to_string_lossy()
     );
     Ok(tempfile)
-}
-
-/// Any tempdir should be created with this function. The prefix and directory of every directory
-/// created  with this function stays the same which is helpful to query all existing tempdirs and
-/// e.g. remove them in a case of ctrl-c. Having one function also good to prevent mistakes like
-/// setting the wrong prefix if done manually.
-pub fn tempdir<S: AsRef<str>>(suffix: S) -> io::Result<TempDir> {
-    let tempdir = Builder::default()
-        .prefix(".crunchy-cli_")
-        .suffix(suffix.as_ref())
-        .tempdir_in(temp_directory())?;
-    debug!(
-        "Created temporary directory: {}",
-        tempdir.path().to_string_lossy()
-    );
-    Ok(tempdir)
 }
 
 pub fn cache_dir<S: AsRef<str>>(name: S) -> io::Result<PathBuf> {

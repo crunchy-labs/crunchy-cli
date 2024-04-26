@@ -2,15 +2,13 @@ use crate::utils::ffmpeg::FFmpegPreset;
 use crate::utils::filter::real_dedup_vec;
 use crate::utils::fmt::format_time_delta;
 use crate::utils::log::progress;
-use crate::utils::os::{
-    cache_dir, is_special_file, temp_directory, temp_named_pipe, tempdir, tempfile,
-};
+use crate::utils::os::{cache_dir, is_special_file, temp_directory, temp_named_pipe, tempfile};
 use crate::utils::rate_limit::RateLimiterService;
+use crate::utils::sync::{sync_audios, SyncAudio};
 use anyhow::{bail, Result};
 use chrono::{NaiveTime, TimeDelta};
 use crunchyroll_rs::media::{SkipEvents, SkipEventsEvent, StreamData, StreamSegment, Subtitle};
 use crunchyroll_rs::Locale;
-use image_hasher::{Hasher, HasherConfig, ImageHash};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressFinish, ProgressStyle};
 use log::{debug, warn, LevelFilter};
 use regex::Regex;
@@ -39,6 +37,7 @@ pub enum MergeBehavior {
     Video,
     Audio,
     Auto,
+    Sync,
 }
 
 impl MergeBehavior {
@@ -47,6 +46,7 @@ impl MergeBehavior {
             "video" => MergeBehavior::Video,
             "audio" => MergeBehavior::Audio,
             "auto" => MergeBehavior::Auto,
+            "sync" => MergeBehavior::Sync,
             _ => return Err(format!("'{}' is not a valid merge behavior", s)),
         })
     }
@@ -64,7 +64,8 @@ pub struct DownloadBuilder {
     force_hardsub: bool,
     download_fonts: bool,
     no_closed_caption: bool,
-    sync_start_value: Option<f64>,
+    sync_tolerance: Option<u32>,
+    sync_precision: Option<u32>,
     threads: usize,
     ffmpeg_threads: Option<usize>,
     audio_locale_output_map: HashMap<Locale, String>,
@@ -84,7 +85,8 @@ impl DownloadBuilder {
             force_hardsub: false,
             download_fonts: false,
             no_closed_caption: false,
-            sync_start_value: None,
+            sync_tolerance: None,
+            sync_precision: None,
             threads: num_cpus::get(),
             ffmpeg_threads: None,
             audio_locale_output_map: HashMap::new(),
@@ -106,7 +108,8 @@ impl DownloadBuilder {
             download_fonts: self.download_fonts,
             no_closed_caption: self.no_closed_caption,
 
-            sync_start_value: self.sync_start_value,
+            sync_tolerance: self.sync_tolerance,
+            sync_precision: self.sync_precision,
 
             download_threads: self.threads,
             ffmpeg_threads: self.ffmpeg_threads,
@@ -165,7 +168,8 @@ pub struct Downloader {
     download_fonts: bool,
     no_closed_caption: bool,
 
-    sync_start_value: Option<f64>,
+    sync_tolerance: Option<u32>,
+    sync_precision: Option<u32>,
 
     download_threads: usize,
     ffmpeg_threads: Option<usize>,
@@ -245,6 +249,7 @@ impl Downloader {
         let mut video_offset = None;
         let mut audio_offsets = HashMap::new();
         let mut subtitle_offsets = HashMap::new();
+        let mut raw_audios = vec![];
         let mut videos = vec![];
         let mut audios = vec![];
         let mut subtitles = vec![];
@@ -263,40 +268,32 @@ impl Downloader {
             .max()
             .unwrap();
 
-        if self.formats.len() > 1 && self.sync_start_value.is_some() {
-            let all_segments_count: Vec<usize> = self
-                .formats
-                .iter()
-                .map(|f| f.video.0.segments().len())
-                .collect();
-            let sync_segments = 11.max(
-                all_segments_count.iter().max().unwrap() - all_segments_count.iter().min().unwrap(),
-            );
-            let mut sync_vids = vec![];
-            for (i, format) in self.formats.iter().enumerate() {
+        // downloads all audios
+        for (i, format) in self.formats.iter().enumerate() {
+            for (stream_data, locale) in &format.audios {
                 let path = self
-                    .download_video(
-                        &format.video.0,
-                        format!("Downloading video #{} sync segments", i + 1),
-                        Some(sync_segments),
+                    .download_audio(
+                        stream_data,
+                        format!("{:<1$}", format!("Downloading {} audio", locale), fmt_space),
                     )
                     .await?;
-                sync_vids.push(SyncVideo {
+                raw_audios.push(SyncAudio {
+                    format_id: i,
                     path,
-                    length: len_from_segments(&format.video.0.segments()),
-                    available_frames: (len_from_segments(
-                        &format.video.0.segments()[0..sync_segments],
-                    )
-                    .num_milliseconds() as f64
-                        * format.video.0.fps().unwrap()
-                        / 1000.0) as u64,
-                    idx: i,
+                    locale: locale.clone(),
+                    video_idx: i,
                 })
             }
+        }
 
+        if self.formats.len() > 1 && self.sync_tolerance.is_some() {
             let _progress_handler =
                 progress!("Syncing video start times (this might take some time)");
-            let mut offsets = sync_videos(sync_vids, self.sync_start_value.unwrap())?;
+            let mut offsets = sync_audios(
+                &raw_audios,
+                self.sync_tolerance.unwrap(),
+                self.sync_precision.unwrap(),
+            )?;
             drop(_progress_handler);
 
             let mut offset_pre_checked = false;
@@ -307,19 +304,14 @@ impl Downloader {
                     .enumerate()
                     .map(|(i, f)| {
                         len_from_segments(&f.video.0.segments())
-                            - TimeDelta::milliseconds(
-                                tmp_offsets
-                                    .get(&i)
-                                    .map(|o| (*o as f64 / f.video.0.fps().unwrap() * 1000.0) as i64)
-                                    .unwrap_or_default(),
-                            )
+                            - tmp_offsets.get(&i).map(|o| *o).unwrap_or_default()
                     })
                     .collect();
                 let min = formats_with_offset.iter().min().unwrap();
                 let max = formats_with_offset.iter().max().unwrap();
 
                 if max.num_seconds() - min.num_seconds() > 15 {
-                    warn!("Found difference of >15 seconds after sync, skipping applying it");
+                    warn!("Found difference of >15 seconds after sync, so the application was skipped");
                     offsets = None;
                     offset_pre_checked = true
                 }
@@ -331,7 +323,7 @@ impl Downloader {
                 let mut audio_count: usize = 0;
                 let mut subtitle_count: usize = 0;
                 for (i, format) in self.formats.iter().enumerate() {
-                    let format_fps = format.video.0.fps().unwrap();
+                    let offset = offsets.get(&i).map(|o| *o).unwrap_or_default();
                     let format_len = format
                         .video
                         .0
@@ -339,7 +331,7 @@ impl Downloader {
                         .iter()
                         .map(|s| s.length.as_millis())
                         .sum::<u128>() as u64
-                        - offsets.get(&i).map_or(0, |o| *o);
+                        - offset.num_milliseconds() as u64;
                     if format_len > root_format_length {
                         root_format_idx = i;
                         root_format_length = format_len;
@@ -347,23 +339,13 @@ impl Downloader {
 
                     for _ in &format.audios {
                         if let Some(offset) = &offsets.get(&i) {
-                            audio_offsets.insert(
-                                audio_count,
-                                TimeDelta::milliseconds(
-                                    (**offset as f64 / format_fps * 1000.0) as i64,
-                                ),
-                            );
+                            audio_offsets.insert(audio_count, **offset);
                         }
                         audio_count += 1
                     }
                     for _ in &format.subtitles {
                         if let Some(offset) = &offsets.get(&i) {
-                            subtitle_offsets.insert(
-                                subtitle_count,
-                                TimeDelta::milliseconds(
-                                    (**offset as f64 / format_fps * 1000.0) as i64,
-                                ),
-                            );
+                            subtitle_offsets.insert(subtitle_count, **offset);
                         }
                         subtitle_count += 1
                     }
@@ -390,20 +372,28 @@ impl Downloader {
                 root_format.subtitles.extend(subtitle_append);
 
                 self.formats = vec![root_format];
-                video_offset = offsets.get(&root_format_idx).map(|o| {
-                    TimeDelta::milliseconds(
-                        (*o as f64 / self.formats[0].video.0.fps().unwrap() * 1000.0) as i64,
-                    )
-                })
+                video_offset = offsets.get(&root_format_idx).map(|o| *o);
+                for raw_audio in raw_audios.iter_mut() {
+                    raw_audio.video_idx = root_format_idx;
+                }
             } else {
                 for format in &mut self.formats {
                     format.metadata.skip_events = None
                 }
+                if !offset_pre_checked {
+                    warn!("Couldn't find reliable sync positions")
+                }
             }
+        }
 
-            if !offset_pre_checked {
-                warn!("Couldn't find reliable sync positions")
-            }
+        // add audio metadata
+        for raw_audio in raw_audios {
+            audios.push(FFmpegAudioMeta {
+                path: raw_audio.path,
+                locale: raw_audio.locale,
+                start_time: audio_offsets.get(&raw_audio.format_id).map(|o| *o),
+                video_idx: raw_audio.video_idx,
+            })
         }
 
         // downloads all videos
@@ -433,24 +423,6 @@ impl Downloader {
                 length: len,
                 start_time: video_offset,
             })
-        }
-
-        // downloads all audios
-        for (i, format) in self.formats.iter().enumerate() {
-            for (j, (stream_data, locale)) in format.audios.iter().enumerate() {
-                let path = self
-                    .download_audio(
-                        stream_data,
-                        format!("{:<1$}", format!("Downloading {} audio", locale), fmt_space),
-                    )
-                    .await?;
-                audios.push(FFmpegAudioMeta {
-                    path,
-                    locale: locale.clone(),
-                    start_time: audio_offsets.get(&j).cloned(),
-                    video_idx: i,
-                })
-            }
         }
 
         for (i, format) in self.formats.iter().enumerate() {
@@ -1536,134 +1508,6 @@ async fn ffmpeg_progress<R: AsyncReadExt + Unpin>(
     }
 
     Ok(())
-}
-
-struct SyncVideo {
-    path: TempPath,
-    length: TimeDelta,
-    available_frames: u64,
-    idx: usize,
-}
-
-fn sync_videos(mut sync_videos: Vec<SyncVideo>, value: f64) -> Result<Option<HashMap<usize, u64>>> {
-    let mut result = HashMap::new();
-    let hasher = HasherConfig::new().preproc_dct().to_hasher();
-    let start_frame = 300;
-
-    sync_videos.sort_by_key(|sv| sv.length);
-
-    let sync_base = sync_videos.remove(0);
-    let sync_hashes = extract_frame_hashes(&sync_base.path, start_frame, 50, &hasher)?;
-
-    for sync_video in sync_videos {
-        let mut highest_frame_match = f64::INFINITY;
-        let mut frame = start_frame;
-        let mut hashes = vec![];
-
-        loop {
-            if frame == sync_video.available_frames {
-                debug!(
-                    "Failed to sync videos, end of stream {} reached (highest frame match: {})",
-                    sync_video.idx + 1,
-                    highest_frame_match
-                );
-                return Ok(None);
-            }
-
-            hashes.drain(0..(hashes.len() as i32 - sync_hashes.len() as i32).max(0) as usize);
-            hashes.extend(extract_frame_hashes(
-                &sync_video.path,
-                frame,
-                300 - hashes.len() as u64,
-                &hasher,
-            )?);
-
-            let mut check_frame_windows_result: Vec<(usize, f64)> =
-                check_frame_windows(&sync_hashes, &hashes)
-                    .into_iter()
-                    .enumerate()
-                    .collect();
-            check_frame_windows_result.sort_by(|(_, a), (_, b)| a.partial_cmp(&b).unwrap());
-            if check_frame_windows_result[0].1 <= value {
-                result.insert(
-                    sync_video.idx,
-                    frame + check_frame_windows_result[0].0 as u64 - start_frame,
-                );
-                break;
-            } else if check_frame_windows_result[0].1 < highest_frame_match {
-                highest_frame_match = check_frame_windows_result[0].1
-            }
-
-            frame = (frame + 300 - sync_hashes.len() as u64).min(sync_video.available_frames)
-        }
-    }
-
-    Ok(Some(result))
-}
-
-fn extract_frame_hashes(
-    input_file: &Path,
-    start_frame: u64,
-    frame_count: u64,
-    hasher: &Hasher,
-) -> Result<Vec<ImageHash>> {
-    let frame_dir = tempdir(format!(
-        "{}_sync_frames",
-        input_file
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .trim_end_matches(
-                &input_file
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string()
-            )
-    ))?;
-    let extract_output = Command::new("ffmpeg")
-        .arg("-hide_banner")
-        .arg("-y")
-        .args(["-i", input_file.to_string_lossy().to_string().as_str()])
-        .args([
-            "-vf",
-            format!(
-                r#"select=between(n\,{}\,{}),setpts=PTS-STARTPTS,scale=-1:240"#,
-                start_frame,
-                start_frame + frame_count
-            )
-            .as_str(),
-        ])
-        .args(["-vframes", frame_count.to_string().as_str()])
-        .arg(format!("{}/%03d.jpg", frame_dir.path().to_string_lossy()))
-        .output()?;
-    if !extract_output.status.success() {
-        bail!(
-            "{}",
-            String::from_utf8_lossy(extract_output.stderr.as_slice())
-        )
-    }
-
-    let mut hashes = vec![];
-    for file in frame_dir.path().read_dir()? {
-        let file = file?;
-        let img = image::open(file.path())?;
-        hashes.push(hasher.hash_image(&img))
-    }
-    Ok(hashes)
-}
-
-fn check_frame_windows(base_hashes: &[ImageHash], check_hashes: &[ImageHash]) -> Vec<f64> {
-    let mut results = vec![];
-
-    for i in 0..(check_hashes.len() - base_hashes.len()) {
-        let check_window = &check_hashes[i..(base_hashes.len() + i)];
-        let sum = std::iter::zip(base_hashes, check_window)
-            .map(|(a, b)| a.dist(b))
-            .sum::<u32>();
-        results.push(sum as f64 / check_window.len() as f64);
-    }
-    results
 }
 
 fn len_from_segments(segments: &[StreamSegment]) -> TimeDelta {

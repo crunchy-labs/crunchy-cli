@@ -304,7 +304,7 @@ impl Downloader {
                     .enumerate()
                     .map(|(i, f)| {
                         len_from_segments(&f.video.0.segments())
-                            - tmp_offsets.get(&i).map(|o| *o).unwrap_or_default()
+                            - tmp_offsets.get(&i).copied().unwrap_or_default()
                     })
                     .collect();
                 let min = formats_with_offset.iter().min().unwrap();
@@ -323,7 +323,7 @@ impl Downloader {
                 let mut audio_count: usize = 0;
                 let mut subtitle_count: usize = 0;
                 for (i, format) in self.formats.iter().enumerate() {
-                    let offset = offsets.get(&i).map(|o| *o).unwrap_or_default();
+                    let offset = offsets.get(&i).copied().unwrap_or_default();
                     let format_len = format
                         .video
                         .0
@@ -372,7 +372,7 @@ impl Downloader {
                 root_format.subtitles.extend(subtitle_append);
 
                 self.formats = vec![root_format];
-                video_offset = offsets.get(&root_format_idx).map(|o| *o);
+                video_offset = offsets.get(&root_format_idx).copied();
                 for raw_audio in raw_audios.iter_mut() {
                     raw_audio.video_idx = root_format_idx;
                 }
@@ -391,7 +391,7 @@ impl Downloader {
             audios.push(FFmpegAudioMeta {
                 path: raw_audio.path,
                 locale: raw_audio.locale,
-                start_time: audio_offsets.get(&raw_audio.format_id).map(|o| *o),
+                start_time: audio_offsets.get(&raw_audio.format_id).copied(),
                 video_idx: raw_audio.video_idx,
             })
         }

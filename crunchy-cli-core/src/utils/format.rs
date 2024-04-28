@@ -544,7 +544,7 @@ impl Format {
                 path.set_file_name(format!("{}.{}", &name[..(255 - ext.len() - 1)], ext))
             }
         }
-        path.into_iter()
+        path.iter()
             .map(|s| {
                 if s.len() > 255 {
                     s.to_string_lossy()[..255].to_string()

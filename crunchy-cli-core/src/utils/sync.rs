@@ -111,7 +111,7 @@ pub fn sync_audios(
 
     for sync_audio in &sync_audios {
         let chromaprint = generate_chromaprint(
-            &sync_audio.1,
+            sync_audio.1,
             &start,
             &end,
             initial_offsets.get(&sync_audio.0).unwrap(),
@@ -130,7 +130,7 @@ pub fn sync_audios(
             generate_chromaprint(base_audio.1, &start, &end, &base_offset)?,
         );
         for audio in &sync_audios {
-            let initial_offset = initial_offsets.get(&audio.0).map(|o| *o).unwrap();
+            let initial_offset = initial_offsets.get(&audio.0).copied().unwrap();
             let offset = find_offset(
                 (&base_audio.0, chromaprints.get(&base_audio.0).unwrap()),
                 &base_offset,
@@ -148,15 +148,12 @@ pub fn sync_audios(
                 audio.0,
                 result
                     .get(&audio.0)
-                    .map(|o| *o)
+                    .copied()
                     .unwrap_or_default()
                     .checked_add(&offset)
                     .unwrap(),
             );
-            runs.insert(
-                audio.0,
-                runs.get(&audio.0).map(|o| *o).unwrap_or_default() + 1,
-            );
+            runs.insert(audio.0, runs.get(&audio.0).copied().unwrap_or_default() + 1);
         }
     }
     let mut result: HashMap<usize, TimeDelta> = result
@@ -165,7 +162,7 @@ pub fn sync_audios(
             (
                 *format_id,
                 TimeDelta::milliseconds(
-                    offset.num_milliseconds() / runs.get(format_id).map(|o| *o).unwrap(),
+                    offset.num_milliseconds() / runs.get(format_id).copied().unwrap(),
                 ),
             )
         })
@@ -183,7 +180,7 @@ fn find_offset(
     start: &TimeDelta,
     sync_tolerance: u32,
 ) -> Option<TimeDelta> {
-    let (lhs_ranges, rhs_ranges) = compare_chromaprints(&lhs.1, &rhs.1, sync_tolerance);
+    let (lhs_ranges, rhs_ranges) = compare_chromaprints(lhs.1, rhs.1, sync_tolerance);
     if lhs_ranges.is_empty() || rhs_ranges.is_empty() {
         return None;
     }
@@ -191,8 +188,8 @@ fn find_offset(
     let rhs_range = rhs_ranges[0];
     let offset = rhs_range.end - lhs_range.end;
     let offset = TimeDelta::milliseconds((offset * 1000.0) as i64)
-        .checked_add(&lhs_shift)?
-        .checked_sub(&rhs_shift)?;
+        .checked_add(lhs_shift)?
+        .checked_sub(rhs_shift)?;
     debug!(
         "Found offset of {}ms ({} - {} {}s) ({} - {} {}s) for format {} to {}",
         offset.num_milliseconds(),
@@ -205,7 +202,7 @@ fn find_offset(
         rhs.0,
         lhs.0
     );
-    return Some(offset);
+    Some(offset)
 }
 
 fn generate_chromaprint(
@@ -255,10 +252,10 @@ fn generate_chromaprint(
     let mut chromaprint = Vec::with_capacity(length / 4);
     for i in 0..length / 4 {
         chromaprint.push(as_u32_le(
-            raw_chromaprint[i * 4 + 0..i * 4 + 4].try_into().unwrap(),
+            raw_chromaprint[i * 4..i * 4 + 4].try_into().unwrap(),
         ));
     }
-    return Ok(chromaprint);
+    Ok(chromaprint)
 }
 
 fn compare_chromaprints(
@@ -266,8 +263,8 @@ fn compare_chromaprints(
     rhs_chromaprint: &Vec<u32>,
     sync_tolerance: u32,
 ) -> (Vec<TimeRange>, Vec<TimeRange>) {
-    let lhs_inverse_index = create_inverse_index(&lhs_chromaprint);
-    let rhs_inverse_index = create_inverse_index(&rhs_chromaprint);
+    let lhs_inverse_index = create_inverse_index(lhs_chromaprint);
+    let rhs_inverse_index = create_inverse_index(rhs_chromaprint);
 
     let mut possible_shifts = HashSet::new();
     for lhs_pair in lhs_inverse_index {
@@ -275,7 +272,7 @@ fn compare_chromaprints(
         for i in -2..=2 {
             let modified_point = (original_point as i32 + i) as u32;
             if rhs_inverse_index.contains_key(&modified_point) {
-                let rhs_index = rhs_inverse_index.get(&modified_point).map(|o| *o).unwrap();
+                let rhs_index = rhs_inverse_index.get(&modified_point).copied().unwrap();
                 possible_shifts.insert(rhs_index as i32 - lhs_pair.1 as i32);
             }
         }
@@ -285,8 +282,8 @@ fn compare_chromaprints(
     let mut all_rhs_time_ranges = vec![];
     for shift_amount in possible_shifts {
         let time_range_pair = find_time_ranges(
-            &lhs_chromaprint,
-            &rhs_chromaprint,
+            lhs_chromaprint,
+            rhs_chromaprint,
             shift_amount,
             sync_tolerance,
         );
@@ -324,20 +321,20 @@ fn compare_chromaprints(
     all_rhs_time_ranges.sort_by(|a, b| (a.end - a.start).total_cmp(&(b.end - b.start)));
     all_rhs_time_ranges.reverse();
 
-    return (all_lhs_time_ranges, all_rhs_time_ranges);
+    (all_lhs_time_ranges, all_rhs_time_ranges)
 }
 
 fn create_inverse_index(chromaprint: &Vec<u32>) -> HashMap<u32, usize> {
     let mut inverse_index = HashMap::with_capacity(chromaprint.capacity());
-    for i in 0..chromaprint.capacity() {
-        inverse_index.insert(chromaprint[i], i);
+    for (i, fingerprint) in chromaprint.iter().enumerate().take(chromaprint.capacity()) {
+        inverse_index.insert(*fingerprint, i);
     }
-    return inverse_index;
+    inverse_index
 }
 
 fn find_time_ranges(
-    lhs_chromaprint: &Vec<u32>,
-    rhs_chromaprint: &Vec<u32>,
+    lhs_chromaprint: &[u32],
+    rhs_chromaprint: &[u32],
     shift_amount: i32,
     sync_tolerance: u32,
 ) -> Option<(Vec<TimeRange>, Vec<TimeRange>)> {
@@ -372,13 +369,11 @@ fn find_time_ranges(
     rhs_matching_timestamps.push(f64::MAX);
 
     let lhs_time_ranges = timestamps_to_ranges(lhs_matching_timestamps);
-    if lhs_time_ranges.is_none() {
-        return None;
-    }
+    lhs_time_ranges.as_ref()?;
     let lhs_time_ranges = lhs_time_ranges.unwrap();
     let rhs_time_ranges = timestamps_to_ranges(rhs_matching_timestamps).unwrap();
 
-    return Some((lhs_time_ranges, rhs_time_ranges));
+    Some((lhs_time_ranges, rhs_time_ranges))
 }
 
 fn timestamps_to_ranges(mut timestamps: Vec<f64>) -> Option<Vec<TimeRange>> {
@@ -402,20 +397,20 @@ fn timestamps_to_ranges(mut timestamps: Vec<f64>) -> Option<Vec<TimeRange>> {
             continue;
         }
 
-        time_ranges.push(current_range.clone());
+        time_ranges.push(current_range);
         current_range.start = next;
         current_range.end = next;
     }
-    return if time_ranges.len() > 0 {
+    if !time_ranges.is_empty() {
         Some(time_ranges)
     } else {
         None
-    };
+    }
 }
 
 fn as_u32_le(array: &[u8; 4]) -> u32 {
     #![allow(arithmetic_overflow)]
-    ((array[0] as u32) << 0)
+    (array[0] as u32)
         | ((array[1] as u32) << 8)
         | ((array[2] as u32) << 16)
         | ((array[3] as u32) << 24)

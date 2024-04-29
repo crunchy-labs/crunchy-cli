@@ -261,14 +261,14 @@ fn generate_chromaprint(
     // the stdout is read in chunks because keeping all the raw audio data in memory would take up
     // a significant amount of space
     let mut stdout = handle.stdout.take().unwrap();
-    let mut buf: [u8; 32_000] = [0; 32_000];
+    let mut buf: [u8; 128_000] = [0; 128_000];
     while handle.try_wait()?.is_none() {
         loop {
             let read_bytes = stdout.read(&mut buf)?;
             if read_bytes == 0 {
                 break;
             }
-            let data: [i16; 16_000] = unsafe { mem::transmute(buf) };
+            let data: [i16; 64_000] = unsafe { mem::transmute(buf) };
             printer.consume(&data[0..(read_bytes / 2)])
         }
     }

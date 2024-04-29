@@ -1,6 +1,9 @@
+use std::io::Read;
+use std::process::Stdio;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
+    mem,
     ops::Not,
     path::Path,
     process::Command,
@@ -12,6 +15,7 @@ use log::debug;
 use tempfile::TempPath;
 
 use anyhow::{bail, Result};
+use rusty_chromaprint::{Configuration, Fingerprinter};
 
 use super::fmt::format_time_delta;
 
@@ -19,6 +23,7 @@ pub struct SyncAudio {
     pub format_id: usize,
     pub path: TempPath,
     pub locale: Locale,
+    pub sample_rate: u32,
     pub video_idx: usize,
 }
 
@@ -43,11 +48,12 @@ pub fn sync_audios(
             continue;
         }
         formats.insert(audio.format_id);
-        sync_audios.push((audio.format_id, &audio.path));
+        sync_audios.push((audio.format_id, &audio.path, audio.sample_rate));
         chromaprints.insert(
             audio.format_id,
             generate_chromaprint(
                 &audio.path,
+                audio.sample_rate,
                 &TimeDelta::zero(),
                 &TimeDelta::zero(),
                 &TimeDelta::zero(),
@@ -112,6 +118,7 @@ pub fn sync_audios(
     for sync_audio in &sync_audios {
         let chromaprint = generate_chromaprint(
             sync_audio.1,
+            sync_audio.2,
             &start,
             &end,
             initial_offsets.get(&sync_audio.0).unwrap(),
@@ -127,7 +134,7 @@ pub fn sync_audios(
         );
         chromaprints.insert(
             base_audio.0,
-            generate_chromaprint(base_audio.1, &start, &end, &base_offset)?,
+            generate_chromaprint(base_audio.1, base_audio.2, &start, &end, &base_offset)?,
         );
         for audio in &sync_audios {
             let initial_offset = initial_offsets.get(&audio.0).copied().unwrap();
@@ -207,6 +214,7 @@ fn find_offset(
 
 fn generate_chromaprint(
     input_file: &Path,
+    sample_rate: u32,
     start: &TimeDelta,
     end: &TimeDelta,
     offset: &TimeDelta,
@@ -217,6 +225,9 @@ fn generate_chromaprint(
         ss_argument = start;
         offset_argument = offset;
     };
+
+    let mut printer = Fingerprinter::new(&Configuration::preset_test1());
+    printer.start(sample_rate, 2)?;
 
     let mut command = Command::new("ffmpeg");
     command
@@ -232,30 +243,42 @@ fn generate_chromaprint(
         .args(["-itsoffset", format_time_delta(offset_argument).as_str()])
         .args(["-i", input_file.to_string_lossy().to_string().as_str()])
         .args(["-ac", "2"])
-        .args(["-f", "chromaprint"])
-        .args(["-fp_format", "raw"])
+        .args([
+            "-f",
+            if cfg!(target_endian = "big") {
+                "s16be"
+            } else {
+                "s16le"
+            },
+        ])
         .arg("-");
 
-    let extract_output = command.output()?;
+    let mut handle = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
 
-    if !extract_output.status.success() {
-        bail!(
-            "{}",
-            String::from_utf8_lossy(extract_output.stderr.as_slice())
-        );
+    // the stdout is read in chunks because keeping all the raw audio data in memory would take up
+    // a significant amount of space
+    let mut stdout = handle.stdout.take().unwrap();
+    let mut buf: [u8; 32_000] = [0; 32_000];
+    while handle.try_wait()?.is_none() {
+        loop {
+            let read_bytes = stdout.read(&mut buf)?;
+            if read_bytes == 0 {
+                break;
+            }
+            let data: [i16; 16_000] = unsafe { mem::transmute(buf) };
+            printer.consume(&data[0..(read_bytes / 2)])
+        }
     }
-    let raw_chromaprint = extract_output.stdout.as_slice();
-    let length = raw_chromaprint.len();
-    if length % 4 != 0 {
-        bail!("chromaprint bytes should be a multiple of 4");
+
+    if !handle.wait()?.success() {
+        bail!("{}", std::io::read_to_string(handle.stderr.unwrap())?)
     }
-    let mut chromaprint = Vec::with_capacity(length / 4);
-    for i in 0..length / 4 {
-        chromaprint.push(as_u32_le(
-            raw_chromaprint[i * 4..i * 4 + 4].try_into().unwrap(),
-        ));
-    }
-    Ok(chromaprint)
+
+    printer.finish();
+    return Ok(printer.fingerprint().into());
 }
 
 fn compare_chromaprints(
@@ -406,12 +429,4 @@ fn timestamps_to_ranges(mut timestamps: Vec<f64>) -> Option<Vec<TimeRange>> {
     } else {
         None
     }
-}
-
-fn as_u32_le(array: &[u8; 4]) -> u32 {
-    #![allow(arithmetic_overflow)]
-    (array[0] as u32)
-        | ((array[1] as u32) << 8)
-        | ((array[2] as u32) << 16)
-        | ((array[3] as u32) << 24)
 }

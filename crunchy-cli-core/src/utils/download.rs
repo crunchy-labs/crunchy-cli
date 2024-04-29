@@ -281,6 +281,7 @@ impl Downloader {
                     format_id: i,
                     path,
                     locale: locale.clone(),
+                    sample_rate: stream_data.sampling_rate().unwrap(),
                     video_idx: i,
                 })
             }

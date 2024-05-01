@@ -106,12 +106,12 @@ pub struct Archive {
     #[arg(long, default_value_t = 200)]
     pub(crate) merge_time_tolerance: u32,
     #[arg(
-        help = "If the merge behavior is 'sync', specify the difference by which two fingerprints are considered equal, higher values can help if the algorithm fails"
+        help = "If the merge behavior is 'sync', specify the difference by which two fingerprints are considered equal, higher values can help when the algorithm fails"
     )]
     #[arg(long, default_value_t = 6)]
     pub(crate) sync_tolerance: u32,
     #[arg(
-        help = "If the merge behavior is 'sync', specify the amount of offset determination runs from which the final offset is calculated, higher values will take a lot more time but will result in more precise offsets"
+        help = "If the merge behavior is 'sync', specify the amount of offset determination runs from which the final offset is calculated, higher values will increase the time required but lead to more precise offsets"
     )]
     #[arg(long, default_value_t = 4)]
     pub(crate) sync_precision: u32,

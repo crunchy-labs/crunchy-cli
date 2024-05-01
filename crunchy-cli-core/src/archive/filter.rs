@@ -333,7 +333,7 @@ impl Filter for ArchiveFilter {
                     .unwrap()
                     .push(episode.season_number)
             }
-            
+
             if episodes.is_empty() {
                 return Ok(None);
             }

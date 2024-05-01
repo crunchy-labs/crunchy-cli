@@ -90,32 +90,31 @@ pub struct Archive {
     pub(crate) resolution: Resolution,
 
     #[arg(
-        help = "Sets the behavior of the stream merging. Valid behaviors are 'auto', 'audio' and 'video'"
+        help = "Sets the behavior of the stream merging. Valid behaviors are 'auto', 'sync', 'audio' and 'video'"
     )]
     #[arg(
         long_help = "Because of local restrictions (or other reasons) some episodes with different languages does not have the same length (e.g. when some scenes were cut out). \
     With this flag you can set the behavior when handling multiple language.
-    Valid options are 'audio' (stores one video and all other languages as audio only), 'video' (stores the video + audio for every language) and 'auto' (detects if videos differ in length: if so, behave like 'video' else like 'audio')"
+    Valid options are 'audio' (stores one video and all other languages as audio only), 'video' (stores the video + audio for every language), 'auto' (detects if videos differ in length: if so, behave like 'video' else like 'audio') and 'sync' (detects if videos differ in length: if so, tries to find the offset of matching audio parts and removes it from the beginning, otherwise it behaves like 'audio')"
     )]
     #[arg(short, long, default_value = "auto")]
     #[arg(value_parser = MergeBehavior::parse)]
     pub(crate) merge: MergeBehavior,
     #[arg(
-        help = "If the merge behavior is 'auto', only download multiple video tracks if their length difference is higher than the given milliseconds"
+        help = "If the merge behavior is 'auto' or 'sync', consider videos to be of equal lengths if the difference in length is smaller than the specified milliseconds"
     )]
     #[arg(long, default_value_t = 200)]
     pub(crate) merge_time_tolerance: u32,
-    #[arg(help = "Tries to sync the timing of all downloaded audios to match one video")]
     #[arg(
-        long_help = "Tries to sync the timing of all downloaded audios to match one video. \
-    This is done by downloading the first few segments/frames of all video tracks that differ in length and comparing them frame by frame. \
-    The value of this flag determines how accurate the syncing is, generally speaking everything over 15 begins to be more inaccurate and everything below 6 is too accurate (and won't succeed). \
-    If you want to provide a custom value to this flag, you have to set it with an equals (e.g. `--sync-start=10` instead of `--sync-start 10`). \
-    When the syncing fails, the command is continued as if `--sync-start` wasn't provided for this episode
-    "
+        help = "If the merge behavior is 'sync', specify the difference by which two fingerprints are considered equal, higher values can help when the algorithm fails"
     )]
-    #[arg(long, require_equals = true, num_args = 0..=1, default_missing_value = "7.5")]
-    pub(crate) sync_start: Option<f64>,
+    #[arg(long, default_value_t = 6)]
+    pub(crate) sync_tolerance: u32,
+    #[arg(
+        help = "If the merge behavior is 'sync', specify the amount of offset determination runs from which the final offset is calculated, higher values will increase the time required but lead to more precise offsets"
+    )]
+    #[arg(long, default_value_t = 4)]
+    pub(crate) sync_precision: u32,
 
     #[arg(
         help = "Specified which language tagging the audio and subtitle tracks and language specific format options should have. \
@@ -229,18 +228,10 @@ impl Execute for Archive {
         }
 
         if self.include_chapters
+            && !matches!(self.merge, MergeBehavior::Sync)
             && !matches!(self.merge, MergeBehavior::Audio)
-            && self.sync_start.is_none()
         {
-            bail!("`--include-chapters` can only be used if `--merge` is set to 'audio' or `--sync-start` is set")
-        }
-
-        if !matches!(self.merge, MergeBehavior::Auto) && self.sync_start.is_some() {
-            bail!("`--sync-start` can only be used if `--merge` is set to `auto`")
-        }
-
-        if self.sync_start.is_some() && self.ffmpeg_preset.is_none() {
-            warn!("Using `--sync-start` without `--ffmpeg-preset` might produce worse sync results than with `--ffmpeg-preset` set")
+            bail!("`--include-chapters` can only be used if `--merge` is set to 'audio' or 'sync'")
         }
 
         self.audio = all_locale_in_locales(self.audio.clone());
@@ -317,7 +308,14 @@ impl Execute for Archive {
                     .audio_sort(Some(self.audio.clone()))
                     .subtitle_sort(Some(self.subtitle.clone()))
                     .no_closed_caption(self.no_closed_caption)
-                    .sync_start_value(self.sync_start)
+                    .sync_tolerance(match self.merge {
+                        MergeBehavior::Sync => Some(self.sync_tolerance),
+                        _ => None,
+                    })
+                    .sync_precision(match self.merge {
+                        MergeBehavior::Sync => Some(self.sync_precision),
+                        _ => None,
+                    })
                     .threads(self.threads)
                     .audio_locale_output_map(
                         zip(self.audio.clone(), self.output_audio_locales.clone()).collect(),
@@ -560,7 +558,7 @@ async fn get_format(
                 },
             },
         }),
-        MergeBehavior::Auto => {
+        MergeBehavior::Auto | MergeBehavior::Sync => {
             let mut d_formats: Vec<(Duration, DownloadFormat)> = vec![];
 
             for (single_format, video, audio, subtitles) in format_pairs {

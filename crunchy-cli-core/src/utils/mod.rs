@@ -11,4 +11,5 @@ pub mod log;
 pub mod os;
 pub mod parse;
 pub mod rate_limit;
+pub mod sync;
 pub mod video;

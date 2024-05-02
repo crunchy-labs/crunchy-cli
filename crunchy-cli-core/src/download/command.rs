@@ -400,7 +400,7 @@ async fn get_format(
         subtitles: subtitle.clone().map_or(vec![], |s| {
             vec![(
                 s,
-                single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
+                single_format.audio != Locale::ja_JP && stream.subtitles.len() == 1,
             )]
         }),
         metadata: DownloadFormatMetadata {
@@ -417,7 +417,7 @@ async fn get_format(
         subtitle.map_or(vec![], |s| {
             vec![(
                 s,
-                single_format.audio == Locale::ja_JP || stream.subtitles.len() > 1,
+                single_format.audio != Locale::ja_JP && stream.subtitles.len() == 1,
             )]
         }),
     )]);

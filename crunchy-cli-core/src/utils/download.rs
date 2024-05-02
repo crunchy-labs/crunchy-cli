@@ -232,13 +232,13 @@ impl Downloader {
             if let Some(subtitle_sort) = &self.subtitle_sort {
                 format
                     .subtitles
-                    .sort_by(|(a_subtitle, a_not_cc), (b_subtitle, b_not_cc)| {
+                    .sort_by(|(a_subtitle, a_cc), (b_subtitle, b_cc)| {
                         let ordering = subtitle_sort
                             .iter()
                             .position(|l| l == &a_subtitle.locale)
                             .cmp(&subtitle_sort.iter().position(|l| l == &b_subtitle.locale));
                         if matches!(ordering, Ordering::Equal) {
-                            a_not_cc.cmp(b_not_cc).reverse()
+                            a_cc.cmp(b_cc).reverse()
                         } else {
                             ordering
                         }
@@ -451,8 +451,8 @@ impl Downloader {
                 None
             };
 
-            for (j, (subtitle, not_cc)) in format.subtitles.iter().enumerate() {
-                if !not_cc && self.no_closed_caption {
+            for (j, (subtitle, cc)) in format.subtitles.iter().enumerate() {
+                if *cc && self.no_closed_caption {
                     continue;
                 }
 
@@ -462,7 +462,7 @@ impl Downloader {
                         progress_message += ", "
                     }
                     progress_message += &subtitle.locale.to_string();
-                    if !not_cc {
+                    if *cc {
                         progress_message += " (CC)";
                     }
                     if i.min(videos.len() - 1) != 0 {
@@ -477,12 +477,12 @@ impl Downloader {
                 debug!(
                     "Downloaded {} subtitles{}",
                     subtitle.locale,
-                    (!not_cc).then_some(" (cc)").unwrap_or_default(),
+                    cc.then_some(" (cc)").unwrap_or_default(),
                 );
                 subtitles.push(FFmpegSubtitleMeta {
                     path,
                     locale: subtitle.locale.clone(),
-                    cc: !not_cc,
+                    cc: *cc,
                     start_time: subtitle_offsets.get(&j).cloned(),
                     video_idx: i,
                 })

@@ -15,14 +15,23 @@ sha256sums=('$CI_SHA_SUM')
 # lto causes linking errors when executed by this buildscript. besides, lto is already done by cargo itself (which doesn't cause linking errors)
 options=(!lto)
 
+prepare() {
+  cd "$srcdir/${pkgname}-$pkgver"
+
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_HOME="$srcdir/cargo-home"
+
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
 build() {
   cd "$srcdir/${pkgname}-$pkgver"
 
-  export CARGO_HOME="$srcdir/cargo-home"
   export RUSTUP_TOOLCHAIN=stable
+  export CARGO_HOME="$srcdir/cargo-home"
 
   export CRUNCHY_CLI_GIT_HASH=$CI_GIT_HASH
-  cargo build --release
+  cargo build --frozen --release
 }
 
 package() {

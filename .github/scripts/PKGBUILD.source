@@ -21,6 +21,7 @@ build() {
   export CARGO_HOME="$srcdir/cargo-home"
   export RUSTUP_TOOLCHAIN=stable
 
+  export CRUNCHY_CLI_GIT_HASH=$CI_GIT_HASH
   cargo build --release
 }
 

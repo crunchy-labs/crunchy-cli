@@ -20,11 +20,15 @@ jobs:
           curl -LO https://github.com/crunchy-labs/crunchy-cli/archive/refs/tags/${{ github.ref_name }}.tar.gz
           echo "CRUNCHY_CLI_SHA256=$(sha256sum ${{ github.ref_name }}.tar.gz | cut -f 1 -d ' ')" >> $GITHUB_ENV
 
+      - name: Get release commit hash
+        run: echo "CRUNCHY_CLI_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Generate crunchy-cli PKGBUILD
         env:
           CI_PKG_VERSION: ${{ env.RELEASE_VERSION }}
           CI_SHA_SUM: ${{ env.CRUNCHY_CLI_SHA256 }}
-        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM' < .github/scripts/PKGBUILD.source > PKGBUILD
+          CI_GIT_HASH: ${{ env.CRUNCHY_CLI_GIT_HASH }}
+        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_GIT_HASH' < .github/scripts/PKGBUILD.source > PKGBUILD
 
       - name: Publish crunchy-cli to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0

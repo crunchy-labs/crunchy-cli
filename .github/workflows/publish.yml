@@ -28,7 +28,7 @@ jobs:
           CI_PKG_VERSION: ${{ env.RELEASE_VERSION }}
           CI_SHA_SUM: ${{ env.CRUNCHY_CLI_SHA256 }}
           CI_GIT_HASH: ${{ env.CRUNCHY_CLI_GIT_HASH }}
-        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_GIT_HASH' < .github/scripts/PKGBUILD.source > PKGBUILD
+        run: envsubst '$CI_PKG_VERSION,$CI_SHA_SUM,$CI_GIT_HASH' < .github/workflow-resources/PKGBUILD.source > PKGBUILD
 
       - name: Publish crunchy-cli to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
@@ -61,7 +61,7 @@ jobs:
           CI_MANPAGES_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_MANPAGES_SHA256 }}
           CI_COMPLETIONS_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_COMPLETIONS_SHA256 }}
           CI_LICENSE_SHA_SUM: ${{ env.CRUNCHY_CLI_BIN_LICENSE_SHA256 }}
-        run: envsubst '$CI_PKG_VERSION,$CI_AMD_BINARY_SHA_SUM,$CI_ARM_BINARY_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM,$CI_LICENSE_SHA_SUM' < .github/scripts/PKGBUILD.binary > PKGBUILD
+        run: envsubst '$CI_PKG_VERSION,$CI_AMD_BINARY_SHA_SUM,$CI_ARM_BINARY_SHA_SUM,$CI_COMPLETIONS_SHA_SUM,$CI_MANPAGES_SHA_SUM,$CI_LICENSE_SHA_SUM' < .github/workflow-resources/PKGBUILD.binary > PKGBUILD
 
       - name: Publish crunchy-cli-bin to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0

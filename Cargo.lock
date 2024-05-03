@@ -376,6 +376,7 @@ dependencies = [
  "num_cpus",
  "regex",
  "reqwest",
+ "rsubs-lib",
  "rustls-native-certs",
  "rusty-chromaprint",
  "serde",
@@ -1500,6 +1501,16 @@ name = "roff"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b833d8d034ea094b1ea68aa6d5c740e0d04bad9d16568d08ba6f76823a114316"
+
+[[package]]
+name = "rsubs-lib"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0df7559a05635a4132b737c736ee286af83f3969cb98d9028d17d333e6b41cc5"
+dependencies = [
+ "regex",
+ "serde",
+]
 
 [[package]]
 name = "rubato"

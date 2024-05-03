@@ -30,6 +30,7 @@ log = { version = "0.4", features = ["std"] }
 num_cpus = "1.16"
 regex = "1.10"
 reqwest = { version = "0.12", features = ["socks", "stream"] }
+rsubs-lib = "0.2"
 rusty-chromaprint = "0.2"
 serde = "1.0"
 serde_json = "1.0"

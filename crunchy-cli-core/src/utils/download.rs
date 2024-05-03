@@ -13,6 +13,7 @@ use indicatif::{ProgressBar, ProgressDrawTarget, ProgressFinish, ProgressStyle};
 use log::{debug, warn, LevelFilter};
 use regex::Regex;
 use reqwest::Client;
+use rsubs_lib::{ssa, vtt};
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
@@ -931,13 +932,38 @@ impl Downloader {
         subtitle: Subtitle,
         max_length: TimeDelta,
     ) -> Result<TempPath> {
+        let buf = subtitle.data().await?;
+        let mut ass = match subtitle.format.as_str() {
+            "ass" => ssa::parse(String::from_utf8_lossy(&buf).to_string()),
+            "vtt" => vtt::parse(String::from_utf8_lossy(&buf).to_string()).to_ass(),
+            _ => bail!("unknown subtitle format: {}", subtitle.format),
+        };
+        // subtitles aren't always correct sorted and video players may have issues with that. to
+        // prevent issues, the subtitles are sorted
+        ass.events
+            .sort_by(|a, b| a.line_start.total_ms().cmp(&b.line_start.total_ms()));
+        // it might be the case that the start and/or end time are greater than the actual video
+        // length. this might also result in issues with video players, thus the times are stripped
+        // to be maxim
+        for i in (0..ass.events.len()).rev() {
+            if ass.events[i].line_end.total_ms() > max_length.num_milliseconds() as u32 {
+                if ass.events[i].line_start.total_ms() > max_length.num_milliseconds() as u32 {
+                    ass.events[i]
+                        .line_start
+                        .set_ms(max_length.num_milliseconds() as u32);
+                }
+                ass.events[i]
+                    .line_end
+                    .set_ms(max_length.num_milliseconds() as u32);
+            } else {
+                break;
+            }
+        }
+
         let tempfile = tempfile(".ass")?;
-        let (mut file, path) = tempfile.into_parts();
+        let path = tempfile.into_temp_path();
 
-        let mut buf = subtitle.data().await?;
-        fix_subtitles(&mut buf, max_length);
-
-        file.write_all(buf.as_slice())?;
+        ass.to_file(path.to_string_lossy().to_string().as_str())?;
 
         Ok(path)
     }
@@ -1299,93 +1325,6 @@ fn get_subtitle_stats(path: &Path) -> Result<Vec<String>> {
     }
 
     Ok(fonts)
-}
-
-/// Fix the subtitles in multiple ways as Crunchyroll sometimes delivers them malformed.
-///
-/// Look and feel fix: Add `ScaledBorderAndShadows: yes` to subtitles; without it they look very
-/// messy on some video players. See
-/// [crunchy-labs/crunchy-cli#66](https://github.com/crunchy-labs/crunchy-cli/issues/66) for more
-/// information.
-/// Length fix: Sometimes subtitles have an unnecessary long entry which exceeds the video length,
-/// some video players can't handle this correctly. To prevent this, the subtitles must be checked
-/// if any entry is longer than the video length and if so the entry ending must be hard set to not
-/// exceed the video length. See [crunchy-labs/crunchy-cli#32](https://github.com/crunchy-labs/crunchy-cli/issues/32)
-/// for more information.
-/// Sort fix: Sometimes subtitle entries aren't sorted correctly by time which confuses some video
-/// players. To prevent this, the subtitle entries must be manually sorted. See
-/// [crunchy-labs/crunchy-cli#208](https://github.com/crunchy-labs/crunchy-cli/issues/208) for more
-/// information.
-fn fix_subtitles(raw: &mut Vec<u8>, max_length: TimeDelta) {
-    let re = Regex::new(
-        r"^Dialogue:\s(?P<layer>\d+),(?P<start>\d+:\d+:\d+\.\d+),(?P<end>\d+:\d+:\d+\.\d+),",
-    )
-    .unwrap();
-
-    let mut entries = (vec![], vec![]);
-
-    let mut as_lines: Vec<String> = String::from_utf8_lossy(raw.as_slice())
-        .split('\n')
-        .map(|s| s.to_string())
-        .collect();
-
-    for (i, line) in as_lines.iter_mut().enumerate() {
-        if line.trim() == "[Script Info]" {
-            line.push_str("\nScaledBorderAndShadow: yes")
-        } else if let Some(capture) = re.captures(line) {
-            let mut start = capture
-                .name("start")
-                .map_or(NaiveTime::default(), |s| {
-                    NaiveTime::parse_from_str(s.as_str(), "%H:%M:%S.%f").unwrap()
-                })
-                .signed_duration_since(NaiveTime::MIN);
-            let mut end = capture
-                .name("end")
-                .map_or(NaiveTime::default(), |e| {
-                    NaiveTime::parse_from_str(e.as_str(), "%H:%M:%S.%f").unwrap()
-                })
-                .signed_duration_since(NaiveTime::MIN);
-
-            if start > max_length || end > max_length {
-                let layer = capture
-                    .name("layer")
-                    .map_or(0, |l| i32::from_str(l.as_str()).unwrap());
-
-                if start > max_length {
-                    start = max_length;
-                }
-                if start > max_length || end > max_length {
-                    end = max_length;
-                }
-
-                *line = re
-                    .replace(
-                        line,
-                        format!(
-                            "Dialogue: {},{},{},",
-                            layer,
-                            format_time_delta(&start),
-                            format_time_delta(&end)
-                        ),
-                    )
-                    .to_string()
-            }
-            entries.0.push((start, i));
-            entries.1.push(i)
-        }
-    }
-
-    entries.0.sort_by(|(a, _), (b, _)| a.cmp(b));
-    for i in 0..entries.0.len() {
-        let (_, original_position) = entries.0[i];
-        let new_position = entries.1[i];
-
-        if original_position != new_position {
-            as_lines.swap(original_position, new_position)
-        }
-    }
-
-    *raw = as_lines.join("\n").into_bytes()
 }
 
 fn write_ffmpeg_chapters(

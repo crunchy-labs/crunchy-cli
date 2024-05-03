@@ -1,7 +1,8 @@
 fn main() -> std::io::Result<()> {
     println!(
         "cargo:rustc-env=GIT_HASH={}",
-        get_short_commit_hash()?.unwrap_or_default()
+        std::env::var("CRUNCHY_CLI_GIT_HASH")
+            .or::<std::io::Error>(Ok(get_short_commit_hash()?.unwrap_or_default()))?
     );
     println!(
         "cargo:rustc-env=BUILD_DATE={}",

@@ -393,7 +393,7 @@ impl Execute for Archive {
                                 || (method_subtitle && subtitle_differ)
                             {
                                 skip = false;
-                                path = formatted_path.clone()
+                                path.clone_from(&formatted_path)
                             }
                         }
                     }

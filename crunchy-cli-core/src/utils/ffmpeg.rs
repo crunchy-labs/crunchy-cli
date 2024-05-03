@@ -1,5 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::fmt;
+use std::fmt::Formatter;
 use std::str::FromStr;
 
 pub const SOFTSUB_CONTAINERS: [&str; 3] = ["mkv", "mov", "mp4"];
@@ -33,11 +35,11 @@ macro_rules! ffmpeg_enum {
             }
         }
 
-        impl ToString for $name {
-            fn to_string(&self) -> String {
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 match self {
                     $(
-                        &$name::$field => stringify!($field).to_string().to_lowercase()
+                        &$name::$field => write!(f, "{}", stringify!($field).to_string().to_lowercase())
                     ),*
                 }
             }
@@ -135,23 +137,16 @@ impl FFmpegPreset {
         for (codec, hwaccel, quality) in FFmpegPreset::available_matches() {
             let mut description_details = vec![];
             if let Some(h) = &hwaccel {
-                description_details.push(format!("{} hardware acceleration", h.to_string()))
+                description_details.push(format!("{h} hardware acceleration"))
             }
             if let Some(q) = &quality {
-                description_details.push(format!("{} video quality/compression", q.to_string()))
+                description_details.push(format!("{q} video quality/compression"))
             }
 
             let description = if description_details.is_empty() {
-                format!(
-                    "{} encoded with default video quality/compression",
-                    codec.to_string()
-                )
+                format!("{codec} encoded with default video quality/compression",)
             } else if description_details.len() == 1 {
-                format!(
-                    "{} encoded with {}",
-                    codec.to_string(),
-                    description_details[0]
-                )
+                format!("{} encoded with {}", codec, description_details[0])
             } else {
                 let first = description_details.remove(0);
                 let last = description_details.remove(description_details.len() - 1);
@@ -161,13 +156,7 @@ impl FFmpegPreset {
                     "".to_string()
                 };
 
-                format!(
-                    "{} encoded with {}{} and {}",
-                    codec.to_string(),
-                    first,
-                    mid,
-                    last
-                )
+                format!("{codec} encoded with {first}{mid} and {last}",)
             };
 
             return_values.push(format!(
@@ -201,11 +190,7 @@ impl FFmpegPreset {
                 .find(|p| p.to_string() == token.to_lowercase())
             {
                 if let Some(cc) = codec {
-                    return Err(format!(
-                        "cannot use multiple codecs (found {} and {})",
-                        cc.to_string(),
-                        c.to_string()
-                    ));
+                    return Err(format!("cannot use multiple codecs (found {cc} and {c})",));
                 }
                 codec = Some(c)
             } else if let Some(h) = FFmpegHwAccel::all()
@@ -214,9 +199,7 @@ impl FFmpegPreset {
             {
                 if let Some(hh) = hwaccel {
                     return Err(format!(
-                        "cannot use multiple hardware accelerations (found {} and {})",
-                        hh.to_string(),
-                        h.to_string()
+                        "cannot use multiple hardware accelerations (found {hh} and {h})",
                     ));
                 }
                 hwaccel = Some(h)
@@ -226,9 +209,7 @@ impl FFmpegPreset {
             {
                 if let Some(qq) = quality {
                     return Err(format!(
-                        "cannot use multiple ffmpeg preset qualities (found {} and {})",
-                        qq.to_string(),
-                        q.to_string()
+                        "cannot use multiple ffmpeg preset qualities (found {qq} and {q})",
                     ));
                 }
                 quality = Some(q)

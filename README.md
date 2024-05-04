@@ -487,11 +487,19 @@ The `archive` command lets you download episodes with multiple audios and subtit
   Sometimes two video tracks are downloaded with `--merge` set to `sync` because the audio fingerprinting fails to identify matching audio parts (e.g. opening).
   To prevent this, you can use the `--merge-sync-tolerance` flag to specify the difference by which two fingerprints are considered equal.
 
+  ```shell
+  $ crunchy-cli archive -m sync --merge-sync-tolerance 3 https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
+
   Default is `6`.
 
 - <span id="archive-merge-sync-precision">Merge sync precision</span>
 
   If you use `--merge` set to `sync` and the syncing seems to be not accurate enough or takes to long, you can use the `--sync-precision` flag to specify the amount of offset determination runs from which the final offset is calculated.
+
+  ```shell
+  $ crunchy-cli archive -m sync --merge-sync-precision 3 https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome
+  ```
 
   Default is `4`.
 

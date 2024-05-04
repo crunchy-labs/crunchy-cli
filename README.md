@@ -22,8 +22,8 @@
   <a href="https://discord.gg/PXGPGpQxgk">
     <img src="https://img.shields.io/discord/994882878125121596?label=discord&style=flat-square" alt="Discord">
   </a>
-  <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/crunchy-labs/crunchy-cli/ci.yml?branch=master&style=flat-square" alt="CI">
+  <a href="https://github.com/crunchy-labs/crunchy-cli/actions/workflows/build.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/crunchy-labs/crunchy-cli/build.yml?branch=master&style=flat-square" alt="Build">
   </a>
 </p>
 

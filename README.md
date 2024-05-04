@@ -482,14 +482,14 @@ The `archive` command lets you download episodes with multiple audios and subtit
   
   Default are `200` milliseconds.
 
-- <span id="archive-sync-tolerance">Sync tolerance</span>
+- <span id="archive-merge-sync-tolerance">Merge sync tolerance</span>
 
   Sometimes two video tracks are downloaded with `--merge` set to `sync` because the audio fingerprinting fails to identify matching audio parts (e.g. opening).
-  To prevent this, you can use the `--sync-tolerance` flag to specify the difference by which two fingerprints are considered equal.
+  To prevent this, you can use the `--merge-sync-tolerance` flag to specify the difference by which two fingerprints are considered equal.
 
   Default is `6`.
 
-- <span id="archive-sync-precision">Sync precision</span>
+- <span id="archive-merge-sync-precision">Merge sync precision</span>
 
   If you use `--merge` set to `sync` and the syncing seems to be not accurate enough or takes to long, you can use the `--sync-precision` flag to specify the amount of offset determination runs from which the final offset is calculated.
 

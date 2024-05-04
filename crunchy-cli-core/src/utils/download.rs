@@ -64,8 +64,8 @@ pub struct DownloadBuilder {
     force_hardsub: bool,
     download_fonts: bool,
     no_closed_caption: bool,
-    sync_tolerance: Option<u32>,
-    sync_precision: Option<u32>,
+    merge_sync_tolerance: Option<u32>,
+    merge_sync_precision: Option<u32>,
     threads: usize,
     ffmpeg_threads: Option<usize>,
     audio_locale_output_map: HashMap<Locale, String>,
@@ -85,8 +85,8 @@ impl DownloadBuilder {
             force_hardsub: false,
             download_fonts: false,
             no_closed_caption: false,
-            sync_tolerance: None,
-            sync_precision: None,
+            merge_sync_tolerance: None,
+            merge_sync_precision: None,
             threads: num_cpus::get(),
             ffmpeg_threads: None,
             audio_locale_output_map: HashMap::new(),
@@ -108,8 +108,8 @@ impl DownloadBuilder {
             download_fonts: self.download_fonts,
             no_closed_caption: self.no_closed_caption,
 
-            sync_tolerance: self.sync_tolerance,
-            sync_precision: self.sync_precision,
+            merge_sync_tolerance: self.merge_sync_tolerance,
+            merge_sync_precision: self.merge_sync_precision,
 
             download_threads: self.threads,
             ffmpeg_threads: self.ffmpeg_threads,
@@ -168,8 +168,8 @@ pub struct Downloader {
     download_fonts: bool,
     no_closed_caption: bool,
 
-    sync_tolerance: Option<u32>,
-    sync_precision: Option<u32>,
+    merge_sync_tolerance: Option<u32>,
+    merge_sync_precision: Option<u32>,
 
     download_threads: usize,
     ffmpeg_threads: Option<usize>,
@@ -287,13 +287,13 @@ impl Downloader {
             }
         }
 
-        if self.formats.len() > 1 && self.sync_tolerance.is_some() {
+        if self.formats.len() > 1 && self.merge_sync_tolerance.is_some() {
             let _progress_handler =
                 progress!("Syncing video start times (this might take some time)");
             let mut offsets = sync_audios(
                 &raw_audios,
-                self.sync_tolerance.unwrap(),
-                self.sync_precision.unwrap(),
+                self.merge_sync_tolerance.unwrap(),
+                self.merge_sync_precision.unwrap(),
             )?;
             drop(_progress_handler);
 

@@ -321,8 +321,6 @@ impl Downloader {
             if let Some(offsets) = offsets {
                 let mut root_format_idx = 0;
                 let mut root_format_length = 0;
-                let mut audio_count: usize = 0;
-                let mut subtitle_count: usize = 0;
                 for (i, format) in self.formats.iter().enumerate() {
                     let offset = offsets.get(&i).copied().unwrap_or_default();
                     let format_len = format
@@ -340,15 +338,13 @@ impl Downloader {
 
                     for _ in &format.audios {
                         if let Some(offset) = &offsets.get(&i) {
-                            audio_offsets.insert(audio_count, **offset);
+                            audio_offsets.insert(i, **offset);
                         }
-                        audio_count += 1
                     }
                     for _ in &format.subtitles {
                         if let Some(offset) = &offsets.get(&i) {
-                            subtitle_offsets.insert(subtitle_count, **offset);
+                            subtitle_offsets.insert(i, **offset);
                         }
-                        subtitle_count += 1
                     }
                 }
 

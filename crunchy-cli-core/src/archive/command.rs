@@ -234,6 +234,10 @@ impl Execute for Archive {
             bail!("`--include-chapters` can only be used if `--merge` is set to 'audio' or 'sync'")
         }
 
+        if !self.skip_existing_method.is_empty() && !self.skip_existing {
+            warn!("`--skip-existing-method` has no effect if `--skip-existing` is not set")
+        }
+
         self.audio = all_locale_in_locales(self.audio.clone());
         self.subtitle = all_locale_in_locales(self.subtitle.clone());
 

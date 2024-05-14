@@ -386,6 +386,7 @@ dependencies = [
  "shlex",
  "sys-locale",
  "tempfile",
+ "time",
  "tokio",
  "tokio-util",
  "tower-service",
@@ -1511,12 +1512,13 @@ checksum = "b833d8d034ea094b1ea68aa6d5c740e0d04bad9d16568d08ba6f76823a114316"
 
 [[package]]
 name = "rsubs-lib"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dcca2a9560fca05de8f95bc3767e46673d4b4c1f2c7a11092e10efd95bbdf62"
+checksum = "f43e1a7f184bc76407dbaa67bd2aeea8a15430d7e1e498070963336d03ebedee"
 dependencies = [
  "regex",
  "serde",
+ "time",
 ]
 
 [[package]]

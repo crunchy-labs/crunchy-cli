@@ -13,17 +13,19 @@ use indicatif::{ProgressBar, ProgressDrawTarget, ProgressFinish, ProgressStyle};
 use log::{debug, warn, LevelFilter};
 use regex::Regex;
 use reqwest::Client;
-use rsubs_lib::{ssa, vtt};
+use rsubs_lib::{SSA, VTT};
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
+use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, fs};
 use tempfile::TempPath;
+use time::Time;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::select;
 use tokio::sync::mpsc::unbounded_channel;
@@ -929,36 +931,43 @@ impl Downloader {
     ) -> Result<TempPath> {
         let buf = subtitle.data().await?;
         let mut ass = match subtitle.format.as_str() {
-            "ass" => ssa::parse(String::from_utf8_lossy(&buf).to_string()),
-            "vtt" => vtt::parse(String::from_utf8_lossy(&buf).to_string()).to_ass(),
+            "ass" => SSA::parse(String::from_utf8_lossy(&buf))?,
+            "vtt" => VTT::parse(String::from_utf8_lossy(&buf))?.to_ssa(),
             _ => bail!("unknown subtitle format: {}", subtitle.format),
         };
         // subtitles aren't always correct sorted and video players may have issues with that. to
         // prevent issues, the subtitles are sorted
-        ass.events
-            .sort_by(|a, b| a.line_start.total_ms().cmp(&b.line_start.total_ms()));
+        // (https://github.com/crunchy-labs/crunchy-cli/issues/208)
+        ass.events.sort_by(|a, b| a.start.cmp(&b.start));
         // it might be the case that the start and/or end time are greater than the actual video
         // length. this might also result in issues with video players, thus the times are stripped
-        // to be maxim
+        // to be at most as long as `max_length`
+        // (https://github.com/crunchy-labs/crunchy-cli/issues/32)
         for i in (0..ass.events.len()).rev() {
-            if ass.events[i].line_end.total_ms() > max_length.num_milliseconds() as u32 {
-                if ass.events[i].line_start.total_ms() > max_length.num_milliseconds() as u32 {
-                    ass.events[i]
-                        .line_start
-                        .set_ms(max_length.num_milliseconds() as u32);
+            let max_len = Time::from_hms(0, 0, 0)
+                .unwrap()
+                .add(Duration::from_millis(max_length.num_milliseconds() as u64));
+
+            if ass.events[i].start > max_len {
+                if ass.events[i].end > max_len {
+                    ass.events[i].start = max_len
                 }
-                ass.events[i]
-                    .line_end
-                    .set_ms(max_length.num_milliseconds() as u32);
+                ass.events[i].end = max_len
             } else {
                 break;
             }
         }
 
+        // without this additional info, subtitle look very messy in some video player
+        // (https://github.com/crunchy-labs/crunchy-cli/issues/66)
+        ass.info
+            .additional_fields
+            .insert("ScaledBorderAndShadows".to_string(), "yes".to_string());
+
         let tempfile = tempfile(".ass")?;
         let path = tempfile.into_temp_path();
 
-        ass.to_file(path.to_string_lossy().to_string().as_str())?;
+        fs::write(&path, ass.to_string())?;
 
         Ok(path)
     }

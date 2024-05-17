@@ -962,7 +962,7 @@ impl Downloader {
         // (https://github.com/crunchy-labs/crunchy-cli/issues/66)
         ass.info
             .additional_fields
-            .insert("ScaledBorderAndShadows".to_string(), "yes".to_string());
+            .insert("ScaledBorderAndShadow".to_string(), "yes".to_string());
 
         let tempfile = tempfile(".ass")?;
         let path = tempfile.into_temp_path();

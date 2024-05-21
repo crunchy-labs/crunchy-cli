@@ -434,5 +434,7 @@ async fn get_format(
         subs.push(download.subtitle.clone().unwrap())
     }
 
+    stream.invalidate().await?;
+
     Ok((download_format, format))
 }

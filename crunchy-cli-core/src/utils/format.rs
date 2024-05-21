@@ -2,7 +2,7 @@ use crate::utils::filter::real_dedup_vec;
 use crate::utils::locale::LanguageTagging;
 use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
-use anyhow::{bail, Result};
+use anyhow::Result;
 use chrono::{Datelike, Duration};
 use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, StreamData, Subtitle};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
@@ -166,19 +166,27 @@ impl SingleFormat {
     }
 
     pub async fn stream(&self) -> Result<Stream> {
-        let stream = match &self.source {
-            MediaCollection::Episode(e) => e.stream_maybe_without_drm().await?,
-            MediaCollection::Movie(m) => m.stream_maybe_without_drm().await?,
-            MediaCollection::MusicVideo(mv) => mv.stream_maybe_without_drm().await?,
-            MediaCollection::Concert(c) => c.stream_maybe_without_drm().await?,
-            _ => unreachable!(),
-        };
+        let mut i = 0;
+        loop {
+            let stream = match &self.source {
+                MediaCollection::Episode(e) => e.stream_maybe_without_drm().await,
+                MediaCollection::Movie(m) => m.stream_maybe_without_drm().await,
+                MediaCollection::MusicVideo(mv) => mv.stream_maybe_without_drm().await,
+                MediaCollection::Concert(c) => c.stream_maybe_without_drm().await,
+                _ => unreachable!(),
+            };
 
-        if stream.session.uses_stream_limits {
-            bail!("Found a stream which probably uses DRM. DRM downloads aren't supported")
+            // sometimes the request to get streams fails with an 403 and the message "JWT error",
+            // even if the jwt (i guess the auth bearer token is meant by that) is perfectly valid.
+            // it's retried the request 3 times if this specific error occurs
+            if let Err(crunchyroll_rs::error::Error::Request { message, .. }) = &stream {
+                if message == "JWT error" && i < 3 {
+                    i += 1;
+                    continue;
+                }
+            };
+            return Ok(stream?);
         }
-
-        Ok(stream)
     }
 
     pub async fn skip_events(&self) -> Result<Option<SkipEvents>> {

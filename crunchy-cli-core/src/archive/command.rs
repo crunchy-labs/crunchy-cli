@@ -520,7 +520,9 @@ async fn get_format(
             .collect();
 
         format_pairs.push((single_format, video.clone(), audio, subtitles.clone()));
-        single_format_to_format_pairs.push((single_format.clone(), video, subtitles))
+        single_format_to_format_pairs.push((single_format.clone(), video, subtitles));
+
+        stream.invalidate().await?
     }
 
     let mut download_formats = vec![];

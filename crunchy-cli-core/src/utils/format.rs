@@ -2,7 +2,7 @@ use crate::utils::filter::real_dedup_vec;
 use crate::utils::locale::LanguageTagging;
 use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::{Datelike, Duration};
 use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, StreamData, Subtitle};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
@@ -176,13 +176,15 @@ impl SingleFormat {
                 _ => unreachable!(),
             };
 
-            // sometimes the request to get streams fails with an 403 and the message "JWT error",
-            // even if the jwt (i guess the auth bearer token is meant by that) is perfectly valid.
-            // it's retried the request 3 times if this specific error occurs
             if let Err(crunchyroll_rs::error::Error::Request { message, .. }) = &stream {
+                // sometimes the request to get streams fails with an 403 and the message
+                // "JWT error", even if the jwt (i guess the auth bearer token is meant by that) is
+                // perfectly valid. it's retried the request 3 times if this specific error occurs
                 if message == "JWT error" && i < 3 {
                     i += 1;
                     continue;
+                } else if message.starts_with("TOO_MANY_ACTIVE_STREAMS") {
+                    bail!("Too many active/parallel streams. Please close at least one stream you're watching and try again")
                 }
             };
             return Ok(stream?);

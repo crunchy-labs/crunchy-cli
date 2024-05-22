@@ -166,29 +166,20 @@ impl SingleFormat {
     }
 
     pub async fn stream(&self) -> Result<Stream> {
-        let mut i = 0;
-        loop {
-            let stream = match &self.source {
-                MediaCollection::Episode(e) => e.stream_maybe_without_drm().await,
-                MediaCollection::Movie(m) => m.stream_maybe_without_drm().await,
-                MediaCollection::MusicVideo(mv) => mv.stream_maybe_without_drm().await,
-                MediaCollection::Concert(c) => c.stream_maybe_without_drm().await,
-                _ => unreachable!(),
-            };
+        let stream = match &self.source {
+            MediaCollection::Episode(e) => e.stream_maybe_without_drm().await,
+            MediaCollection::Movie(m) => m.stream_maybe_without_drm().await,
+            MediaCollection::MusicVideo(mv) => mv.stream_maybe_without_drm().await,
+            MediaCollection::Concert(c) => c.stream_maybe_without_drm().await,
+            _ => unreachable!(),
+        };
 
-            if let Err(crunchyroll_rs::error::Error::Request { message, .. }) = &stream {
-                // sometimes the request to get streams fails with an 403 and the message
-                // "JWT error", even if the jwt (i guess the auth bearer token is meant by that) is
-                // perfectly valid. it's retried the request 3 times if this specific error occurs
-                if message == "JWT error" && i < 3 {
-                    i += 1;
-                    continue;
-                } else if message.starts_with("TOO_MANY_ACTIVE_STREAMS") {
-                    bail!("Too many active/parallel streams. Please close at least one stream you're watching and try again")
-                }
-            };
-            return Ok(stream?);
-        }
+        if let Err(crunchyroll_rs::error::Error::Request { message, .. }) = &stream {
+            if message.starts_with("TOO_MANY_ACTIVE_STREAMS") {
+                bail!("Too many active/parallel streams. Please close at least one stream you're watching and try again")
+            }
+        };
+        Ok(stream?)
     }
 
     pub async fn skip_events(&self) -> Result<Option<SkipEvents>> {

@@ -464,7 +464,9 @@ impl Format {
         if !stream_empty {
             for (_, episodes) in tree.iter_mut() {
                 for (episode, streams) in episodes {
-                    streams.push(episode.stream_maybe_without_drm().await?)
+                    let stream = episode.stream_maybe_without_drm().await?;
+                    stream.clone().invalidate().await?;
+                    streams.push(stream)
                 }
             }
         } else {

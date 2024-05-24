@@ -4,7 +4,7 @@ use crate::utils::log::tab_info;
 use crate::utils::os::{is_special_file, sanitize};
 use anyhow::{bail, Result};
 use chrono::{Datelike, Duration};
-use crunchyroll_rs::media::{Resolution, SkipEvents, Stream, StreamData, Subtitle};
+use crunchyroll_rs::media::{SkipEvents, Stream, StreamData, Subtitle};
 use crunchyroll_rs::{Concert, Episode, Locale, MediaCollection, Movie, MusicVideo};
 use log::{debug, info};
 use std::cmp::Ordering;
@@ -354,8 +354,6 @@ pub struct Format {
 
     pub locales: Vec<(Locale, Vec<Locale>)>,
 
-    // deprecated
-    pub resolution: Resolution,
     pub width: u64,
     pub height: u64,
     pub fps: f64,
@@ -401,7 +399,6 @@ impl Format {
             title: first_format.title,
             description: first_format.description,
             locales,
-            resolution: first_stream.resolution().unwrap(),
             width: first_stream.resolution().unwrap().width,
             height: first_stream.resolution().unwrap().height,
             fps: first_stream.fps().unwrap(),
@@ -449,11 +446,11 @@ impl Format {
             )
             .replace(
                 "{width}",
-                &sanitize(self.resolution.width.to_string(), true, universal),
+                &sanitize(self.width.to_string(), true, universal),
             )
             .replace(
                 "{height}",
-                &sanitize(self.resolution.height.to_string(), true, universal),
+                &sanitize(self.height.to_string(), true, universal),
             )
             .replace("{series_id}", &sanitize(&self.series_id, true, universal))
             .replace(
@@ -589,7 +586,7 @@ impl Format {
                 .collect::<Vec<String>>()
                 .join(", ")
         );
-        tab_info!("Resolution: {}", self.resolution);
+        tab_info!("Resolution: {}x{}", self.height, self.width);
         tab_info!("FPS: {:.2}", self.fps)
     }
 

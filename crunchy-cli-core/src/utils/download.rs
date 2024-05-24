@@ -654,7 +654,7 @@ impl Downloader {
                 metadata.extend([
                     format!("-metadata:s:s:{}", i),
                     format!("title={}", {
-                        let mut title = meta.locale.to_string();
+                        let mut title = meta.locale.to_human_readable();
                         if meta.cc {
                             title += " (CC)"
                         }

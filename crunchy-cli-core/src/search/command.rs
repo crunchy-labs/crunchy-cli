@@ -111,6 +111,10 @@ impl Execute for Search {
             warn!("Using `search` anonymously or with a non-premium account may return incomplete results")
         }
 
+        if self.output.contains("{{stream.is_drm}}") {
+            warn!("The `{{{{stream.is_drm}}}}` option is deprecated as it isn't reliable anymore and will be removed soon")
+        }
+
         let input = if crunchyroll_rs::parse::parse_url(&self.input).is_some() {
             match parse_url(&ctx.crunchy, self.input.clone(), true).await {
                 Ok(ok) => vec![ok],

@@ -173,7 +173,7 @@ impl From<&Stream> for FormatStream {
         Self {
             locale: value.audio_locale.clone(),
             dash_url: value.url.clone(),
-            is_drm: value.session.uses_stream_limits,
+            is_drm: false,
         }
     }
 }

@@ -241,14 +241,6 @@ macro_rules! must_match_if_true {
     };
 }
 
-macro_rules! self_and_versions {
-    ($var:expr => $audio:expr) => {{
-        let mut items = vec![$var.clone()];
-        items.extend($var.clone().version($audio).await?);
-        items
-    }};
-}
-
 pub struct Format {
     pattern: Vec<(Range<usize>, Scope, String)>,
     pattern_count: HashMap<Scope, u32>,
@@ -421,7 +413,15 @@ impl Format {
             };
             let mut seasons = vec![];
             for season in tmp_seasons {
-                seasons.extend(self_and_versions!(season => self.filter_options.audio.clone()))
+                seasons.push(season.clone());
+                for version in season.versions {
+                    if season.id == version.id {
+                        continue;
+                    }
+                    if self.filter_options.audio.contains(&version.audio_locale) {
+                        seasons.push(version.season().await?)
+                    }
+                }
             }
             tree.extend(
                 self.filter_options
@@ -435,7 +435,15 @@ impl Format {
         if !episode_empty || !stream_empty {
             match &media_collection {
                 MediaCollection::Episode(episode) => {
-                    let episodes = self_and_versions!(episode => self.filter_options.audio.clone());
+                    let mut episodes = vec![episode.clone()];
+                    for version in &episode.versions {
+                        if episode.id == version.id {
+                            continue;
+                        }
+                        if self.filter_options.audio.contains(&version.audio_locale) {
+                            episodes.push(version.episode().await?)
+                        }
+                    }
                     tree.push((
                         Season::default(),
                         episodes

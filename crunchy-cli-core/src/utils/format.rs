@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct SingleFormat {
     pub identifier: String,
@@ -347,6 +348,7 @@ impl Iterator for SingleFormatCollectionIterator {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Format {
     pub title: String,

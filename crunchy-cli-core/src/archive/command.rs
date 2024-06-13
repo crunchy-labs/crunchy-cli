@@ -1,10 +1,9 @@
-use crate::archive::filter::ArchiveFilter;
 use crate::utils::context::Context;
 use crate::utils::download::{
     DownloadBuilder, DownloadFormat, DownloadFormatMetadata, MergeBehavior,
 };
 use crate::utils::ffmpeg::FFmpegPreset;
-use crate::utils::filter::Filter;
+use crate::utils::filter::{Filter, FilterMediaScope};
 use crate::utils::format::{Format, SingleFormat};
 use crate::utils::locale::{all_locale_in_locales, resolve_locales, LanguageTagging};
 use crate::utils::log::progress;
@@ -284,9 +283,49 @@ impl Execute for Archive {
 
         for (i, (media_collection, url_filter)) in parsed_urls.into_iter().enumerate() {
             let progress_handler = progress!("Fetching series details");
-            let single_format_collection = ArchiveFilter::new(
+            let single_format_collection = Filter::new(
                 url_filter,
-                self.clone(),
+                self.audio.clone(),
+                self.subtitle.clone(),
+                |scope, locales| {
+                    let audios = locales.into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ");
+                    match scope {
+                        FilterMediaScope::Series(series) => warn!("Series {} is not available with {} audio", series.title, audios),
+                        FilterMediaScope::Season(season) => warn!("Season {} is not available with {} audio", season.season_number, audios),
+                        FilterMediaScope::Episode(episodes) => {
+                            if episodes.len() == 1 {
+                                warn!("Episode {} is not available with {} audio", episodes[0].sequence_number, audios)
+                            } else if episodes.len() == 2 {
+                                warn!("Season {} is only available with {} audio from episode {} to {}", episodes[0].season_number, audios, episodes[0].sequence_number, episodes[1].sequence_number)
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                    }
+                    Ok(true)
+                },
+                |scope, locales| {
+                    let subtitles = locales.into_iter().map(|l| l.to_string()).collect::<Vec<String>>().join(", ");
+                    match scope {
+                        FilterMediaScope::Series(series) => warn!("Series {} is not available with {} subtitles", series.title, subtitles),
+                        FilterMediaScope::Season(season) => warn!("Season {} is not available with {} subtitles", season.season_number, subtitles),
+                        FilterMediaScope::Episode(episodes) => {
+                            if episodes.len() == 1 {
+                                warn!("Episode {} of season {} is not available with {} subtitles", episodes[0].sequence_number, episodes[0].season_title, subtitles)
+                            } else if episodes.len() == 2 {
+                                warn!("Season {} of season {} is only available with {} subtitles from episode {} to {}", episodes[0].season_number, episodes[0].season_title, subtitles, episodes[0].sequence_number, episodes[1].sequence_number)
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                    }
+                    Ok(true)
+                },
+                |season| {
+                    warn!("Skipping premium episodes in season {season}");
+                    Ok(())
+                },
+                Format::has_relative_fmt(&self.output),
                 !self.yes,
                 self.skip_specials,
                 ctx.crunchy.premium().await,

@@ -16,7 +16,7 @@ anyhow = "1.0"
 async-speed-limit = "0.4"
 clap = { version = "4.5", features = ["derive", "string"] }
 chrono = "0.4"
-crunchyroll-rs = { version = "0.11.3", features = ["experimental-stabilizations", "tower"] }
+crunchyroll-rs = { version = "0.11.4", features = ["experimental-stabilizations", "tower"] }
 ctrlc = "3.4"
 dialoguer = { version = "0.11", default-features = false }
 dirs = "5.0"

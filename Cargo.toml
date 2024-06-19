@@ -1,7 +1,7 @@
 [package]
 name = "crunchy-cli"
 authors = ["Crunchy Labs Maintainers"]
-version = "3.6.6"
+version = "3.6.7"
 edition = "2021"
 license = "MIT"
 
@@ -14,9 +14,9 @@ openssl-tls = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-
 openssl-tls-static = ["dep:native-tls-crate", "native-tls-crate/openssl", "crunchy-cli-core/openssl-tls-static"]
 
 [dependencies]
-tokio = { version = "1.37", features = ["macros", "rt-multi-thread", "time"], default-features = false }
+tokio = { version = "1.38", features = ["macros", "rt-multi-thread", "time"], default-features = false }
 
-native-tls-crate = { package = "native-tls", version = "0.2.11", optional = true }
+native-tls-crate = { package = "native-tls", version = "0.2.12", optional = true }
 
 crunchy-cli-core = { path = "./crunchy-cli-core" }
 
@@ -34,7 +34,7 @@ members = ["crunchy-cli-core"]
 [patch.crates-io]
 # fork of the `native-tls` crate which can use openssl as backend on every platform. this is done as `reqwest` only
 # supports `rustls` and `native-tls` as tls backend
-native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "b7969a8" }
+native-tls = { git = "https://github.com/crunchy-labs/rust-not-so-native-tls.git", rev = "c7ac566" }
 
 [profile.release]
 strip = true

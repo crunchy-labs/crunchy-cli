@@ -171,13 +171,23 @@ impl Filter {
                 eps.retain(|e| e.audio_locale == season_locale)
             }
 
-            if eps.len() < season.number_of_episodes as usize
-                && !(self.audios_missing)(
-                    FilterMediaScope::Episode(vec![eps.first().unwrap(), eps.last().unwrap()]),
-                    vec![&eps.first().unwrap().audio_locale],
-                )?
-            {
-                return Ok(vec![]);
+            #[allow(clippy::if_same_then_else)]
+            if eps.len() < season.number_of_episodes as usize {
+                if eps.is_empty()
+                    && !(self.audios_missing)(
+                        FilterMediaScope::Season(&season),
+                        season.audio_locales.iter().collect(),
+                    )?
+                {
+                    return Ok(vec![]);
+                } else if !eps.is_empty()
+                    && !(self.audios_missing)(
+                        FilterMediaScope::Episode(vec![eps.first().unwrap(), eps.last().unwrap()]),
+                        vec![&eps.first().unwrap().audio_locale],
+                    )?
+                {
+                    return Ok(vec![]);
+                }
             }
 
             episodes.extend(eps)

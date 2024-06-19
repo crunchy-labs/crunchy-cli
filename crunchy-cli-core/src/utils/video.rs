@@ -27,6 +27,11 @@ pub async fn stream_data_from_stream(
         }
     }
     .unwrap();
+
+    if videos.iter().any(|v| v.drm.is_some()) || audios.iter().any(|v| v.drm.is_some()) {
+        bail!("Stream is DRM protected")
+    }
+
     videos.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
     audios.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
 

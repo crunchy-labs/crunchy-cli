@@ -561,7 +561,7 @@ impl Downloader {
 
         for (i, meta) in videos.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
+                input.extend(["-itsoffset".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), i.to_string()]);
@@ -582,7 +582,7 @@ impl Downloader {
         }
         for (i, meta) in audios.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
+                input.extend(["-itsoffset".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), (i + videos.len()).to_string()]);

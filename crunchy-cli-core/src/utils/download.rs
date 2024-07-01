@@ -322,20 +322,14 @@ impl Downloader {
 
             if let Some(offsets) = offsets {
                 let mut root_format_idx = 0;
-                let mut root_format_length = 0;
+                let mut root_format_offset = u64::MAX;
+
                 for (i, format) in self.formats.iter().enumerate() {
                     let offset = offsets.get(&i).copied().unwrap_or_default();
-                    let format_len = format
-                        .video
-                        .0
-                        .segments()
-                        .iter()
-                        .map(|s| s.length.as_millis())
-                        .sum::<u128>() as u64
-                        - offset.num_milliseconds() as u64;
-                    if format_len > root_format_length {
+                    let format_offset = offset.num_milliseconds() as u64;
+                    if format_offset < root_format_offset {
                         root_format_idx = i;
-                        root_format_length = format_len;
+                        root_format_offset = format_offset;
                     }
 
                     for _ in &format.audios {
@@ -567,7 +561,7 @@ impl Downloader {
 
         for (i, meta) in videos.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
+                input.extend(["-itsoffset".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), i.to_string()]);
@@ -588,7 +582,7 @@ impl Downloader {
         }
         for (i, meta) in audios.iter().enumerate() {
             if let Some(start_time) = meta.start_time {
-                input.extend(["-ss".to_string(), format_time_delta(&start_time)])
+                input.extend(["-itsoffset".to_string(), format_time_delta(&start_time)])
             }
             input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
             maps.extend(["-map".to_string(), (i + videos.len()).to_string()]);
@@ -635,7 +629,7 @@ impl Downloader {
         if container_supports_softsubs {
             for (i, meta) in subtitles.iter().enumerate() {
                 if let Some(start_time) = meta.start_time {
-                    input.extend(["-ss".to_string(), format_time_delta(&start_time)])
+                    input.extend(["-itsoffset".to_string(), format_time_delta(&start_time)])
                 }
                 input.extend(["-i".to_string(), meta.path.to_string_lossy().to_string()]);
                 maps.extend([
